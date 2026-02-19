@@ -91,9 +91,9 @@
     # INSTALLATION HEADLAMP
     # ==========================================================
 
-    - name: Installer Headlamp via Helm
+    - name: Installer / Mettre à jour Headlamp via Helm
       ansible.builtin.command: >
-        helm install headlamp headlamp/headlamp
+        helm upgrade --install headlamp headlamp/headlamp
         --namespace headlamp
         --create-namespace
         --version {{ headlamp_version }}
@@ -102,7 +102,6 @@
         --timeout 5m
       environment:
         KUBECONFIG: /etc/rancher/k3s/k3s.yaml
-      when: headlamp_helm_status.rc != 0
       tags: [headlamp, headlamp-install]
 
     - name: Supprimer le fichier de valeurs temporaire
