@@ -1,0 +1,54 @@
+# =============================================================
+# CONFIGURATION NETPLAN - bond0 LACP (802.3ad)
+# Généré par Ansible - NE PAS MODIFIER MANUELLEMENT
+# Nœud   : {{ inventory_hostname }}
+# IP bond0: {{ bond_ip }}/{{ network_prefix }}
+# =============================================================
+# L'interface de management (DHCP) reste gérée par
+# /etc/netplan/50-cloud-init.yaml et n'est PAS touchée ici.
+# =============================================================
+
+network:
+  version: 2
+  renderer: networkd
+
+  ethernets:
+    # ----------------------------------------------------------
+    # Interfaces esclaves du bond0
+    # DHCP désactivé - elles ne portent pas d'IP directement
+    # ----------------------------------------------------------
+{% for iface in network_interfaces %}
+    {{ iface }}:
+      dhcp4: false
+      dhcp6: false
+{% endfor %}
+
+  bonds:
+    # ----------------------------------------------------------
+    # Bond0 - LACP 802.3ad
+    # ----------------------------------------------------------
+    {{ network_bond_name }}:
+      interfaces:
+{% for iface in network_interfaces %}
+        - {{ iface }}
+{% endfor %}
+      addresses:
+        - {{ bond_ip }}/{{ network_prefix }}
+      routes:
+        - to: default
+          via: {{ network_gateway }}
+          metric: 100           # Priorité plus faible que la route management
+      nameservers:
+        addresses:
+{% for dns in network_dns %}
+          - {{ dns }}
+{% endfor %}
+        search:
+{% for domain in network_search_domains %}
+          - {{ domain }}
+{% endfor %}
+      parameters:
+        mode: {{ bond_mode }}
+        lacp-rate: {{ bond_lacp_rate }}
+        mii-monitor-interval: {{ bond_miimon }}
+        transmit-hash-policy: {{ bond_xmit_hash_policy }}
