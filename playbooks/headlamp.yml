@@ -47,6 +47,44 @@
       changed_when: false
       tags: [headlamp, headlamp-install]
 
+    - name: Créer le namespace headlamp (si absent)
+      ansible.builtin.command: k3s kubectl create namespace headlamp
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: ns_create
+      failed_when: ns_create.rc != 0 and 'already exists' not in ns_create.stderr
+      changed_when: ns_create.rc == 0
+      tags: [headlamp, headlamp-install]
+
+    - name: Écrire le Middleware redirect HTTPS
+      ansible.builtin.copy:
+        dest: /tmp/headlamp-middleware.yml
+        mode: '0644'
+        content: |
+          apiVersion: traefik.io/v1alpha1
+          kind: Middleware
+          metadata:
+            name: redirect-https
+            namespace: headlamp
+          spec:
+            redirectScheme:
+              scheme: https
+              permanent: true
+      tags: [headlamp, headlamp-install]
+
+    - name: Appliquer le Middleware redirect HTTPS
+      ansible.builtin.command: k3s kubectl apply -f /tmp/headlamp-middleware.yml
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [headlamp, headlamp-install]
+
+    - name: Supprimer le fichier Middleware temporaire
+      ansible.builtin.file:
+        path: /tmp/headlamp-middleware.yml
+        state: absent
+      tags: [headlamp, headlamp-install]
+
     # ==========================================================
     # FICHIER DE VALEURS HELM
     # ==========================================================
@@ -71,6 +109,7 @@
             className: traefik
             annotations:
               traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+              traefik.ingress.kubernetes.io/router.middlewares: "headlamp-redirect-https@kubernetescrd"
               cert-manager.io/cluster-issuer: letsencrypt-production
             hosts:
               - host: "{{ headlamp_config.hostname }}"
