@@ -33,6 +33,7 @@ k3s_config:
   kubelet_args:
     - "topology-manager-policy=best-effort"
     - "cpu-manager-policy=static"
+    - "kube-reserved=cpu=500m,memory=256Mi"  # obligatoire avec cpu-manager-policy=static
 
 # --- Configuration Longhorn globale ---
 longhorn_config:
