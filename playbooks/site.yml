@@ -47,7 +47,7 @@
   import_playbook: metallb.yml
   tags: [metallb]
 
-# PHASE 6 : Traefik - Ingress Controller (IP fixe 192.168.0.14)
+# PHASE 6 : Traefik - Ingress Controller (IP fixe 192.168.0.20 → *.app.corp.lcl)
 - name: "PHASE 6 - Traefik Ingress"
   import_playbook: traefik.yml
   tags: [traefik]

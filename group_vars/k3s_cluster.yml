@@ -16,7 +16,7 @@ rancher_version: "2.8.0"
 
 # --- Headlamp dashboard ---
 headlamp_config:
-  hostname: "headlamp.{{ cluster_network.traefik_ip }}.nip.io"  # Pas de DNS requis
+  hostname: "headlamp.{{ cluster_network.apps_domain }}"
 
 # --- Configuration réseau cluster ---
 cluster_network:
@@ -25,6 +25,7 @@ cluster_network:
   cluster_dns: "10.43.0.10"
   metallb_pool: "192.168.0.20-192.168.0.60"
   traefik_ip: "192.168.0.20"       # IP fixe assignée à Traefik via MetalLB
+  apps_domain: "app.corp.lcl"      # *.app.corp.lcl → 192.168.0.20 (DNS interne)
   vm_network: "192.168.10.0/24"
   api_server_ip: "192.168.0.11"    # Node 1 = primary
 

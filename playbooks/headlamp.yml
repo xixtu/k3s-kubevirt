@@ -7,7 +7,7 @@
 #   headlamp-install → Installer Headlamp via Helm
 #   headlamp-verify  → Vérifier pods, Ingress, URL
 # Prérequis : K3s + MetalLB + Traefik installés
-# URL : http://headlamp.{{ cluster_network.traefik_ip }}.nip.io
+# URL : http://headlamp.app.corp.lcl
 # =============================================================
 
 - name: "Headlamp - Dashboard Kubernetes"
