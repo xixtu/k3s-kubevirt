@@ -108,8 +108,9 @@
             name: "{{ app_name }}-ingress"
             namespace: "{{ target_namespace }}"
             annotations:
-              kubernetes.io/ingress.class: "nginx"
+              kubernetes.io/ingress.class: "traefik"
           spec:
+            ingressClassName: traefik
             rules:
               - host: "{{ fqdn }}"
                 http:
