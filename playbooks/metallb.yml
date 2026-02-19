@@ -4,11 +4,10 @@
 # =============================================================
 # Usage : ansible-playbook -i inventory/hosts.yml playbooks/metallb.yml
 # Tags :
-#   metallb-helm    → Installer Helm si absent
 #   metallb-install → Installer MetalLB via Helm
 #   metallb-config  → Configurer IPAddressPool + L2Advertisement
 #   metallb-verify  → Vérifier l'état de MetalLB
-# Prérequis : K3s installé (playbooks/k3s.yml)
+# Prérequis : K3s installé + Helm présent (playbooks/prerequisites.yml + k3s.yml)
 # =============================================================
 
 - name: "MetalLB - Load Balancer Layer 2"
@@ -21,31 +20,20 @@
   tasks:
 
     # ==========================================================
-    # INSTALLATION HELM
+    # VÉRIFICATION HELM (installé via prerequisites.yml)
     # ==========================================================
 
-    - name: Vérifier si Helm est installé
-      ansible.builtin.stat:
-        path: /usr/local/bin/helm
-      register: helm_binary
-      tags: [metallb, metallb-helm]
-
-    - name: Installer Helm
-      ansible.builtin.shell: |
-        curl -sfL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-      when: not helm_binary.stat.exists
-      tags: [metallb, metallb-helm]
-
-    - name: Vérifier version Helm
+    - name: Vérifier que Helm est disponible
       ansible.builtin.command: helm version --short
       register: helm_version
       changed_when: false
-      tags: [metallb, metallb-helm]
+      failed_when: helm_version.rc != 0
+      tags: [metallb, metallb-install]
 
     - name: Afficher version Helm
       ansible.builtin.debug:
-        msg: "Helm installé : {{ helm_version.stdout }}"
-      tags: [metallb, metallb-helm]
+        msg: "Helm : {{ helm_version.stdout }}"
+      tags: [metallb, metallb-install]
 
     # ==========================================================
     # INSTALLATION METALLB VIA HELM
