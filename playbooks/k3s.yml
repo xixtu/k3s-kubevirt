@@ -98,12 +98,20 @@
         timeout: 180
       tags: [k3s, k3s-primary]
 
+    - name: Pause pour laisser l'API K3s s'initialiser complètement
+      ansible.builtin.pause:
+        seconds: 15
+      tags: [k3s, k3s-primary]
+
     - name: Attendre que le nœud primaire soit Ready
       ansible.builtin.command: >
         k3s kubectl wait --for=condition=Ready node/{{ node_name }}
-        --timeout=120s
+        --timeout=60s
       register: node_ready
       changed_when: false
+      retries: 6
+      delay: 10
+      until: node_ready.rc == 0
       tags: [k3s, k3s-primary]
 
     - name: Afficher état nœud primaire
