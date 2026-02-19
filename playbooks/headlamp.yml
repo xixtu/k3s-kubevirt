@@ -25,7 +25,7 @@
 
     - name: Ajouter le repo Helm Headlamp
       ansible.builtin.command: >
-        helm repo add headlamp-k8s https://headlamp-k8s.github.io/headlamp/
+        helm repo add headlamp https://kubernetes-sigs.github.io/headlamp/
       environment:
         KUBECONFIG: /etc/rancher/k3s/k3s.yaml
       changed_when: false
@@ -93,7 +93,7 @@
 
     - name: Installer Headlamp via Helm
       ansible.builtin.command: >
-        helm install headlamp headlamp-k8s/headlamp
+        helm install headlamp headlamp/headlamp
         --namespace headlamp
         --create-namespace
         --version {{ headlamp_version }}
