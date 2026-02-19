@@ -5,7 +5,7 @@
   vars:
     target_namespace: "kwaba-kinesiologie-redirect"
     app_name: "kwaba-redirect"
-    fqdn: "kwaba-kinesiologie.corp.lcl"
+    fqdn: "kwaba-kinesiologie.app.corp.lcl"
     source_html: "{{ playbook_dir }}/../files/index_kwaba_kinesiologie.html"
     # Chemin standard pour K3s
     k3s_config: "/etc/rancher/k3s/k3s.yaml"

@@ -805,3 +805,123 @@ Origin: /home/administrator/git/k3s-kubevirt/playbooks/kwaba_deploy_redirect.yml
 2026-02-19 21:53:27,357 p=96813 u=administrator n=ansible INFO| Installation du paquet python3-kubernetes ----------------------------------------------------------------------------------------------------------------------- 3.22s
 2026-02-19 21:53:27,358 p=96813 u=administrator n=ansible INFO| Créer le namespace ---------------------------------------------------------------------------------------------------------------------------------------------- 1.93s
 2026-02-19 21:53:27,358 p=96813 u=administrator n=ansible INFO| Créer la ConfigMap ---------------------------------------------------------------------------------------------------------------------------------------------- 0.08s
+2026-02-19 22:22:32,806 p=98908 u=administrator n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+
+2026-02-19 22:22:32,807 p=98908 u=administrator n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be removed from collection 'community.general' version 12.0.0.
+
+2026-02-19 22:22:32,849 p=98908 u=administrator n=ansible INFO| PLAY [Déploiement de la redirection Kwaba Kinésiologie] ****************************************************************************************************************
+2026-02-19 22:22:32,862 p=98908 u=administrator n=ansible INFO| TASK [Gathering Facts] *************************************************************************************************************************************************
+2026-02-19 22:22:32,862 p=98908 u=administrator n=ansible INFO| jeudi 19 février 2026  22:22:32 +0100 (0:00:00.019)       0:00:00.019 ********* 
+2026-02-19 22:22:36,505 p=98908 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 22:22:36,579 p=98908 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-19 22:22:36,620 p=98908 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 22:22:36,634 p=98908 u=administrator n=ansible INFO| TASK [Installation du paquet python3-kubernetes] ***********************************************************************************************************************
+2026-02-19 22:22:36,634 p=98908 u=administrator n=ansible INFO| jeudi 19 février 2026  22:22:36 +0100 (0:00:03.771)       0:00:03.791 ********* 
+2026-02-19 22:22:43,494 p=98908 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-19 22:22:44,433 p=98908 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 22:22:44,988 p=98908 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 22:22:45,003 p=98908 u=administrator n=ansible INFO| TASK [Créer le namespace] **********************************************************************************************************************************************
+2026-02-19 22:22:45,003 p=98908 u=administrator n=ansible INFO| jeudi 19 février 2026  22:22:45 +0100 (0:00:08.369)       0:00:12.160 ********* 
+2026-02-19 22:22:46,776 p=98908 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 22:22:46,869 p=98908 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-19 22:22:47,007 p=98908 u=administrator n=ansible WARNING| [WARNING]: Collection cloud.common does not support Ansible version 2.19.0
+
+2026-02-19 22:22:47,007 p=98908 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 22:22:47,016 p=98908 u=administrator n=ansible INFO| TASK [Créer la ConfigMap] **********************************************************************************************************************************************
+2026-02-19 22:22:47,016 p=98908 u=administrator n=ansible INFO| jeudi 19 février 2026  22:22:47 +0100 (0:00:02.012)       0:00:14.173 ********* 
+2026-02-19 22:22:48,387 p=98908 u=administrator n=ansible INFO| changed: [k3s-node-2]
+2026-02-19 22:22:48,474 p=98908 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-19 22:22:48,581 p=98908 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 22:22:48,595 p=98908 u=administrator n=ansible INFO| TASK [Déployer Nginx] **************************************************************************************************************************************************
+2026-02-19 22:22:48,595 p=98908 u=administrator n=ansible INFO| jeudi 19 février 2026  22:22:48 +0100 (0:00:01.578)       0:00:15.752 ********* 
+2026-02-19 22:22:50,101 p=98908 u=administrator n=ansible INFO| changed: [k3s-node-3]
+2026-02-19 22:22:50,197 p=98908 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 22:22:50,216 p=98908 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 22:22:50,230 p=98908 u=administrator n=ansible INFO| TASK [Créer le Service] ************************************************************************************************************************************************
+2026-02-19 22:22:50,231 p=98908 u=administrator n=ansible INFO| jeudi 19 février 2026  22:22:50 +0100 (0:00:01.635)       0:00:17.387 ********* 
+2026-02-19 22:22:51,686 p=98908 u=administrator n=ansible WARNING| [WARNING]: kwaba-redirect-service was not found, but creating it returned a 409 Conflict error. This can happen                         if the resource you are creating does not directly create a resource of the same kind.
+
+2026-02-19 22:22:51,687 p=98908 u=administrator n=ansible INFO| changed: [k3s-node-2]
+2026-02-19 22:22:51,714 p=98908 u=administrator n=ansible INFO| changed: [k3s-node-3]
+2026-02-19 22:22:51,794 p=98908 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 22:22:51,805 p=98908 u=administrator n=ansible INFO| TASK [Créer l'Ingress] *************************************************************************************************************************************************
+2026-02-19 22:22:51,805 p=98908 u=administrator n=ansible INFO| jeudi 19 février 2026  22:22:51 +0100 (0:00:01.574)       0:00:18.962 ********* 
+2026-02-19 22:22:53,287 p=98908 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 22:22:53,290 p=98908 u=administrator n=ansible INFO| changed: [k3s-node-3]
+2026-02-19 22:22:53,390 p=98908 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 22:22:53,393 p=98908 u=administrator n=ansible INFO| PLAY RECAP *************************************************************************************************************************************************************
+2026-02-19 22:22:53,393 p=98908 u=administrator n=ansible INFO| k3s-node-1                 : ok=7    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+2026-02-19 22:22:53,394 p=98908 u=administrator n=ansible INFO| k3s-node-2                 : ok=7    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+2026-02-19 22:22:53,394 p=98908 u=administrator n=ansible INFO| k3s-node-3                 : ok=7    changed=3    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+2026-02-19 22:22:53,394 p=98908 u=administrator n=ansible INFO| PLAYBOOK RECAP *********************************************************************************************************************************************************
+2026-02-19 22:22:53,394 p=98908 u=administrator n=ansible INFO| Playbook run took 0 days, 0 hours, 0 minutes, 20 seconds
+
+2026-02-19 22:22:53,395 p=98908 u=administrator n=ansible INFO| TASKS RECAP ************************************************************************************************************************************************************
+2026-02-19 22:22:53,395 p=98908 u=administrator n=ansible INFO| jeudi 19 février 2026  22:22:53 +0100 (0:00:01.589)       0:00:20.552 ********* 
+2026-02-19 22:22:53,395 p=98908 u=administrator n=ansible INFO| =============================================================================== 
+2026-02-19 22:22:53,395 p=98908 u=administrator n=ansible INFO| Installation du paquet python3-kubernetes ----------------------------------------------------------------------------------------------------------------------- 8.37s
+2026-02-19 22:22:53,396 p=98908 u=administrator n=ansible INFO| Gathering Facts ------------------------------------------------------------------------------------------------------------------------------------------------- 3.77s
+2026-02-19 22:22:53,396 p=98908 u=administrator n=ansible INFO| Créer le namespace ---------------------------------------------------------------------------------------------------------------------------------------------- 2.01s
+2026-02-19 22:22:53,396 p=98908 u=administrator n=ansible INFO| Déployer Nginx -------------------------------------------------------------------------------------------------------------------------------------------------- 1.64s
+2026-02-19 22:22:53,396 p=98908 u=administrator n=ansible INFO| Créer l'Ingress ------------------------------------------------------------------------------------------------------------------------------------------------- 1.59s
+2026-02-19 22:22:53,396 p=98908 u=administrator n=ansible INFO| Créer la ConfigMap ---------------------------------------------------------------------------------------------------------------------------------------------- 1.58s
+2026-02-19 22:22:53,396 p=98908 u=administrator n=ansible INFO| Créer le Service ------------------------------------------------------------------------------------------------------------------------------------------------ 1.57s
+2026-02-19 22:24:58,157 p=99997 u=administrator n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+
+2026-02-19 22:24:58,157 p=99997 u=administrator n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be removed from collection 'community.general' version 12.0.0.
+
+2026-02-19 22:24:58,199 p=99997 u=administrator n=ansible INFO| PLAY [Déploiement de la redirection Kwaba Kinésiologie] ****************************************************************************************************************
+2026-02-19 22:24:58,212 p=99997 u=administrator n=ansible INFO| TASK [Gathering Facts] *************************************************************************************************************************************************
+2026-02-19 22:24:58,212 p=99997 u=administrator n=ansible INFO| jeudi 19 février 2026  22:24:58 +0100 (0:00:00.018)       0:00:00.019 ********* 
+2026-02-19 22:25:01,965 p=99997 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 22:25:02,084 p=99997 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-19 22:25:02,215 p=99997 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 22:25:02,230 p=99997 u=administrator n=ansible INFO| TASK [Installation du paquet python3-kubernetes] ***********************************************************************************************************************
+2026-02-19 22:25:02,230 p=99997 u=administrator n=ansible INFO| jeudi 19 février 2026  22:25:02 +0100 (0:00:04.017)       0:00:04.037 ********* 
+2026-02-19 22:25:04,902 p=99997 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 22:25:04,936 p=99997 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 22:25:05,056 p=99997 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-19 22:25:05,075 p=99997 u=administrator n=ansible INFO| TASK [Créer le namespace] **********************************************************************************************************************************************
+2026-02-19 22:25:05,076 p=99997 u=administrator n=ansible INFO| jeudi 19 février 2026  22:25:05 +0100 (0:00:02.845)       0:00:06.882 ********* 
+2026-02-19 22:25:06,887 p=99997 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 22:25:06,912 p=99997 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-19 22:25:07,050 p=99997 u=administrator n=ansible WARNING| [WARNING]: Collection cloud.common does not support Ansible version 2.19.0
+
+2026-02-19 22:25:07,051 p=99997 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 22:25:07,062 p=99997 u=administrator n=ansible INFO| TASK [Créer la ConfigMap] **********************************************************************************************************************************************
+2026-02-19 22:25:07,062 p=99997 u=administrator n=ansible INFO| jeudi 19 février 2026  22:25:07 +0100 (0:00:01.986)       0:00:08.869 ********* 
+2026-02-19 22:25:08,524 p=99997 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-19 22:25:08,575 p=99997 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 22:25:08,658 p=99997 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 22:25:08,672 p=99997 u=administrator n=ansible INFO| TASK [Déployer Nginx] **************************************************************************************************************************************************
+2026-02-19 22:25:08,672 p=99997 u=administrator n=ansible INFO| jeudi 19 février 2026  22:25:08 +0100 (0:00:01.609)       0:00:10.479 ********* 
+2026-02-19 22:25:10,125 p=99997 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 22:25:10,132 p=99997 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 22:25:10,153 p=99997 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-19 22:25:10,167 p=99997 u=administrator n=ansible INFO| TASK [Créer le Service] ************************************************************************************************************************************************
+2026-02-19 22:25:10,168 p=99997 u=administrator n=ansible INFO| jeudi 19 février 2026  22:25:10 +0100 (0:00:01.495)       0:00:11.974 ********* 
+2026-02-19 22:25:11,691 p=99997 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-19 22:25:11,707 p=99997 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 22:25:11,724 p=99997 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 22:25:11,733 p=99997 u=administrator n=ansible INFO| TASK [Créer l'Ingress] *************************************************************************************************************************************************
+2026-02-19 22:25:11,734 p=99997 u=administrator n=ansible INFO| jeudi 19 février 2026  22:25:11 +0100 (0:00:01.565)       0:00:13.540 ********* 
+2026-02-19 22:25:13,199 p=99997 u=administrator n=ansible INFO| changed: [k3s-node-3]
+2026-02-19 22:25:13,231 p=99997 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 22:25:13,281 p=99997 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 22:25:13,283 p=99997 u=administrator n=ansible INFO| PLAY RECAP *************************************************************************************************************************************************************
+2026-02-19 22:25:13,284 p=99997 u=administrator n=ansible INFO| k3s-node-1                 : ok=7    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+2026-02-19 22:25:13,284 p=99997 u=administrator n=ansible INFO| k3s-node-2                 : ok=7    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+2026-02-19 22:25:13,284 p=99997 u=administrator n=ansible INFO| k3s-node-3                 : ok=7    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+2026-02-19 22:25:13,285 p=99997 u=administrator n=ansible INFO| PLAYBOOK RECAP *********************************************************************************************************************************************************
+2026-02-19 22:25:13,285 p=99997 u=administrator n=ansible INFO| Playbook run took 0 days, 0 hours, 0 minutes, 15 seconds
+
+2026-02-19 22:25:13,285 p=99997 u=administrator n=ansible INFO| TASKS RECAP ************************************************************************************************************************************************************
+2026-02-19 22:25:13,285 p=99997 u=administrator n=ansible INFO| jeudi 19 février 2026  22:25:13 +0100 (0:00:01.551)       0:00:15.092 ********* 
+2026-02-19 22:25:13,286 p=99997 u=administrator n=ansible INFO| =============================================================================== 
+2026-02-19 22:25:13,286 p=99997 u=administrator n=ansible INFO| Gathering Facts ------------------------------------------------------------------------------------------------------------------------------------------------- 4.02s
+2026-02-19 22:25:13,286 p=99997 u=administrator n=ansible INFO| Installation du paquet python3-kubernetes ----------------------------------------------------------------------------------------------------------------------- 2.85s
+2026-02-19 22:25:13,286 p=99997 u=administrator n=ansible INFO| Créer le namespace ---------------------------------------------------------------------------------------------------------------------------------------------- 1.99s
+2026-02-19 22:25:13,287 p=99997 u=administrator n=ansible INFO| Créer la ConfigMap ---------------------------------------------------------------------------------------------------------------------------------------------- 1.61s
+2026-02-19 22:25:13,287 p=99997 u=administrator n=ansible INFO| Créer le Service ------------------------------------------------------------------------------------------------------------------------------------------------ 1.57s
+2026-02-19 22:25:13,287 p=99997 u=administrator n=ansible INFO| Créer l'Ingress ------------------------------------------------------------------------------------------------------------------------------------------------- 1.55s
+2026-02-19 22:25:13,287 p=99997 u=administrator n=ansible INFO| Déployer Nginx -------------------------------------------------------------------------------------------------------------------------------------------------- 1.50s
