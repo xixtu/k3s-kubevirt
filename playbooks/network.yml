@@ -95,12 +95,18 @@
     # CONFIGURATION NETPLAN
     # =========================================================
 
+    - name: Vérifier si /etc/netplan/50-cloud-init.yaml existe
+      ansible.builtin.stat:
+        path: /etc/netplan/50-cloud-init.yaml
+      register: cloud_init_netplan
+      tags: [network, netplan]
+
     - name: Sauvegarder la configuration netplan cloud-init
       ansible.builtin.copy:
         src: /etc/netplan/50-cloud-init.yaml
         dest: /etc/netplan/50-cloud-init.yaml.backup
         remote_src: true
-      failed_when: false
+      when: cloud_init_netplan.stat.exists
       tags: [network, netplan]
 
     - name: Déployer la configuration netplan bond0 (LACP)
@@ -213,6 +219,13 @@
   # ===========================================================
 
   post_tasks:
+
+    - name: Supprimer les anciennes entrées k3s-node incorrectes de /etc/hosts
+      ansible.builtin.lineinfile:
+        path: /etc/hosts
+        regexp: '^192\.168\.1\.\d+\s+k3s-node-'
+        state: absent
+      tags: [network, hosts]
 
     - name: Mettre à jour /etc/hosts avec les IPs cluster
       ansible.builtin.blockinfile:
