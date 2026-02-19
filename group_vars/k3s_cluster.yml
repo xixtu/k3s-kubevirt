@@ -120,6 +120,8 @@ system_config:
 
 # --- Kernel modules requis ---
 kernel_modules:
+  - overlay          # requis par containerd / K3s
+  - br_netfilter     # expose net.bridge.* dans /proc/sys (sysctl)
   - kvm
   - kvm_intel
   - vhost_net
