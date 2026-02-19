@@ -2,22 +2,23 @@
 # =============================================================
 # PLAYBOOK : Configuration réseau - LACP + IPs statiques
 # =============================================================
-# OS cible : Rocky Linux 9 (NetworkManager - nmcli)
+# OS cible : Ubuntu 25.10 (netplan + systemd-networkd)
 #
 # Usage :
 #   ansible-playbook -i inventory/hosts.yml playbooks/network.yml
 #
 # Tags disponibles :
-#   debug, packages, bonding, nm, bond, slaves, apply, verify, hosts
+#   debug, packages, bonding, nm, netplan, apply, verify, hosts
 #
 # Configure :
-#   - Module kernel bonding (persistant)
-#   - Bond0 en mode 802.3ad (LACP) avec IP statique par nœud
+#   - bond0 en mode 802.3ad (LACP) via netplan
 #   - 4 interfaces esclaves : enp10s0f0/1 + enp11s0f0/1
-#   - Gateway + DNS (depuis inventaire)
-#   - /etc/hosts avec les IPs du cluster
+#   - IP statique bond_ip par nœud (depuis inventaire)
+#   - Gateway 192.168.0.254 + DNS 192.168.0.100
+#   - /etc/hosts avec les IPs cluster
 #
-# NE TOUCHE PAS à l'interface de management (DHCP) existante.
+# NE TOUCHE PAS l'interface de management (DHCP) :
+#   /etc/netplan/50-cloud-init.yaml est préservé.
 # =============================================================
 
 - name: Configuration réseau LACP + IPs statiques
@@ -26,14 +27,12 @@
   gather_facts: true
 
   pre_tasks:
-    # -----------------------------------------------------------
+
     - name: Afficher la configuration réseau du nœud
       ansible.builtin.debug:
         msg:
-          - "======================================================="
-          - "=== Configuration réseau : {{ inventory_hostname }}  ==="
-          - "======================================================="
-          - "IP bond0   : {{ node_ip }}/{{ network_prefix }}"
+          - "=== Configuration réseau : {{ inventory_hostname }} ==="
+          - "bond0      : {{ bond_ip }}/{{ network_prefix }}"
           - "Gateway    : {{ network_gateway }}"
           - "DNS        : {{ network_dns | join(', ') }}"
           - "Bond mode  : {{ bond_mode }} (LACP)"
@@ -41,29 +40,42 @@
           - "Management : {{ ansible_host }} (DHCP - non modifiée)"
       tags: [network, debug]
 
-    # -----------------------------------------------------------
     - name: Installer les packages réseau requis
-      ansible.builtin.dnf:
+      ansible.builtin.apt:
         name:
-          - NetworkManager
+          - ifenslave
           - net-tools
-          - bind-utils
+          - bridge-utils
+          - vlan
         state: present
         update_cache: yes
       tags: [network, packages]
 
-    # -----------------------------------------------------------
-    - name: S'assurer que NetworkManager est démarré et activé
+  tasks:
+
+    # =========================================================
+    # DÉSACTIVER NETWORKMANAGER (conflit potentiel avec netplan)
+    # =========================================================
+
+    - name: Vérifier si NetworkManager est installé
       ansible.builtin.systemd:
         name: NetworkManager
-        state: started
-        enabled: true
+      register: nm_status
+      failed_when: false
       tags: [network, nm]
 
-  tasks:
+    - name: Arrêter et désactiver NetworkManager
+      ansible.builtin.systemd:
+        name: NetworkManager
+        state: stopped
+        enabled: false
+      when: nm_status.status is defined and nm_status.status.LoadState == "loaded"
+      tags: [network, nm]
+
     # =========================================================
     # CHARGER LE MODULE BONDING
     # =========================================================
+
     - name: Charger le module kernel bonding
       community.general.modprobe:
         name: bonding
@@ -80,91 +92,49 @@
       tags: [network, bonding]
 
     # =========================================================
-    # NETTOYER LES CONNEXIONS NM EXISTANTES SUR LES ESCLAVES
-    # (évite les conflits lors de la création du bond)
+    # CONFIGURATION NETPLAN
     # =========================================================
-    - name: Lister les connexions NetworkManager existantes
-      ansible.builtin.command: nmcli -t -f NAME,DEVICE connection show
-      register: nm_connections
-      changed_when: false
-      tags: [network, nm]
 
-    - name: Supprimer les connexions NM existantes sur les interfaces esclaves
-      ansible.builtin.command: "nmcli connection delete '{{ item.split(':')[0] }}'"
-      loop: "{{ nm_connections.stdout_lines }}"
-      when:
-        - item.split(':') | length > 1
-        - item.split(':')[1] in network_interfaces
-        - item.split(':')[0] != network_bond_name
+    - name: Sauvegarder la configuration netplan cloud-init
+      ansible.builtin.copy:
+        src: /etc/netplan/50-cloud-init.yaml
+        dest: /etc/netplan/50-cloud-init.yaml.backup
+        remote_src: true
       failed_when: false
-      changed_when: true
-      tags: [network, nm]
+      tags: [network, netplan]
 
-    # =========================================================
-    # CRÉER LE BOND LACP (bond0)
-    # =========================================================
-    - name: Créer l'interface bond0 (mode 802.3ad - LACP)
-      community.general.nmcli:
-        conn_name: "{{ network_bond_name }}"
-        type: bond
-        ifname: "{{ network_bond_name }}"
-        ip4: "{{ node_ip }}/{{ network_prefix }}"
-        gw4: "{{ network_gateway }}"
-        dns4: "{{ network_dns }}"
-        mode: "{{ bond_mode }}"
-        miimon: "{{ bond_miimon }}"
-        xmit_hash_policy: "{{ bond_xmit_hash_policy }}"
-        autoconnect: true
-        state: present
-      tags: [network, bond]
+    - name: Déployer la configuration netplan bond0 (LACP)
+      ansible.builtin.template:
+        src: ../templates/netplan-bond.j2
+        dest: /etc/netplan/01-netcfg.yaml
+        mode: '0600'
+        owner: root
+        group: root
+      tags: [network, netplan]
 
-    # Paramètres LACP supplémentaires via nmcli direct
-    - name: Configurer le LACP rate sur bond0
-      ansible.builtin.command: >
-        nmcli connection modify {{ network_bond_name }}
-        bond.options "mode={{ bond_mode }},miimon={{ bond_miimon }},
-        xmit_hash_policy={{ bond_xmit_hash_policy }},lacp_rate={{ bond_lacp_rate }}"
-      changed_when: true
-      tags: [network, bond]
+    - name: Valider la configuration netplan (dry-run)
+      ansible.builtin.command: netplan generate
+      register: netplan_generate
+      changed_when: false
+      tags: [network, netplan]
 
-    # =========================================================
-    # AJOUTER LES INTERFACES ESCLAVES AU BOND
-    # =========================================================
-    - name: Créer les connexions esclaves (ports du bond)
-      community.general.nmcli:
-        conn_name: "{{ network_bond_name }}-{{ item }}"
-        type: ethernet
-        ifname: "{{ item }}"
-        master: "{{ network_bond_name }}"
-        slave_type: bond
-        autoconnect: true
-        state: present
-      loop: "{{ network_interfaces }}"
-      tags: [network, slaves]
+    - name: Afficher le résultat de la validation netplan
+      ansible.builtin.debug:
+        var: netplan_generate.stdout_lines
+      when: netplan_generate.stdout_lines | length > 0
+      tags: [network, netplan]
 
     # =========================================================
     # APPLIQUER LA CONFIGURATION
     # =========================================================
-    - name: Recharger toutes les connexions NetworkManager
-      ansible.builtin.command: nmcli connection reload
-      changed_when: true
-      tags: [network, apply]
 
-    - name: Activer les connexions esclaves
-      ansible.builtin.command: "nmcli connection up {{ network_bond_name }}-{{ item }}"
-      loop: "{{ network_interfaces }}"
-      failed_when: false
-      changed_when: true
-      tags: [network, apply]
-
-    - name: Activer le bond0
-      ansible.builtin.command: "nmcli connection up {{ network_bond_name }}"
-      async: 30
+    - name: Appliquer la configuration netplan
+      ansible.builtin.command: netplan apply
+      async: 60
       poll: 0
-      register: bond_up_job
       tags: [network, apply]
 
-    - name: Attendre que le réseau se stabilise (bond formation LACP)
+    - name: Attendre la stabilisation du réseau (LACP negociation)
       ansible.builtin.wait_for:
         timeout: 20
       delegate_to: localhost
@@ -179,6 +149,7 @@
     # =========================================================
     # VÉRIFICATION FINALE
     # =========================================================
+
     - name: Vérifier l'état du bond (/proc/net/bonding/bond0)
       ansible.builtin.command: cat /proc/net/bonding/bond0
       register: bond_status
@@ -191,7 +162,7 @@
         var: bond_status.stdout_lines
       tags: [network, verify]
 
-    - name: Vérifier les interfaces réseau (ip addr)
+    - name: Vérifier les interfaces réseau
       ansible.builtin.command: ip addr show
       register: ip_addr
       changed_when: false
@@ -230,37 +201,38 @@
     - name: Résumé de configuration réseau
       ansible.builtin.debug:
         msg:
-          - "======================================================="
-          - "=== Résumé réseau : {{ inventory_hostname }}        ==="
-          - "======================================================="
-          - "Bond0      : {{ node_ip }}/{{ network_prefix }}"
-          - "Gateway    : {{ network_gateway }} -- {{ 'OK ✓' if ping_gateway.rc == 0 else 'ECHEC ✗' }}"
-          - "DNS        : {{ network_dns[0] }} -- {{ 'OK ✓' if ping_dns.rc == 0 else 'ECHEC ✗' }}"
-          - "Interfaces : {{ network_interfaces | length }} ports LACP actifs"
-          - "Management : {{ ansible_host }} (DHCP - non modifiée)"
+          - "=== Configuration réseau OK sur {{ inventory_hostname }} ==="
+          - "bond0      : {{ bond_ip }}/{{ network_prefix }}"
+          - "Gateway    : {{ network_gateway }} ({{ 'OK' if ping_gateway.rc == 0 else 'ECHEC' }})"
+          - "DNS        : {{ network_dns[0] }} ({{ 'OK' if ping_dns.rc == 0 else 'ECHEC' }})"
+          - "Interfaces : {{ network_interfaces | length }} ports LACP"
       tags: [network, verify]
 
   # ===========================================================
   # POST-TASKS : /etc/hosts
   # ===========================================================
+
   post_tasks:
+
     - name: Mettre à jour /etc/hosts avec les IPs cluster
       ansible.builtin.blockinfile:
         path: /etc/hosts
         block: |
-          # Cluster K3s - IPs sur bond0 (LACP statique)
+          # Cluster K3s - IPs bond0 (LACP statique)
           192.168.0.11    k3s-node-1 k3s-node-1.{{ network_domain }}
           192.168.0.12    k3s-node-2 k3s-node-2.{{ network_domain }}
           192.168.0.13    k3s-node-3 k3s-node-3.{{ network_domain }}
         marker: "# {mark} ANSIBLE MANAGED BLOCK - K3s Cluster"
-        create: yes
+        create: true
       tags: [network, hosts]
 
   # ===========================================================
   # HANDLERS
   # ===========================================================
+
   handlers:
-    - name: Restart NetworkManager
+
+    - name: Reload systemd-networkd
       ansible.builtin.systemd:
-        name: NetworkManager
-        state: restarted
+        name: systemd-networkd
+        state: reloaded
