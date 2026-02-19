@@ -2,8 +2,9 @@
 # =============================================================
 # PLAYBOOK PRINCIPAL - Déploiement complet cluster K3s
 # =============================================================
-# Usage : ansible-playbook -i inventory/hosts.yml site.yml
+# Usage : ansible-playbook -i inventory/hosts.yml playbooks/site.yml
 # Tags disponibles :
+#   network   → Configuration réseau LACP + IPs statiques
 #   prereq    → Prérequis système + Git
 #   lvm       → Configuration stockage LVM
 #   k3s       → Installation K3s
@@ -17,50 +18,50 @@
 
 # PHASE 0 : Configuration réseau (LACP + IPs statiques)
 - name: "PHASE 0 - Configuration réseau"
-  import_playbook: playbooks/network.yml
+  import_playbook: network.yml
   tags: [network]
 
 # PHASE 1 : Prérequis sur tous les nœuds
 - name: "PHASE 1 - Prérequis système"
-  import_playbook: playbooks/prerequisites.yml
+  import_playbook: prerequisites.yml
   tags: [prereq]
 
 # # PHASE 2 : Configuration LVM (stockage 3 tiers)
 # - name: "PHASE 2 - Configuration LVM"
-#   import_playbook: playbooks/lvm.yml
+#   import_playbook: lvm.yml
 #   tags: [lvm]
 
 # PHASE 3 : Installation K3s (à venir)
 # - name: "PHASE 3 - K3s Cluster"
-#   import_playbook: playbooks/k3s.yml
+#   import_playbook: k3s.yml
 #   tags: [k3s]
 
 # PHASE 4 : Longhorn (à venir)
 # - name: "PHASE 4 - Longhorn Storage"
-#   import_playbook: playbooks/longhorn.yml
+#   import_playbook: longhorn.yml
 #   tags: [longhorn]
 
 # PHASE 5 : MetalLB (à venir)
 # - name: "PHASE 5 - MetalLB"
-#   import_playbook: playbooks/metallb.yml
+#   import_playbook: metallb.yml
 #   tags: [metallb]
 
 # PHASE 6 : Traefik (à venir)
 # - name: "PHASE 6 - Traefik Ingress"
-#   import_playbook: playbooks/traefik.yml
+#   import_playbook: traefik.yml
 #   tags: [traefik]
 
 # PHASE 7 : Monitoring (à venir)
 # - name: "PHASE 7 - Monitoring Stack"
-#   import_playbook: playbooks/monitoring.yml
+#   import_playbook: monitoring.yml
 #   tags: [monitoring]
 
 # PHASE 8 : KubeVirt (à venir)
 # - name: "PHASE 8 - KubeVirt"
-#   import_playbook: playbooks/kubevirt.yml
+#   import_playbook: kubevirt.yml
 #   tags: [kubevirt]
 
 # PHASE 9 : Rancher (à venir)
 # - name: "PHASE 9 - Rancher UI"
-#   import_playbook: playbooks/rancher.yml
+#   import_playbook: rancher.yml
 #   tags: [rancher]
