@@ -11,57 +11,63 @@
 #   longhorn  → Installation Longhorn
 #   metallb   → Installation MetalLB
 #   traefik   → Installation Traefik
+#   headlamp  → Installation Headlamp Dashboard
 #   monitoring→ Prometheus + Grafana + Alertmanager
 #   kubevirt  → Installation KubeVirt
 #   rancher   → Installation Rancher UI
 # =============================================================
 
-# PHASE 0 : Configuration réseau (LACP + IPs statiques)
-- name: "PHASE 0 - Configuration réseau"
-  import_playbook: network.yml
-  tags: [network]
+# # PHASE 0 : Configuration réseau (LACP + IPs statiques)
+# - name: "PHASE 0 - Configuration réseau"
+#   import_playbook: network.yml
+#   tags: [network]
 
-# PHASE 1 : Prérequis sur tous les nœuds
-- name: "PHASE 1 - Prérequis système"
-  import_playbook: prerequisites.yml
-  tags: [prereq]
+# # PHASE 1 : Prérequis sur tous les nœuds
+# - name: "PHASE 1 - Prérequis système"
+#   import_playbook: prerequisites.yml
+#   tags: [prereq]
 
 # # PHASE 2 : Configuration LVM (stockage 3 tiers)
 # - name: "PHASE 2 - Configuration LVM"
 #   import_playbook: lvm.yml
 #   tags: [lvm]
 
-# PHASE 3 : Installation K3s (à venir)
-# - name: "PHASE 3 - K3s Cluster"
-#   import_playbook: k3s.yml
-#   tags: [k3s]
+# PHASE 3 : Installation K3s HA (3 control planes + embedded etcd)
+- name: "PHASE 3 - K3s Cluster"
+  import_playbook: k3s.yml
+  tags: [k3s]
 
-# PHASE 4 : Longhorn (à venir)
+# PHASE 4 : Longhorn (en attente - vérification disques nodes 2-3)
 # - name: "PHASE 4 - Longhorn Storage"
 #   import_playbook: longhorn.yml
 #   tags: [longhorn]
 
-# PHASE 5 : MetalLB (à venir)
-# - name: "PHASE 5 - MetalLB"
-#   import_playbook: metallb.yml
-#   tags: [metallb]
+# PHASE 5 : MetalLB - Load Balancer Layer 2 (plage 192.168.0.30-60)
+- name: "PHASE 5 - MetalLB"
+  import_playbook: metallb.yml
+  tags: [metallb]
 
-# PHASE 6 : Traefik (à venir)
-# - name: "PHASE 6 - Traefik Ingress"
-#   import_playbook: traefik.yml
-#   tags: [traefik]
+# PHASE 6 : Traefik - Ingress Controller (IP fixe 192.168.0.20 → *.app.corp.lcl)
+- name: "PHASE 6 - Traefik Ingress"
+  import_playbook: traefik.yml
+  tags: [traefik]
 
-# PHASE 7 : Monitoring (à venir)
-# - name: "PHASE 7 - Monitoring Stack"
+# PHASE 7 : Headlamp - Dashboard Kubernetes
+- name: "PHASE 7 - Headlamp Dashboard"
+  import_playbook: headlamp.yml
+  tags: [headlamp]
+
+# PHASE 8 : Monitoring (à venir)
+# - name: "PHASE 8 - Monitoring Stack"
 #   import_playbook: monitoring.yml
 #   tags: [monitoring]
 
-# PHASE 8 : KubeVirt (à venir)
-# - name: "PHASE 8 - KubeVirt"
+# PHASE 9 : KubeVirt (à venir)
+# - name: "PHASE 9 - KubeVirt"
 #   import_playbook: kubevirt.yml
 #   tags: [kubevirt]
 
-# PHASE 9 : Rancher (à venir)
-# - name: "PHASE 9 - Rancher UI"
+# PHASE 10 : Rancher (à venir)
+# - name: "PHASE 10 - Rancher UI"
 #   import_playbook: rancher.yml
 #   tags: [rancher]

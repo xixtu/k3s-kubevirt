@@ -9,18 +9,25 @@ longhorn_version: "1.6.0"
 kubevirt_version: "v1.2.0"
 metallb_version: "v0.13.12"
 cert_manager_version: "v1.13.0"
-traefik_version: "26.0.0"
+traefik_version: "34.2.0"
+headlamp_version: "0.40.0"
 prometheus_stack_version: "55.5.0"
 rancher_version: "2.8.0"
+
+# --- Headlamp dashboard ---
+headlamp_config:
+  hostname: "headlamp.{{ cluster_network.apps_domain }}"
 
 # --- Configuration réseau cluster ---
 cluster_network:
   pod_cidr: "10.42.0.0/16"
   service_cidr: "10.43.0.0/16"
   cluster_dns: "10.43.0.10"
-  metallb_pool: "192.168.1.100-192.168.1.150"
+  metallb_pool: "192.168.0.21-192.168.0.60"
+  traefik_ip: "192.168.0.20"       # IP fixe assignée à Traefik via MetalLB
+  apps_domain: "app.corp.lcl"      # *.app.corp.lcl → 192.168.0.20 (DNS interne)
   vm_network: "192.168.10.0/24"
-  api_server_ip: "192.168.1.11"    # Node 1 = primary
+  api_server_ip: "192.168.0.11"    # Node 1 = primary
 
 # --- Configuration K3s ---
 k3s_config:
@@ -32,6 +39,7 @@ k3s_config:
   kubelet_args:
     - "topology-manager-policy=best-effort"
     - "cpu-manager-policy=static"
+    - "kube-reserved=cpu=500m,memory=256Mi"  # obligatoire avec cpu-manager-policy=static
 
 # --- Configuration Longhorn globale ---
 longhorn_config:
@@ -119,6 +127,8 @@ system_config:
 
 # --- Kernel modules requis ---
 kernel_modules:
+  - overlay          # requis par containerd / K3s
+  - br_netfilter     # expose net.bridge.* dans /proc/sys (sysctl)
   - kvm
   - kvm_intel
   - vhost_net

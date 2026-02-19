@@ -1,11 +1,20 @@
 ---
 # =============================================================
-# PLAYBOOK : Prérequis système + Git
+# PLAYBOOK : Prérequis système + Git + Helm
 # =============================================================
 # Usage : ansible-playbook -i inventory/hosts.yml playbooks/prerequisites.yml
+# Tags :
+#   apt       → Mise à jour système + packages
+#   git       → Installation et vérification Git
+#   system    → Timezone, hostname, swap, /etc/hosts
+#   kernel    → Modules kernel K3s/KubeVirt
+#   sysctl    → Tuning réseau et VM
+#   iscsi     → Service open-iscsi (requis Longhorn)
+#   helm      → Installation Helm
+#   verify    → Vérification finale
 # =============================================================
 
-- name: Installation prérequis système et Git
+- name: Installation prérequis système, Git et Helm
   hosts: k3s_cluster
   become: true
   gather_facts: true
@@ -33,7 +42,7 @@
       ansible.builtin.apt:
         name: "{{ common_packages }}"
         state: present
-      tags: [prereq, packages]
+      tags: [prereq, apt, packages]
 
     - name: Installation Git
       ansible.builtin.apt:
@@ -82,16 +91,17 @@
         name: "{{ node_name }}"
       tags: [prereq, system]
 
-    - name: Mettre à jour /etc/hosts
+    - name: Mettre à jour /etc/hosts avec les IPs bond0 (statiques)
       ansible.builtin.lineinfile:
         path: /etc/hosts
-        line: "{{ item }}"
+        regexp: ".*{{ item.name }}$"
+        line: "{{ item.ip }}    {{ item.name }}"
         state: present
       loop:
-        - "192.168.1.174    k3s-node-1"
-        - "192.168.1.12    k3s-node-2"
-        - "192.168.1.13    k3s-node-3"
-      tags: [prereq, network]
+        - { ip: "192.168.0.11", name: "k3s-node-1" }
+        - { ip: "192.168.0.12", name: "k3s-node-2" }
+        - { ip: "192.168.0.13", name: "k3s-node-3" }
+      tags: [prereq, system]
 
     # =========================================================
     # MODULES KERNEL
@@ -141,6 +151,33 @@
       tags: [prereq, iscsi]
 
     # =========================================================
+    # HELM
+    # =========================================================
+
+    - name: Vérifier si Helm est déjà installé
+      ansible.builtin.stat:
+        path: /usr/local/bin/helm
+      register: helm_binary
+      tags: [prereq, helm]
+
+    - name: Télécharger et installer Helm
+      ansible.builtin.shell: |
+        curl -sfL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+      when: not helm_binary.stat.exists
+      tags: [prereq, helm]
+
+    - name: Vérifier version Helm
+      ansible.builtin.command: helm version --short
+      register: helm_version
+      changed_when: false
+      tags: [prereq, helm]
+
+    - name: Afficher version Helm
+      ansible.builtin.debug:
+        msg: "Helm installé : {{ helm_version.stdout }}"
+      tags: [prereq, helm]
+
+    # =========================================================
     # VÉRIFICATION FINALE
     # =========================================================
 
@@ -156,6 +193,7 @@
         msg:
           - "=== Prérequis OK sur {{ inventory_hostname }} ==="
           - "Git     : {{ git_version.stdout }}"
+          - "Helm    : {{ helm_version.stdout }}"
           - "Hostname: {{ node_name }}"
           - "Swap    : désactivé"
           - "Modules : chargés"

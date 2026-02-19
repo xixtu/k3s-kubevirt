@@ -1,0 +1,198 @@
+---
+# =============================================================
+# PLAYBOOK : Installation Headlamp - Dashboard Kubernetes
+# =============================================================
+# Usage : ansible-playbook -i inventory/hosts.yml playbooks/headlamp.yml
+# Tags :
+#   headlamp-install → Installer Headlamp via Helm
+#   headlamp-verify  → Vérifier pods, Ingress, URL
+# Prérequis : K3s + MetalLB + Traefik installés
+# URL : http://headlamp.app.corp.lcl
+# =============================================================
+
+- name: "Headlamp - Dashboard Kubernetes"
+  hosts: k3s-node-1
+  become: true
+  gather_facts: false
+  vars_files:
+    - "../group_vars/k3s_cluster.yml"
+
+  tasks:
+
+    # ==========================================================
+    # PRÉPARATION
+    # ==========================================================
+
+    - name: Ajouter le repo Helm Headlamp
+      ansible.builtin.command: >
+        helm repo add headlamp https://kubernetes-sigs.github.io/headlamp/
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [headlamp, headlamp-install]
+
+    - name: Mettre à jour les repos Helm
+      ansible.builtin.command: helm repo update
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [headlamp, headlamp-install]
+
+    - name: Vérifier si Headlamp est déjà installé
+      ansible.builtin.command: helm status headlamp -n headlamp
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: headlamp_helm_status
+      failed_when: false
+      changed_when: false
+      tags: [headlamp, headlamp-install]
+
+    # ==========================================================
+    # FICHIER DE VALEURS HELM
+    # ==========================================================
+
+    - name: Écrire le fichier de valeurs Headlamp
+      ansible.builtin.copy:
+        dest: /tmp/headlamp-values.yml
+        mode: '0644'
+        content: |
+          # Headlamp Helm values - cluster k3s
+
+          replicaCount: 1
+
+          # Service interne uniquement (Traefik expose via Ingress)
+          service:
+            type: ClusterIP
+            port: 4466
+
+          # Ingress Traefik
+          ingress:
+            enabled: true
+            className: traefik
+            annotations:
+              traefik.ingress.kubernetes.io/router.entrypoints: web
+            hosts:
+              - host: "{{ headlamp_config.hostname }}"
+                paths:
+                  - path: /
+                    type: Prefix
+
+          # Resources
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "256Mi"
+      tags: [headlamp, headlamp-install]
+
+    # ==========================================================
+    # INSTALLATION HEADLAMP
+    # ==========================================================
+
+    - name: Installer / Mettre à jour Headlamp via Helm
+      ansible.builtin.command: >
+        helm upgrade --install headlamp headlamp/headlamp
+        --namespace headlamp
+        --create-namespace
+        --version {{ headlamp_version }}
+        --values /tmp/headlamp-values.yml
+        --wait
+        --timeout 5m
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      tags: [headlamp, headlamp-install]
+
+    - name: Supprimer le fichier de valeurs temporaire
+      ansible.builtin.file:
+        path: /tmp/headlamp-values.yml
+        state: absent
+      tags: [headlamp, headlamp-install]
+
+    # ==========================================================
+    # VÉRIFICATION
+    # ==========================================================
+
+    - name: Attendre que les pods Headlamp soient Ready
+      ansible.builtin.command: >
+        k3s kubectl wait --for=condition=Ready pods
+        --all -n headlamp
+        --timeout=120s
+      register: headlamp_pods_ready
+      changed_when: false
+      tags: [headlamp, headlamp-verify]
+
+    - name: Vérifier les pods Headlamp
+      ansible.builtin.command: k3s kubectl get pods -n headlamp -o wide
+      register: headlamp_pods
+      changed_when: false
+      tags: [headlamp, headlamp-verify]
+
+    - name: Vérifier le service Headlamp
+      ansible.builtin.command: k3s kubectl get svc -n headlamp
+      register: headlamp_svc
+      changed_when: false
+      tags: [headlamp, headlamp-verify]
+
+    - name: Vérifier l'Ingress Headlamp
+      ansible.builtin.command: k3s kubectl get ingress -n headlamp
+      register: headlamp_ingress
+      changed_when: false
+      tags: [headlamp, headlamp-verify]
+
+    # ==========================================================
+    # TOKEN D'ACCÈS (ServiceAccount admin)
+    # ==========================================================
+
+    - name: Créer le ServiceAccount admin pour Headlamp
+      ansible.builtin.command: >
+        k3s kubectl create serviceaccount headlamp-admin -n headlamp
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: sa_create
+      failed_when: sa_create.rc != 0 and 'already exists' not in sa_create.stderr
+      changed_when: sa_create.rc == 0
+      tags: [headlamp, headlamp-install]
+
+    - name: Créer le ClusterRoleBinding admin pour Headlamp
+      ansible.builtin.command: >
+        k3s kubectl create clusterrolebinding headlamp-ui-admin
+        --clusterrole=cluster-admin
+        --serviceaccount=headlamp:headlamp-admin
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: crb_create
+      failed_when: crb_create.rc != 0 and 'already exists' not in crb_create.stderr
+      changed_when: crb_create.rc == 0
+      tags: [headlamp, headlamp-install]
+
+    - name: Créer le token d'accès Headlamp (durée 24h)
+      ansible.builtin.command: >
+        k3s kubectl create token headlamp-admin -n headlamp --duration=8760h
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: headlamp_token
+      changed_when: false
+      tags: [headlamp, headlamp-install, headlamp-verify]
+
+    # ==========================================================
+    # RÉSUMÉ
+    # ==========================================================
+
+    - name: Résumé Headlamp
+      ansible.builtin.debug:
+        msg:
+          - "================================================"
+          - "  Headlamp v{{ headlamp_version }} installé"
+          - "================================================"
+          - "URL     : http://{{ headlamp_config.hostname }}"
+          - "Ingress : traefik (entrypoint: web)"
+          - "Pods    : {{ headlamp_pods.stdout_lines }}"
+          - "Service : {{ headlamp_svc.stdout_lines }}"
+          - "Ingress : {{ headlamp_ingress.stdout_lines }}"
+          - "================================================"
+          - "TOKEN D'ACCÈS (valide 1 an) :"
+          - "{{ headlamp_token.stdout }}"
+          - "================================================"
+      tags: [headlamp, headlamp-verify]

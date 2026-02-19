@@ -228,22 +228,22 @@ graph TB
     
     subgraph DMZ["🔒 DMZ / Firewall"]
         Firewall["Firewall<br/>Ports: 80, 443"]
-        Router["Router/Gateway<br/>192.168.1.1"]
+        Router["Router/Gateway<br/>192.168.0.254"]
     end
     
-    subgraph LANPhysique["🌐 LAN Physique - 192.168.1.0/24"]
+    subgraph LANPhysique["🌐 LAN Physique - 192.168.0.0/24"]
         Switch["Switch Gigabit"]
         
-        Node1NIC["k3s-node-1<br/>eth0: 192.168.1.11"]
-        Node2NIC["k3s-node-2<br/>eth0: 192.168.1.12"]
-        Node3NIC["k3s-node-3<br/>eth0: 192.168.1.13"]
+        Node1NIC["k3s-node-1<br/>eth0: 192.168.0.11"]
+        Node2NIC["k3s-node-2<br/>eth0: 192.168.0.12"]
+        Node3NIC["k3s-node-3<br/>eth0: 192.168.0.13"]
     end
     
     subgraph MetalLBPool["⚖️ MetalLB IP Pool"]
-        VIP1["VIP: 192.168.1.100<br/>Web Frontend"]
-        VIP2["VIP: 192.168.1.101<br/>API Services"]
-        VIP3["VIP: 192.168.1.102<br/>Grafana"]
-        VIPRange["Pool: 192.168.1.100-150<br/>50 IPs disponibles"]
+        VIP1["VIP: 192.168.0.16<br/>Web Frontend"]
+        VIP2["VIP: 192.168.0.17<br/>API Services"]
+        VIP3["VIP: 192.168.0.18<br/>Grafana"]
+        VIPRange["Pool: 192.168.0.30-60<br/>31 IPs disponibles"]
     end
     
     subgraph K8sNetworks["🔷 Réseaux Kubernetes Overlay"]
