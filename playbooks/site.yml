@@ -16,15 +16,15 @@
 #   rancher   → Installation Rancher UI
 # =============================================================
 
-# PHASE 0 : Configuration réseau (LACP + IPs statiques)
-- name: "PHASE 0 - Configuration réseau"
-  import_playbook: network.yml
-  tags: [network]
+# # PHASE 0 : Configuration réseau (LACP + IPs statiques)
+# - name: "PHASE 0 - Configuration réseau"
+#   import_playbook: network.yml
+#   tags: [network]
 
-# PHASE 1 : Prérequis sur tous les nœuds
-- name: "PHASE 1 - Prérequis système"
-  import_playbook: prerequisites.yml
-  tags: [prereq]
+# # PHASE 1 : Prérequis sur tous les nœuds
+# - name: "PHASE 1 - Prérequis système"
+#   import_playbook: prerequisites.yml
+#   tags: [prereq]
 
 # # PHASE 2 : Configuration LVM (stockage 3 tiers)
 # - name: "PHASE 2 - Configuration LVM"
