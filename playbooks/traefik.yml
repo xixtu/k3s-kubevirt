@@ -1,0 +1,201 @@
+---
+# =============================================================
+# PLAYBOOK : Installation Traefik - Ingress Controller
+# =============================================================
+# Usage : ansible-playbook -i inventory/hosts.yml playbooks/traefik.yml
+# Tags :
+#   traefik-install → Installer Traefik via Helm
+#   traefik-verify  → Vérifier IP, pods, IngressClass
+# Prérequis : K3s + MetalLB installés
+# IP fixe Traefik : 192.168.0.14 (assignée via MetalLB)
+# =============================================================
+
+- name: "Traefik - Ingress Controller"
+  hosts: k3s-node-1
+  become: true
+  gather_facts: false
+  vars_files:
+    - "../group_vars/k3s_cluster.yml"
+
+  tasks:
+
+    # ==========================================================
+    # PRÉPARATION
+    # ==========================================================
+
+    - name: Ajouter le repo Helm Traefik
+      ansible.builtin.command: helm repo add traefik https://helm.traefik.io/traefik
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [traefik, traefik-install]
+
+    - name: Mettre à jour les repos Helm
+      ansible.builtin.command: helm repo update
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [traefik, traefik-install]
+
+    - name: Vérifier si Traefik est déjà installé
+      ansible.builtin.command: helm status traefik -n traefik
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: traefik_helm_status
+      failed_when: false
+      changed_when: false
+      tags: [traefik, traefik-install]
+
+    # ==========================================================
+    # FICHIER DE VALEURS HELM
+    # ==========================================================
+
+    - name: Écrire le fichier de valeurs Traefik
+      ansible.builtin.copy:
+        dest: /tmp/traefik-values.yml
+        mode: '0644'
+        content: |
+          # Traefik Helm values - cluster k3s
+          deployment:
+            replicas: 1
+
+          # Service LoadBalancer avec IP fixe via MetalLB
+          service:
+            type: LoadBalancer
+            spec:
+              loadBalancerIP: "{{ cluster_network.traefik_ip }}"
+
+          # IngressClass par défaut pour tout le cluster
+          ingressClass:
+            enabled: true
+            isDefaultClass: true
+
+          # Ports exposés
+          ports:
+            web:
+              port: 8000
+              expose:
+                default: true
+              exposedPort: 80
+              protocol: TCP
+            websecure:
+              port: 8443
+              expose:
+                default: true
+              exposedPort: 443
+              protocol: TCP
+              tls:
+                enabled: false    # TLS géré par cert-manager en phase suivante
+
+          # Logs
+          logs:
+            general:
+              level: INFO
+            access:
+              enabled: true
+
+          # Dashboard Traefik (accessible en interne uniquement)
+          ingressRoute:
+            dashboard:
+              enabled: false    # Désactivé par sécurité, à activer si besoin
+
+          # Resources
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "50Mi"
+            limits:
+              cpu: "300m"
+              memory: "150Mi"
+      tags: [traefik, traefik-install]
+
+    # ==========================================================
+    # INSTALLATION TRAEFIK
+    # ==========================================================
+
+    - name: Installer Traefik via Helm
+      ansible.builtin.command: >
+        helm install traefik traefik/traefik
+        --namespace traefik
+        --create-namespace
+        --version {{ traefik_version }}
+        --values /tmp/traefik-values.yml
+        --wait
+        --timeout 5m
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      when: traefik_helm_status.rc != 0
+      tags: [traefik, traefik-install]
+
+    - name: Supprimer le fichier de valeurs temporaire
+      ansible.builtin.file:
+        path: /tmp/traefik-values.yml
+        state: absent
+      tags: [traefik, traefik-install]
+
+    # ==========================================================
+    # VÉRIFICATION
+    # ==========================================================
+
+    - name: Attendre que les pods Traefik soient Ready
+      ansible.builtin.command: >
+        k3s kubectl wait --for=condition=Ready pods
+        --all -n traefik
+        --timeout=180s
+      register: traefik_pods_ready
+      changed_when: false
+      tags: [traefik, traefik-verify]
+
+    - name: Récupérer l'IP externe assignée par MetalLB
+      ansible.builtin.command: >
+        k3s kubectl get svc traefik -n traefik
+        -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+      register: traefik_external_ip
+      changed_when: false
+      retries: 10
+      delay: 5
+      until: traefik_external_ip.stdout != ""
+      tags: [traefik, traefik-verify]
+
+    - name: Vérifier les pods Traefik
+      ansible.builtin.command: k3s kubectl get pods -n traefik -o wide
+      register: traefik_pods
+      changed_when: false
+      tags: [traefik, traefik-verify]
+
+    - name: Vérifier le service Traefik
+      ansible.builtin.command: k3s kubectl get svc -n traefik
+      register: traefik_svc
+      changed_when: false
+      tags: [traefik, traefik-verify]
+
+    - name: Vérifier l'IngressClass
+      ansible.builtin.command: k3s kubectl get ingressclass
+      register: ingress_class
+      changed_when: false
+      tags: [traefik, traefik-verify]
+
+    - name: Résumé Traefik
+      ansible.builtin.debug:
+        msg:
+          - "================================================"
+          - "  Traefik v{{ traefik_version }} installé"
+          - "================================================"
+          - "IP assignée  : {{ traefik_external_ip.stdout }}"
+          - "IP attendue  : {{ cluster_network.traefik_ip }}"
+          - "HTTP         : http://{{ traefik_external_ip.stdout }}"
+          - "HTTPS        : https://{{ traefik_external_ip.stdout }}"
+          - "IngressClass : traefik (default)"
+          - "Pods         : {{ traefik_pods.stdout_lines }}"
+          - "Service      : {{ traefik_svc.stdout_lines }}"
+          - "================================================"
+      tags: [traefik, traefik-verify]
+
+    - name: Vérifier que l'IP assignée correspond à l'IP attendue
+      ansible.builtin.fail:
+        msg: >
+          ERREUR : Traefik a reçu l'IP {{ traefik_external_ip.stdout }}
+          mais {{ cluster_network.traefik_ip }} était attendue.
+          Vérifier la config MetalLB et la plage IP.
+      when: traefik_external_ip.stdout != cluster_network.traefik_ip
+      tags: [traefik, traefik-verify]

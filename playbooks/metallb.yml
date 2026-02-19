@@ -1,0 +1,202 @@
+---
+# =============================================================
+# PLAYBOOK : Installation MetalLB - Load Balancer Layer 2
+# =============================================================
+# Usage : ansible-playbook -i inventory/hosts.yml playbooks/metallb.yml
+# Tags :
+#   metallb-helm    → Installer Helm si absent
+#   metallb-install → Installer MetalLB via Helm
+#   metallb-config  → Configurer IPAddressPool + L2Advertisement
+#   metallb-verify  → Vérifier l'état de MetalLB
+# Prérequis : K3s installé (playbooks/k3s.yml)
+# =============================================================
+
+- name: "MetalLB - Load Balancer Layer 2"
+  hosts: k3s-node-1
+  become: true
+  gather_facts: false
+  vars_files:
+    - "../group_vars/k3s_cluster.yml"
+
+  tasks:
+
+    # ==========================================================
+    # INSTALLATION HELM
+    # ==========================================================
+
+    - name: Vérifier si Helm est installé
+      ansible.builtin.stat:
+        path: /usr/local/bin/helm
+      register: helm_binary
+      tags: [metallb, metallb-helm]
+
+    - name: Installer Helm
+      ansible.builtin.shell: |
+        curl -sfL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+      when: not helm_binary.stat.exists
+      tags: [metallb, metallb-helm]
+
+    - name: Vérifier version Helm
+      ansible.builtin.command: helm version --short
+      register: helm_version
+      changed_when: false
+      tags: [metallb, metallb-helm]
+
+    - name: Afficher version Helm
+      ansible.builtin.debug:
+        msg: "Helm installé : {{ helm_version.stdout }}"
+      tags: [metallb, metallb-helm]
+
+    # ==========================================================
+    # INSTALLATION METALLB VIA HELM
+    # ==========================================================
+
+    - name: Ajouter le repo Helm MetalLB
+      ansible.builtin.command: helm repo add metallb https://metallb.github.io/metallb
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [metallb, metallb-install]
+
+    - name: Mettre à jour les repos Helm
+      ansible.builtin.command: helm repo update
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [metallb, metallb-install]
+
+    - name: Vérifier si MetalLB est déjà installé
+      ansible.builtin.command: helm status metallb -n metallb-system
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: metallb_helm_status
+      failed_when: false
+      changed_when: false
+      tags: [metallb, metallb-install]
+
+    - name: Installer MetalLB via Helm
+      ansible.builtin.command: >
+        helm install metallb metallb/metallb
+        --namespace metallb-system
+        --create-namespace
+        --version {{ metallb_version | replace('v', '') }}
+        --wait
+        --timeout 5m
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      when: metallb_helm_status.rc != 0
+      tags: [metallb, metallb-install]
+
+    # ==========================================================
+    # ATTENDRE QUE LES CRDs SOIENT ÉTABLIS
+    # Obligatoire avant d'appliquer IPAddressPool / L2Advertisement
+    # ==========================================================
+
+    - name: Attendre CRD IPAddressPool
+      ansible.builtin.command: >
+        k3s kubectl wait --for=condition=Established
+        crd/ipaddresspools.metallb.io
+        --timeout=120s
+      register: crd_pool
+      changed_when: false
+      tags: [metallb, metallb-config]
+
+    - name: Attendre CRD L2Advertisement
+      ansible.builtin.command: >
+        k3s kubectl wait --for=condition=Established
+        crd/l2advertisements.metallb.io
+        --timeout=120s
+      register: crd_l2
+      changed_when: false
+      tags: [metallb, metallb-config]
+
+    - name: Attendre que les pods MetalLB soient Ready
+      ansible.builtin.command: >
+        k3s kubectl wait --for=condition=Ready pods
+        --all -n metallb-system
+        --timeout=120s
+      register: metallb_pods_ready
+      changed_when: false
+      tags: [metallb, metallb-config]
+
+    # ==========================================================
+    # CONFIGURATION : IPAddressPool + L2Advertisement
+    # ==========================================================
+
+    - name: Écrire le manifeste MetalLB config
+      ansible.builtin.copy:
+        dest: /tmp/metallb-config.yml
+        mode: '0644'
+        content: |
+          ---
+          # Plage d'IPs disponibles pour les services LoadBalancer
+          apiVersion: metallb.io/v1beta1
+          kind: IPAddressPool
+          metadata:
+            name: main-pool
+            namespace: metallb-system
+          spec:
+            addresses:
+              - {{ cluster_network.metallb_pool }}
+          ---
+          # Activer le mode Layer 2 (ARP) sur la plage main-pool
+          apiVersion: metallb.io/v1beta1
+          kind: L2Advertisement
+          metadata:
+            name: main-l2
+            namespace: metallb-system
+          spec:
+            ipAddressPools:
+              - main-pool
+      tags: [metallb, metallb-config]
+
+    - name: Appliquer la configuration MetalLB
+      ansible.builtin.command: k3s kubectl apply -f /tmp/metallb-config.yml
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: metallb_apply
+      changed_when: "'configured' in metallb_apply.stdout or 'created' in metallb_apply.stdout"
+      tags: [metallb, metallb-config]
+
+    - name: Supprimer le fichier manifeste temporaire
+      ansible.builtin.file:
+        path: /tmp/metallb-config.yml
+        state: absent
+      tags: [metallb, metallb-config]
+
+    # ==========================================================
+    # VÉRIFICATION
+    # ==========================================================
+
+    - name: Vérifier les pods MetalLB
+      ansible.builtin.command: k3s kubectl get pods -n metallb-system -o wide
+      register: metallb_pods
+      changed_when: false
+      tags: [metallb, metallb-verify]
+
+    - name: Vérifier l'IPAddressPool
+      ansible.builtin.command: k3s kubectl get ipaddresspools -n metallb-system
+      register: pool_status
+      changed_when: false
+      tags: [metallb, metallb-verify]
+
+    - name: Vérifier la L2Advertisement
+      ansible.builtin.command: k3s kubectl get l2advertisements -n metallb-system
+      register: l2_status
+      changed_when: false
+      tags: [metallb, metallb-verify]
+
+    - name: Résumé MetalLB
+      ansible.builtin.debug:
+        msg:
+          - "================================================"
+          - "  MetalLB {{ metallb_version }} installé"
+          - "================================================"
+          - "Mode         : Layer 2 (ARP)"
+          - "Plage IP     : {{ cluster_network.metallb_pool }}"
+          - "IP Traefik   : {{ cluster_network.traefik_ip }} (réservée)"
+          - "Pods         : {{ metallb_pods.stdout_lines }}"
+          - "Pool         : {{ pool_status.stdout_lines }}"
+          - "L2Advert     : {{ l2_status.stdout_lines }}"
+          - "================================================"
+      tags: [metallb, metallb-verify]

@@ -31,25 +31,25 @@
 #   import_playbook: lvm.yml
 #   tags: [lvm]
 
-# PHASE 3 : Installation K3s (à venir)
-# - name: "PHASE 3 - K3s Cluster"
-#   import_playbook: k3s.yml
-#   tags: [k3s]
+# PHASE 3 : Installation K3s HA (3 control planes + embedded etcd)
+- name: "PHASE 3 - K3s Cluster"
+  import_playbook: k3s.yml
+  tags: [k3s]
 
-# PHASE 4 : Longhorn (à venir)
+# PHASE 4 : Longhorn (en attente - vérification disques nodes 2-3)
 # - name: "PHASE 4 - Longhorn Storage"
 #   import_playbook: longhorn.yml
 #   tags: [longhorn]
 
-# PHASE 5 : MetalLB (à venir)
-# - name: "PHASE 5 - MetalLB"
-#   import_playbook: metallb.yml
-#   tags: [metallb]
+# PHASE 5 : MetalLB - Load Balancer Layer 2 (plage 192.168.0.30-60)
+- name: "PHASE 5 - MetalLB"
+  import_playbook: metallb.yml
+  tags: [metallb]
 
-# PHASE 6 : Traefik (à venir)
-# - name: "PHASE 6 - Traefik Ingress"
-#   import_playbook: traefik.yml
-#   tags: [traefik]
+# PHASE 6 : Traefik - Ingress Controller (IP fixe 192.168.0.14)
+- name: "PHASE 6 - Traefik Ingress"
+  import_playbook: traefik.yml
+  tags: [traefik]
 
 # PHASE 7 : Monitoring (à venir)
 # - name: "PHASE 7 - Monitoring Stack"

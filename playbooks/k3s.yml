@@ -1,0 +1,307 @@
+---
+# =============================================================
+# PLAYBOOK : Installation K3s - Cluster HA 3 control planes
+# =============================================================
+# Usage : ansible-playbook -i inventory/hosts.yml playbooks/k3s.yml
+# Tags :
+#   k3s-config     → Écrire la config K3s (/etc/rancher/k3s/config.yaml)
+#   k3s-primary    → Installer K3s sur le nœud primaire (cluster-init)
+#   k3s-secondary  → Installer K3s sur les nœuds secondaires (join)
+#   kubeconfig     → Récupérer le kubeconfig en local
+#   k3s-verify     → Vérifier l'état du cluster
+# =============================================================
+
+# =============================================================
+# PLAY 1 : Nœud primaire - Bootstrap du cluster
+# =============================================================
+- name: "K3s - Nœud primaire (cluster-init)"
+  hosts: k3s-node-1
+  become: true
+  gather_facts: false
+  vars_files:
+    - "../group_vars/k3s_cluster.yml"
+
+  tasks:
+
+    # ---------------------------------------------------------
+    # CONFIGURATION K3s (fichier config)
+    # ---------------------------------------------------------
+
+    - name: Créer le répertoire de config K3s
+      ansible.builtin.file:
+        path: /etc/rancher/k3s
+        state: directory
+        mode: '0755'
+      tags: [k3s, k3s-config, k3s-primary]
+
+    - name: Déployer la config K3s (nœud primaire)
+      ansible.builtin.copy:
+        dest: /etc/rancher/k3s/config.yaml
+        mode: '0600'
+        content: |
+          # Config K3s - Nœud primaire
+          cluster-init: true
+          node-ip: "{{ bond_ip }}"
+          advertise-address: "{{ bond_ip }}"
+          flannel-backend: "{{ k3s_config.flannel_backend }}"
+          cluster-cidr: "{{ cluster_network.pod_cidr }}"
+          service-cidr: "{{ cluster_network.service_cidr }}"
+          write-kubeconfig-mode: "{{ k3s_config.write_kubeconfig_mode }}"
+          disable:
+          {% for item in k3s_config.disable %}
+            - {{ item }}
+          {% endfor %}
+          tls-san:
+            - "{{ cluster_network.api_server_ip }}"
+            - "192.168.0.12"
+            - "192.168.0.13"
+          kubelet-arg:
+          {% for arg in k3s_config.kubelet_args %}
+            - "{{ arg }}"
+          {% endfor %}
+      tags: [k3s, k3s-config, k3s-primary]
+
+    # ---------------------------------------------------------
+    # INSTALLATION K3s
+    # ---------------------------------------------------------
+
+    - name: Vérifier si K3s est déjà installé et actif
+      ansible.builtin.systemd:
+        name: k3s
+      register: k3s_service
+      failed_when: false
+      tags: [k3s, k3s-primary]
+
+    - name: Installer K3s (nœud primaire)
+      ansible.builtin.shell: |
+        curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="{{ k3s_version }}" sh -s - server
+      when: k3s_service.status is not defined or k3s_service.status.ActiveState != "active"
+      tags: [k3s, k3s-primary]
+
+    - name: Activer et démarrer le service K3s
+      ansible.builtin.systemd:
+        name: k3s
+        state: started
+        enabled: true
+      tags: [k3s, k3s-primary]
+
+    - name: Attendre que le token cluster soit disponible
+      ansible.builtin.wait_for:
+        path: /var/lib/rancher/k3s/server/node-token
+        timeout: 120
+      tags: [k3s, k3s-primary]
+
+    - name: Attendre que l'API K3s réponde sur le port 6443
+      ansible.builtin.wait_for:
+        host: "{{ bond_ip }}"
+        port: 6443
+        timeout: 180
+      tags: [k3s, k3s-primary]
+
+    - name: Attendre que le nœud primaire soit Ready
+      ansible.builtin.command: >
+        k3s kubectl wait --for=condition=Ready node/{{ node_name }}
+        --timeout=120s
+      register: node_ready
+      changed_when: false
+      tags: [k3s, k3s-primary]
+
+    - name: Afficher état nœud primaire
+      ansible.builtin.command: k3s kubectl get nodes -o wide
+      register: node_status
+      changed_when: false
+      tags: [k3s, k3s-primary]
+
+    - name: Status cluster
+      ansible.builtin.debug:
+        msg: "{{ node_status.stdout_lines }}"
+      tags: [k3s, k3s-primary]
+
+# =============================================================
+# PLAY 2 : Nœuds secondaires - Rejoindre le cluster
+# =============================================================
+- name: "K3s - Nœuds secondaires (join cluster)"
+  hosts: k3s_control_plane
+  become: true
+  gather_facts: false
+  serial: 1
+  vars_files:
+    - "../group_vars/k3s_cluster.yml"
+
+  tasks:
+
+    - name: Skip le nœud primaire
+      ansible.builtin.meta: end_host
+      when: k3s_role == "primary"
+      tags: [k3s, k3s-secondary]
+
+    # ---------------------------------------------------------
+    # RÉCUPÉRER LE TOKEN DEPUIS NODE 1
+    # ---------------------------------------------------------
+
+    - name: Lire le token K3s depuis le nœud primaire
+      ansible.builtin.slurp:
+        src: /var/lib/rancher/k3s/server/node-token
+      register: k3s_token_raw
+      delegate_to: k3s-node-1
+      tags: [k3s, k3s-secondary]
+
+    - name: Décoder le token
+      ansible.builtin.set_fact:
+        k3s_node_token: "{{ k3s_token_raw.content | b64decode | trim }}"
+      tags: [k3s, k3s-secondary]
+
+    # ---------------------------------------------------------
+    # CONFIGURATION K3s
+    # ---------------------------------------------------------
+
+    - name: Créer le répertoire de config K3s
+      ansible.builtin.file:
+        path: /etc/rancher/k3s
+        state: directory
+        mode: '0755'
+      tags: [k3s, k3s-config, k3s-secondary]
+
+    - name: Déployer la config K3s (nœud secondaire)
+      ansible.builtin.copy:
+        dest: /etc/rancher/k3s/config.yaml
+        mode: '0600'
+        content: |
+          # Config K3s - Nœud secondaire (join)
+          server: "https://{{ cluster_network.api_server_ip }}:6443"
+          token: "{{ k3s_node_token }}"
+          node-ip: "{{ bond_ip }}"
+          advertise-address: "{{ bond_ip }}"
+          flannel-backend: "{{ k3s_config.flannel_backend }}"
+          write-kubeconfig-mode: "{{ k3s_config.write_kubeconfig_mode }}"
+          disable:
+          {% for item in k3s_config.disable %}
+            - {{ item }}
+          {% endfor %}
+          kubelet-arg:
+          {% for arg in k3s_config.kubelet_args %}
+            - "{{ arg }}"
+          {% endfor %}
+      tags: [k3s, k3s-config, k3s-secondary]
+
+    # ---------------------------------------------------------
+    # INSTALLATION K3s
+    # ---------------------------------------------------------
+
+    - name: Vérifier si K3s est déjà installé et actif
+      ansible.builtin.systemd:
+        name: k3s
+      register: k3s_service
+      failed_when: false
+      tags: [k3s, k3s-secondary]
+
+    - name: Installer K3s (nœud secondaire)
+      ansible.builtin.shell: |
+        curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="{{ k3s_version }}" sh -s - server
+      when: k3s_service.status is not defined or k3s_service.status.ActiveState != "active"
+      tags: [k3s, k3s-secondary]
+
+    - name: Activer et démarrer le service K3s
+      ansible.builtin.systemd:
+        name: k3s
+        state: started
+        enabled: true
+      tags: [k3s, k3s-secondary]
+
+    - name: Attendre que l'API K3s réponde sur ce nœud
+      ansible.builtin.wait_for:
+        host: "{{ bond_ip }}"
+        port: 6443
+        timeout: 180
+      tags: [k3s, k3s-secondary]
+
+    - name: Attendre que ce nœud soit Ready (vu depuis Node 1)
+      ansible.builtin.command: >
+        k3s kubectl wait --for=condition=Ready node/{{ node_name }}
+        --timeout=180s
+      delegate_to: k3s-node-1
+      register: node_ready
+      changed_when: false
+      tags: [k3s, k3s-secondary]
+
+    - name: Pause de stabilisation etcd entre les nœuds
+      ansible.builtin.pause:
+        seconds: 20
+      tags: [k3s, k3s-secondary]
+
+# =============================================================
+# PLAY 3 : Kubeconfig et vérification finale
+# =============================================================
+- name: "K3s - Kubeconfig et vérification cluster"
+  hosts: k3s-node-1
+  become: true
+  gather_facts: false
+  vars_files:
+    - "../group_vars/k3s_cluster.yml"
+
+  tasks:
+
+    - name: Attendre que TOUS les nœuds soient Ready
+      ansible.builtin.command: >
+        k3s kubectl wait --for=condition=Ready nodes
+        --all --timeout=300s
+      register: all_nodes_ready
+      changed_when: false
+      tags: [k3s, k3s-verify]
+
+    - name: État final du cluster
+      ansible.builtin.command: k3s kubectl get nodes -o wide
+      register: final_nodes
+      changed_when: false
+      tags: [k3s, k3s-verify]
+
+    - name: État des pods système
+      ansible.builtin.command: k3s kubectl get pods -n kube-system
+      register: system_pods
+      changed_when: false
+      tags: [k3s, k3s-verify]
+
+    - name: Afficher les nœuds
+      ansible.builtin.debug:
+        msg: "{{ final_nodes.stdout_lines }}"
+      tags: [k3s, k3s-verify]
+
+    - name: Afficher les pods système
+      ansible.builtin.debug:
+        msg: "{{ system_pods.stdout_lines }}"
+      tags: [k3s, k3s-verify]
+
+    # ---------------------------------------------------------
+    # RÉCUPÉRER LE KUBECONFIG EN LOCAL
+    # ---------------------------------------------------------
+
+    - name: Récupérer le kubeconfig depuis Node 1
+      ansible.builtin.fetch:
+        src: /etc/rancher/k3s/k3s.yaml
+        dest: "{{ playbook_dir }}/../kubeconfig.yml"
+        flat: true
+      tags: [k3s, kubeconfig]
+
+    - name: Remplacer 127.0.0.1 par l'IP publique du cluster
+      ansible.builtin.replace:
+        path: "{{ playbook_dir }}/../kubeconfig.yml"
+        regexp: 'https://127\.0\.0\.1:6443'
+        replace: "https://{{ cluster_network.api_server_ip }}:6443"
+      delegate_to: localhost
+      become: false
+      tags: [k3s, kubeconfig]
+
+    - name: Résumé installation K3s
+      ansible.builtin.debug:
+        msg:
+          - "================================================"
+          - "  K3s {{ k3s_version }} installé avec succès"
+          - "================================================"
+          - "API Server   : https://{{ cluster_network.api_server_ip }}:6443"
+          - "Pod CIDR     : {{ cluster_network.pod_cidr }}"
+          - "Service CIDR : {{ cluster_network.service_cidr }}"
+          - "CNI          : Flannel ({{ k3s_config.flannel_backend }})"
+          - "Désactivés   : {{ k3s_config.disable | join(', ') }}"
+          - "kubeconfig   : ./kubeconfig.yml"
+          - "================================================"
+      tags: [k3s, k3s-verify]
