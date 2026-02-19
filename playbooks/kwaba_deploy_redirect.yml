@@ -1,6 +1,6 @@
 ---
 - name: Déploiement de la redirection Kwaba Kinésiologie
-  hosts: k3s_cluster
+  hosts: k3s-node-1
   become: true
   vars:
     target_namespace: "kwaba-kinesiologie-redirect"

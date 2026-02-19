@@ -112,10 +112,6 @@
               traefik.ingress.kubernetes.io/router.middlewares: "headlamp-redirect-https@kubernetescrd"
               cert-manager.io/cluster-issuer: letsencrypt-production
             hosts:
-              - host: "{{ headlamp_config.hostname }}"
-                paths:
-                  - path: /
-                    type: Prefix
               - host: "{{ external_domains.headlamp }}"
                 paths:
                   - path: /
