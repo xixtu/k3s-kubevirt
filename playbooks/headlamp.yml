@@ -157,7 +157,7 @@
 
     - name: Créer le ClusterRoleBinding admin pour Headlamp
       ansible.builtin.command: >
-        k3s kubectl create clusterrolebinding headlamp-admin
+        k3s kubectl create clusterrolebinding headlamp-ui-admin
         --clusterrole=cluster-admin
         --serviceaccount=headlamp:headlamp-admin
       environment:
