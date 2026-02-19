@@ -1,0 +1,53 @@
+---
+- name: Benchmark Multi-Tier Storage
+  hosts: all
+  become: yes
+  vars:
+    bench_paths:
+      - { path: "/data_ultra", name: "ULTRA_SSD" }
+      - { path: "/data_fast", name: "FAST_RAID0_SSD" }
+      - { path: "/data_slow", name: "SLOW_RAID0_HDD" }
+      - { path: "/home/administrator", name: "SYSTEM_SSD" }
+
+  tasks:
+    - name: Installation de fio
+      apt:
+        name: fio
+        state: present
+        update_cache: yes
+
+    - name: Création du dossier de bench temporaire
+      file:
+        path: "{{ item.path }}/bench_tmp"
+        state: directory
+        mode: '0777'
+      loop: "{{ bench_paths }}"
+
+    - name: Exécution du benchmark (DD + FIO)
+      shell: |
+        echo "--- Point de montage: {{ item.path }} ({{ item.name }}) ---" > {{ item.path }}/res_{{ inventory_hostname }}.txt
+        echo "Vitesse Séquentielle :" >> {{ item.path }}/res_{{ inventory_hostname }}.txt
+        dd if=/dev/zero of={{ item.path }}/bench_tmp/test_dd bs=1M count=1024 conv=fdatasync 2>&1 | grep -E "Mo/s|MB/s|Go/s" >> {{ item.path }}/res_{{ inventory_hostname }}.txt
+        
+        fio --name=random_write --ioengine=libaio --rw=randwrite --bs=4k --size=128M --numjobs=1 --iodepth=1 --runtime=5 --time_based --direct=1 --filename={{ item.path }}/bench_tmp/test_fio --group_reporting > {{ item.path }}/fio_raw
+        
+        lat=$(grep -E "clat.*avg" {{ item.path }}/fio_raw | awk -F'[,=]' '{print $6}' | xargs)
+        iops=$(grep "write: IOPS" {{ item.path }}/fio_raw | awk -F'[,=]' '{print $2}' | xargs)
+        
+        echo "Latence Moyenne : $lat µs" >> {{ item.path }}/res_{{ inventory_hostname }}.txt
+        echo "IOPS (4K)       : $iops" >> {{ item.path }}/res_{{ inventory_hostname }}.txt
+      loop: "{{ bench_paths }}"
+      ignore_errors: yes
+
+    - name: Récupération des fichiers de résultats
+      fetch:
+        src: "{{ item.path }}/res_{{ inventory_hostname }}.txt"
+        dest: "./results/{{ inventory_hostname }}_{{ item.name }}.txt"
+        flat: yes
+      loop: "{{ bench_paths }}"
+
+    - name: Nettoyage des fichiers temporaires
+      file:
+        path: "{{ item.0.path }}/{{ item.1 }}"
+        state: absent
+      loop: "{{ bench_paths | product(['bench_tmp', 'fio_raw', 'res_' + inventory_hostname + '.txt']) | list }}"

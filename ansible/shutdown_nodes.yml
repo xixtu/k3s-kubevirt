@@ -1,0 +1,9 @@
+---
+- name: Force Power Off des noeuds
+  hosts: all
+  become: yes
+  tasks:
+    - name: Commande d'extinction totale
+      shell: "/sbin/shutdown -P now"
+      async: 1
+      poll: 0

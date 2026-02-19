@@ -1,0 +1,283 @@
+---
+# =============================================================
+# PLAYBOOK : Configuration réseau - LACP + IPs statiques
+# =============================================================
+# Usage : ansible-playbook -i inventory/hosts.yml playbooks/network.yml
+#
+# Configure :
+# - LACP bond0 avec 4 interfaces (enp10s0f0, enp10s0f1, enp11s0f0, enp11s0f1)
+# - IPs statiques par nœud
+# - Gateway + DNS
+# =============================================================
+
+- name: Configuration réseau LACP + IPs statiques
+  hosts: k3s_cluster
+  become: true
+  gather_facts: true
+
+  vars:
+    # Interfaces physiques à agréger
+    bond_interfaces:
+      - enp10s0f0
+      - enp10s0f1
+      - enp11s0f0
+      - enp11s0f1
+
+    # Configuration réseau commune
+    network_config:
+      netmask: 255.255.255.0
+      prefix: 24
+      gateway: 192.168.0.254
+      dns_nameservers:
+        - 192.168.0.100
+        - 8.8.8.8           # DNS secondaire (Google)
+      dns_search: cluster.local
+
+    # IPs par nœud (depuis inventaire)
+    node_ips:
+      k3s-node-1: 192.168.0.11
+      k3s-node-2: 192.168.0.12
+      k3s-node-3: 192.168.0.13
+
+  pre_tasks:
+
+    - name: Afficher la configuration réseau du nœud
+      ansible.builtin.debug:
+        msg:
+          - "=== Configuration réseau : {{ inventory_hostname }} ==="
+          - "IP      : {{ node_ips[inventory_hostname] }}/{{ network_config.prefix }}"
+          - "Gateway : {{ network_config.gateway }}"
+          - "DNS     : {{ network_config.dns_nameservers | join(', ') }}"
+          - "Bond    : {{ bond_interfaces | join(', ') }}"
+      tags: [network, debug]
+
+    - name: Installer les packages réseau requis
+      ansible.builtin.apt:
+        name:
+          - ifenslave
+          - net-tools
+          - bridge-utils
+          - vlan
+        state: present
+        update_cache: yes
+      tags: [network, packages]
+
+  tasks:
+
+    # =========================================================
+    # DÉSACTIVER NETWORKMANAGER (conflit avec netplan)
+    # =========================================================
+
+    - name: Vérifier si NetworkManager est installé
+      ansible.builtin.systemd:
+        name: NetworkManager
+      register: nm_status
+      failed_when: false
+      tags: [network, nm]
+
+    - name: Arrêter et désactiver NetworkManager
+      ansible.builtin.systemd:
+        name: NetworkManager
+        state: stopped
+        enabled: no
+      when: nm_status.status.LoadState == "loaded"
+      tags: [network, nm]
+
+    # =========================================================
+    # CHARGER LE MODULE BONDING
+    # =========================================================
+
+    - name: Charger le module bonding
+      community.general.modprobe:
+        name: bonding
+        state: present
+      tags: [network, bonding]
+
+    - name: Rendre le module bonding persistant
+      ansible.builtin.copy:
+        dest: /etc/modules-load.d/bonding.conf
+        content: |
+          # Module bonding pour LACP
+          bonding
+        mode: '0644'
+      tags: [network, bonding]
+
+    # =========================================================
+    # CONFIGURATION NETPLAN (Ubuntu)
+    # =========================================================
+
+    - name: Sauvegarder la config netplan existante
+      ansible.builtin.copy:
+        src: /etc/netplan/50-cloud-init.yaml
+        dest: /etc/netplan/50-cloud-init.yaml.backup
+        remote_src: yes
+      failed_when: false
+      tags: [network, netplan]
+
+    - name: Créer configuration netplan LACP
+      ansible.builtin.copy:
+        dest: /etc/netplan/01-netcfg.yaml
+        content: |
+          # Configuration réseau Cluster K3s
+          # LACP bond0 avec 4 interfaces
+          network:
+            version: 2
+            renderer: networkd
+
+            ethernets:
+              # Interfaces membres du bond - pas de config IP
+              enp10s0f0:
+                dhcp4: no
+                dhcp6: no
+              enp10s0f1:
+                dhcp4: no
+                dhcp6: no
+              enp11s0f0:
+                dhcp4: no
+                dhcp6: no
+              enp11s0f1:
+                dhcp4: no
+                dhcp6: no
+
+            bonds:
+              bond0:
+                dhcp4: no
+                dhcp6: no
+                interfaces:
+                  - enp10s0f0
+                  - enp10s0f1
+                  - enp11s0f0
+                  - enp11s0f1
+                addresses:
+                  - {{ node_ips[inventory_hostname] }}/{{ network_config.prefix }}
+                routes:
+                  - to: default
+                    via: {{ network_config.gateway }}
+                nameservers:
+                  search: [{{ network_config.dns_search }}]
+                  addresses: {{ network_config.dns_nameservers | to_json }}
+                parameters:
+                  mode: 802.3ad          # LACP
+                  mii-monitor-interval: 100
+                  lacp-rate: fast
+                  transmit-hash-policy: layer3+4
+                  up-delay: 200
+                  down-delay: 200
+        mode: '0644'
+      tags: [network, netplan]
+
+    - name: Valider la configuration netplan
+      ansible.builtin.command: netplan try --timeout 10
+      register: netplan_try
+      failed_when: false
+      tags: [network, netplan]
+
+    - name: Afficher résultat validation netplan
+      ansible.builtin.debug:
+        var: netplan_try
+      tags: [network, netplan]
+
+    # =========================================================
+    # APPLIQUER LA CONFIGURATION
+    # =========================================================
+
+    - name: Appliquer la configuration netplan
+      ansible.builtin.command: netplan apply
+      async: 60
+      poll: 0
+      register: netplan_apply
+      tags: [network, apply]
+
+    - name: Attendre que le réseau se stabilise
+      ansible.builtin.wait_for:
+        timeout: 15
+      delegate_to: localhost
+      tags: [network, apply]
+
+    - name: Vérifier connectivité après reconfiguration
+      ansible.builtin.wait_for_connection:
+        timeout: 60
+        delay: 5
+      tags: [network, apply]
+
+    # =========================================================
+    # VÉRIFICATION FINALE
+    # =========================================================
+
+    - name: Vérifier l'état du bond
+      ansible.builtin.command: cat /proc/net/bonding/bond0
+      register: bond_status
+      changed_when: false
+      tags: [network, verify]
+
+    - name: Afficher l'état du bond
+      ansible.builtin.debug:
+        var: bond_status.stdout_lines
+      tags: [network, verify]
+
+    - name: Vérifier les interfaces réseau
+      ansible.builtin.command: ip addr show
+      register: ip_addr
+      changed_when: false
+      tags: [network, verify]
+
+    - name: Afficher les interfaces
+      ansible.builtin.debug:
+        var: ip_addr.stdout_lines
+      tags: [network, verify]
+
+    - name: Vérifier les routes
+      ansible.builtin.command: ip route show
+      register: ip_route
+      changed_when: false
+      tags: [network, verify]
+
+    - name: Afficher les routes
+      ansible.builtin.debug:
+        var: ip_route.stdout_lines
+      tags: [network, verify]
+
+    - name: Tester la gateway
+      ansible.builtin.command: ping -c 3 {{ network_config.gateway }}
+      register: ping_gateway
+      changed_when: false
+      failed_when: false
+      tags: [network, verify]
+
+    - name: Tester DNS
+      ansible.builtin.command: ping -c 3 {{ network_config.dns_nameservers[0] }}
+      register: ping_dns
+      changed_when: false
+      failed_when: false
+      tags: [network, verify]
+
+    - name: Résumé configuration réseau
+      ansible.builtin.debug:
+        msg:
+          - "=== Configuration réseau OK sur {{ inventory_hostname }} ==="
+          - "Bond0     : {{ node_ips[inventory_hostname] }}/{{ network_config.prefix }}"
+          - "Gateway   : {{ network_config.gateway }} ({{ 'OK' if ping_gateway.rc == 0 else 'FAIL' }})"
+          - "DNS       : {{ network_config.dns_nameservers[0] }} ({{ 'OK' if ping_dns.rc == 0 else 'FAIL' }})"
+          - "Interfaces: {{ bond_interfaces | length }} x LACP"
+      tags: [network, verify]
+
+  post_tasks:
+
+    - name: Mettre à jour /etc/hosts avec les nouvelles IPs
+      ansible.builtin.blockinfile:
+        path: /etc/hosts
+        block: |
+          # Cluster K3s
+          192.168.0.11    k3s-node-1 k3s-node-1.cluster.local
+          192.168.0.12    k3s-node-2 k3s-node-2.cluster.local
+          192.168.0.13    k3s-node-3 k3s-node-3.cluster.local
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - K3s Cluster"
+        create: yes
+      tags: [network, hosts]
+
+  handlers:
+
+    - name: Reload systemd-networkd
+      ansible.builtin.systemd:
+        name: systemd-networkd
+        state: reloaded
