@@ -199,3 +199,14 @@
           - "Modules : chargés"
           - "iSCSI   : actif"
       tags: [prereq, verify]
+
+# =========================================================
+    # INSTALLATION DES DÉPENDANCES PYTHON (Vos commandes)
+    # =========================================================
+    
+    - name: Installation du paquet python3-kubernetes
+      ansible.builtin.apt:
+        name: python3-kubernetes
+        state: present
+        update_cache: yes
+      tags: [setup, python]

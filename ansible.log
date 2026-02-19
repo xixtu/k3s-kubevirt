@@ -1,231 +1,253 @@
-2026-02-19 19:24:56,362 p=68176 u=administrator n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+2026-02-19 21:42:10,735 p=92574 u=administrator n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
 
-2026-02-19 19:24:56,362 p=68176 u=administrator n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be removed from collection 'community.general' version 12.0.0.
+2026-02-19 21:42:10,735 p=92574 u=administrator n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be removed from collection 'community.general' version 12.0.0.
 
-2026-02-19 19:24:56,422 p=68176 u=administrator n=ansible INFO| PLAY [Installation prérequis système, Git et Helm] ***************************************************************************************************************************************************************************************************************************************************
-2026-02-19 19:24:56,446 p=68176 u=administrator n=ansible INFO| TASK [Gathering Facts] *******************************************************************************************************************************************************************************************************************************************************************************
-2026-02-19 19:24:56,446 p=68176 u=administrator n=ansible INFO| jeudi 19 février 2026  19:24:56 +0100 (0:00:00.048)       0:00:00.048 ********* 
-2026-02-19 19:24:59,793 p=68176 u=administrator n=ansible INFO| ok: [k3s-node-2]
-2026-02-19 19:24:59,999 p=68176 u=administrator n=ansible INFO| ok: [k3s-node-1]
-2026-02-19 19:25:00,070 p=68176 u=administrator n=ansible INFO| ok: [k3s-node-3]
-2026-02-19 19:25:00,096 p=68176 u=administrator n=ansible INFO| TASK [Mise à jour du cache apt] **********************************************************************************************************************************************************************************************************************************************************************
-2026-02-19 19:25:00,096 p=68176 u=administrator n=ansible INFO| jeudi 19 février 2026  19:25:00 +0100 (0:00:03.650)       0:00:03.698 ********* 
-2026-02-19 19:25:01,473 p=68176 u=administrator n=ansible INFO| ok: [k3s-node-1]
-2026-02-19 19:25:01,479 p=68176 u=administrator n=ansible INFO| ok: [k3s-node-2]
-2026-02-19 19:25:01,494 p=68176 u=administrator n=ansible INFO| ok: [k3s-node-3]
-2026-02-19 19:25:01,523 p=68176 u=administrator n=ansible INFO| TASK [Mise à jour complète du système] ***************************************************************************************************************************************************************************************************************************************************************
-2026-02-19 19:25:01,523 p=68176 u=administrator n=ansible INFO| jeudi 19 février 2026  19:25:01 +0100 (0:00:01.426)       0:00:05.124 ********* 
-2026-02-19 19:25:03,195 p=68176 u=administrator n=ansible INFO| ok: [k3s-node-2]
-2026-02-19 19:25:03,235 p=68176 u=administrator n=ansible INFO| ok: [k3s-node-3]
-2026-02-19 19:25:03,340 p=68176 u=administrator n=ansible ERROR| [ERROR]: Unexpected Exception, this is probably a bug: [Errno 3] No such process
+2026-02-19 21:42:10,776 p=92574 u=administrator n=ansible WARNING| [WARNING]: Found variable using reserved name 'namespace'.
+Origin: /home/administrator/git/k3s-kubevirt/playbooks/kwaba_deploy_redirect.yml:6:5
 
-Traceback (most recent call last):
-  File "/usr/lib/python3/dist-packages/ansible/cli/__init__.py", line 660, in cli_executor
-    exit_code = cli.run()
-  File "/usr/lib/python3/dist-packages/ansible/cli/playbook.py", line 153, in run
-    results = pbex.run()
-  File "/usr/lib/python3/dist-packages/ansible/executor/playbook_executor.py", line 188, in run
-    result = self._tqm.run(play=play)
-  File "/usr/lib/python3/dist-packages/ansible/executor/task_queue_manager.py", line 344, in run
-    play_return = strategy.run(iterator, play_context)
-  File "/usr/lib/python3/dist-packages/ansible/plugins/strategy/linear.py", line 216, in run
-    results.extend(self._wait_on_pending_results(iterator))
-                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
-  File "/usr/lib/python3/dist-packages/ansible/plugins/strategy/__init__.py", line 796, in _wait_on_pending_results
-    time.sleep(C.DEFAULT_INTERNAL_POLL_INTERVAL)
-    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3/dist-packages/ansible/executor/process/worker.py", line 110, in _term
-    os.killpg(self.pid, signum)
-    ~~~~~~~~~^^^^^^^^^^^^^^^^^^
-ProcessLookupError: [Errno 3] No such process
-
-The above exception was the direct cause of the following exception:
-
-Traceback (most recent call last):
-  File "/usr/lib/python3/dist-packages/ansible/cli/__init__.py", line 669, in cli_executor
-    raise AnsibleError("Unexpected Exception, this is probably a bug.") from ex
-ansible.errors.AnsibleError: Unexpected Exception, this is probably a bug: [Errno 3] No such process
+4   connection: local
+5   vars:
+6     namespace: "kwaba-kinesiologie-redirect"
+      ^ column 5
 
 
-2026-02-19 19:25:17,109 p=68604 u=administrator n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+2026-02-19 21:42:10,779 p=92574 u=administrator n=ansible INFO| PLAY [Déploiement de la redirection Kwaba Kinésiologie] ****************************************************************************************************************
+2026-02-19 21:42:10,792 p=92574 u=administrator n=ansible INFO| TASK [Gathering Facts] *************************************************************************************************************************************************
+2026-02-19 21:42:10,793 p=92574 u=administrator n=ansible INFO| jeudi 19 février 2026  21:42:10 +0100 (0:00:00.020)       0:00:00.020 ********* 
+2026-02-19 21:42:13,438 p=92574 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 21:42:13,455 p=92574 u=administrator n=ansible INFO| TASK [Créer le namespace] **********************************************************************************************************************************************
+2026-02-19 21:42:13,456 p=92574 u=administrator n=ansible INFO| jeudi 19 février 2026  21:42:13 +0100 (0:00:02.662)       0:00:02.683 ********* 
+2026-02-19 21:42:14,778 p=92574 u=administrator n=ansible WARNING| [WARNING]: Collection cloud.common does not support Ansible version 2.19.0
 
-2026-02-19 19:25:17,109 p=68604 u=administrator n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be removed from collection 'community.general' version 12.0.0.
+2026-02-19 21:42:14,779 p=92574 u=administrator n=ansible ERROR| [ERROR]: Task failed: Module failed: Failed to import the required Python library (kubernetes) on k3s-node-1's Python /usr/bin/python3. Please read the module documentation and install it in the appropriate location. If the required library is installed, but Ansible is using the wrong Python interpreter, please consult the documentation on ansible_python_interpreter
+Origin: /home/administrator/git/k3s-kubevirt/playbooks/kwaba_deploy_redirect.yml:13:7
 
-2026-02-19 19:25:17,185 p=68604 u=administrator n=ansible INFO| PLAY [Installation prérequis système, Git et Helm] ***************************************************************************************************************************************************************************************************************************************************
-2026-02-19 19:25:17,214 p=68604 u=administrator n=ansible INFO| TASK [Gathering Facts] *******************************************************************************************************************************************************************************************************************************************************************************
-2026-02-19 19:25:17,214 p=68604 u=administrator n=ansible INFO| jeudi 19 février 2026  19:25:17 +0100 (0:00:00.058)       0:00:00.058 ********* 
-2026-02-19 19:25:19,490 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-1]
-2026-02-19 19:25:19,583 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-2]
-2026-02-19 19:25:19,606 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-3]
-2026-02-19 19:25:19,630 p=68604 u=administrator n=ansible INFO| TASK [Mise à jour du cache apt] **********************************************************************************************************************************************************************************************************************************************************************
-2026-02-19 19:25:19,630 p=68604 u=administrator n=ansible INFO| jeudi 19 février 2026  19:25:19 +0100 (0:00:02.416)       0:00:02.475 ********* 
-2026-02-19 19:25:20,973 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-2]
-2026-02-19 19:25:21,015 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-3]
-2026-02-19 19:25:21,107 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-1]
-2026-02-19 19:25:21,135 p=68604 u=administrator n=ansible INFO| TASK [Mise à jour complète du système] ***************************************************************************************************************************************************************************************************************************************************************
-2026-02-19 19:25:21,135 p=68604 u=administrator n=ansible INFO| jeudi 19 février 2026  19:25:21 +0100 (0:00:01.504)       0:00:03.980 ********* 
-2026-02-19 19:25:22,836 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-3]
-2026-02-19 19:25:22,879 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-2]
-2026-02-19 19:25:22,997 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-1]
-2026-02-19 19:25:23,027 p=68604 u=administrator n=ansible INFO| TASK [Installation des packages essentiels] **********************************************************************************************************************************************************************************************************************************************************
-2026-02-19 19:25:23,027 p=68604 u=administrator n=ansible INFO| jeudi 19 février 2026  19:25:23 +0100 (0:00:01.891)       0:00:05.871 ********* 
-2026-02-19 19:25:24,387 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-2]
-2026-02-19 19:25:24,390 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-3]
-2026-02-19 19:25:24,458 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-1]
-2026-02-19 19:25:24,475 p=68604 u=administrator n=ansible INFO| TASK [Installation Git] ******************************************************************************************************************************************************************************************************************************************************************************
-2026-02-19 19:25:24,476 p=68604 u=administrator n=ansible INFO| jeudi 19 février 2026  19:25:24 +0100 (0:00:01.448)       0:00:07.320 ********* 
-2026-02-19 19:25:25,755 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-2]
-2026-02-19 19:25:25,791 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-3]
-2026-02-19 19:25:25,863 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-1]
-2026-02-19 19:25:25,892 p=68604 u=administrator n=ansible INFO| TASK [Vérifier version Git] **************************************************************************************************************************************************************************************************************************************************************************
-2026-02-19 19:25:25,893 p=68604 u=administrator n=ansible INFO| jeudi 19 février 2026  19:25:25 +0100 (0:00:01.416)       0:00:08.737 ********* 
-2026-02-19 19:25:26,602 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-1]
-2026-02-19 19:25:26,645 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-2]
-2026-02-19 19:25:26,654 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-3]
-2026-02-19 19:25:26,672 p=68604 u=administrator n=ansible INFO| TASK [Afficher version Git] **************************************************************************************************************************************************************************************************************************************************************************
-2026-02-19 19:25:26,673 p=68604 u=administrator n=ansible INFO| jeudi 19 février 2026  19:25:26 +0100 (0:00:00.779)       0:00:09.517 ********* 
-2026-02-19 19:25:26,739 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+11
+12   tasks:
+13     - name: Créer le namespace
+         ^ column 7
+
+
+2026-02-19 21:42:14,780 p=92574 u=administrator n=ansible INFO| fatal: [k3s-node-1]: FAILED! => changed=false 
+  msg: Failed to import the required Python library (kubernetes) on k3s-node-1's Python /usr/bin/python3. Please read the module documentation and install it in the appropriate location. If the required library is installed, but Ansible is using the wrong Python interpreter, please consult the documentation on ansible_python_interpreter
+2026-02-19 21:42:14,781 p=92574 u=administrator n=ansible INFO| PLAY RECAP *************************************************************************************************************************************************************
+2026-02-19 21:42:14,781 p=92574 u=administrator n=ansible INFO| k3s-node-1                 : ok=1    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0   
+2026-02-19 21:42:14,781 p=92574 u=administrator n=ansible INFO| PLAYBOOK RECAP *********************************************************************************************************************************************************
+2026-02-19 21:42:14,781 p=92574 u=administrator n=ansible INFO| Playbook run took 0 days, 0 hours, 0 minutes, 4 seconds
+
+2026-02-19 21:42:14,781 p=92574 u=administrator n=ansible INFO| TASKS RECAP ************************************************************************************************************************************************************
+2026-02-19 21:42:14,782 p=92574 u=administrator n=ansible INFO| jeudi 19 février 2026  21:42:14 +0100 (0:00:01.325)       0:00:04.009 ********* 
+2026-02-19 21:42:14,782 p=92574 u=administrator n=ansible INFO| =============================================================================== 
+2026-02-19 21:42:14,782 p=92574 u=administrator n=ansible INFO| Gathering Facts ------------------------------------------------------------------------------------------------------------------------------------------------- 2.66s
+2026-02-19 21:42:14,782 p=92574 u=administrator n=ansible INFO| Créer le namespace ---------------------------------------------------------------------------------------------------------------------------------------------- 1.33s
+2026-02-19 21:43:03,907 p=92894 u=administrator n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+
+2026-02-19 21:43:03,908 p=92894 u=administrator n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be removed from collection 'community.general' version 12.0.0.
+
+2026-02-19 21:43:03,952 p=92894 u=administrator n=ansible INFO| PLAY [Déploiement de la redirection Kwaba Kinésiologie] ****************************************************************************************************************
+2026-02-19 21:43:03,966 p=92894 u=administrator n=ansible INFO| TASK [Créer le namespace] **********************************************************************************************************************************************
+2026-02-19 21:43:03,966 p=92894 u=administrator n=ansible INFO| jeudi 19 février 2026  21:43:03 +0100 (0:00:00.021)       0:00:00.021 ********* 
+2026-02-19 21:43:05,316 p=92894 u=administrator n=ansible WARNING| [WARNING]: Collection cloud.common does not support Ansible version 2.19.0
+
+2026-02-19 21:43:05,317 p=92894 u=administrator n=ansible ERROR| [ERROR]: Task failed: Module failed: Failed to import the required Python library (kubernetes) on k3s-node-1's Python /usr/bin/python3. Please read the module documentation and install it in the appropriate location. If the required library is installed, but Ansible is using the wrong Python interpreter, please consult the documentation on ansible_python_interpreter
+Origin: /home/administrator/git/k3s-kubevirt/playbooks/kwaba_deploy_redirect.yml:14:7
+
+12
+13   tasks:
+14     - name: Créer le namespace
+         ^ column 7
+
+
+2026-02-19 21:43:05,318 p=92894 u=administrator n=ansible INFO| fatal: [k3s-node-1]: FAILED! => changed=false 
+  msg: Failed to import the required Python library (kubernetes) on k3s-node-1's Python /usr/bin/python3. Please read the module documentation and install it in the appropriate location. If the required library is installed, but Ansible is using the wrong Python interpreter, please consult the documentation on ansible_python_interpreter
+2026-02-19 21:43:05,320 p=92894 u=administrator n=ansible INFO| PLAY RECAP *************************************************************************************************************************************************************
+2026-02-19 21:43:05,320 p=92894 u=administrator n=ansible INFO| k3s-node-1                 : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0   
+2026-02-19 21:43:05,320 p=92894 u=administrator n=ansible INFO| PLAYBOOK RECAP *********************************************************************************************************************************************************
+2026-02-19 21:43:05,321 p=92894 u=administrator n=ansible INFO| Playbook run took 0 days, 0 hours, 0 minutes, 1 seconds
+
+2026-02-19 21:43:05,321 p=92894 u=administrator n=ansible INFO| TASKS RECAP ************************************************************************************************************************************************************
+2026-02-19 21:43:05,321 p=92894 u=administrator n=ansible INFO| jeudi 19 février 2026  21:43:05 +0100 (0:00:01.354)       0:00:01.376 ********* 
+2026-02-19 21:43:05,321 p=92894 u=administrator n=ansible INFO| =============================================================================== 
+2026-02-19 21:43:05,322 p=92894 u=administrator n=ansible INFO| Créer le namespace ---------------------------------------------------------------------------------------------------------------------------------------------- 1.36s
+2026-02-19 21:46:46,888 p=93303 u=administrator n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+
+2026-02-19 21:46:46,888 p=93303 u=administrator n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be removed from collection 'community.general' version 12.0.0.
+
+2026-02-19 21:46:46,949 p=93303 u=administrator n=ansible INFO| PLAY [Installation prérequis système, Git et Helm] *********************************************************************************************************************
+2026-02-19 21:46:46,973 p=93303 u=administrator n=ansible INFO| TASK [Gathering Facts] *************************************************************************************************************************************************
+2026-02-19 21:46:46,974 p=93303 u=administrator n=ansible INFO| jeudi 19 février 2026  21:46:46 +0100 (0:00:00.049)       0:00:00.049 ********* 
+2026-02-19 21:46:50,686 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-19 21:46:50,822 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 21:46:50,987 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 21:46:51,014 p=93303 u=administrator n=ansible INFO| TASK [Mise à jour du cache apt] ****************************************************************************************************************************************
+2026-02-19 21:46:51,014 p=93303 u=administrator n=ansible INFO| jeudi 19 février 2026  21:46:51 +0100 (0:00:04.040)       0:00:04.089 ********* 
+2026-02-19 21:46:57,822 p=93303 u=administrator n=ansible INFO| changed: [k3s-node-3]
+2026-02-19 21:46:58,595 p=93303 u=administrator n=ansible INFO| changed: [k3s-node-2]
+2026-02-19 21:46:58,854 p=93303 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-02-19 21:46:58,883 p=93303 u=administrator n=ansible INFO| TASK [Mise à jour complète du système] *********************************************************************************************************************************
+2026-02-19 21:46:58,883 p=93303 u=administrator n=ansible INFO| jeudi 19 février 2026  21:46:58 +0100 (0:00:07.868)       0:00:11.958 ********* 
+2026-02-19 21:47:00,736 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 21:47:00,841 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-19 21:47:00,901 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 21:47:00,919 p=93303 u=administrator n=ansible INFO| TASK [Installation des packages essentiels] ****************************************************************************************************************************
+2026-02-19 21:47:00,919 p=93303 u=administrator n=ansible INFO| jeudi 19 février 2026  21:47:00 +0100 (0:00:02.035)       0:00:13.994 ********* 
+2026-02-19 21:47:02,334 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 21:47:02,377 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-19 21:47:02,427 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 21:47:02,465 p=93303 u=administrator n=ansible INFO| TASK [Installation Git] ************************************************************************************************************************************************
+2026-02-19 21:47:02,465 p=93303 u=administrator n=ansible INFO| jeudi 19 février 2026  21:47:02 +0100 (0:00:01.546)       0:00:15.540 ********* 
+2026-02-19 21:47:03,903 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 21:47:03,977 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 21:47:03,997 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-19 21:47:04,017 p=93303 u=administrator n=ansible INFO| TASK [Vérifier version Git] ********************************************************************************************************************************************
+2026-02-19 21:47:04,017 p=93303 u=administrator n=ansible INFO| jeudi 19 février 2026  21:47:04 +0100 (0:00:01.552)       0:00:17.092 ********* 
+2026-02-19 21:47:04,784 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 21:47:04,813 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-19 21:47:04,821 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 21:47:04,845 p=93303 u=administrator n=ansible INFO| TASK [Afficher version Git] ********************************************************************************************************************************************
+2026-02-19 21:47:04,845 p=93303 u=administrator n=ansible INFO| jeudi 19 février 2026  21:47:04 +0100 (0:00:00.827)       0:00:17.920 ********* 
+2026-02-19 21:47:04,917 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
   msg: 'Git installé : git version 2.51.0'
-2026-02-19 19:25:26,743 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-2] => 
+2026-02-19 21:47:04,921 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-2] => 
   msg: 'Git installé : git version 2.51.0'
-2026-02-19 19:25:26,764 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-3] => 
+2026-02-19 21:47:04,946 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-3] => 
   msg: 'Git installé : git version 2.51.0'
-2026-02-19 19:25:26,780 p=68604 u=administrator n=ansible INFO| TASK [Configurer timezone] ***************************************************************************************************************************************************************************************************************************************************************************
-2026-02-19 19:25:26,780 p=68604 u=administrator n=ansible INFO| jeudi 19 février 2026  19:25:26 +0100 (0:00:00.107)       0:00:09.624 ********* 
-2026-02-19 19:25:27,703 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-1]
-2026-02-19 19:25:27,734 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-2]
-2026-02-19 19:25:27,765 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-3]
-2026-02-19 19:25:27,793 p=68604 u=administrator n=ansible INFO| TASK [Désactiver swap (requis K8s)] ******************************************************************************************************************************************************************************************************************************************************************
-2026-02-19 19:25:27,793 p=68604 u=administrator n=ansible INFO| jeudi 19 février 2026  19:25:27 +0100 (0:00:01.013)       0:00:10.637 ********* 
-2026-02-19 19:25:28,347 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-1]
-2026-02-19 19:25:28,365 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-2]
-2026-02-19 19:25:28,408 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-3]
-2026-02-19 19:25:28,437 p=68604 u=administrator n=ansible INFO| TASK [Désactiver swap dans fstab] ********************************************************************************************************************************************************************************************************************************************************************
-2026-02-19 19:25:28,438 p=68604 u=administrator n=ansible INFO| jeudi 19 février 2026  19:25:28 +0100 (0:00:00.644)       0:00:11.282 ********* 
-2026-02-19 19:25:29,189 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-3]
-2026-02-19 19:25:29,193 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-2]
-2026-02-19 19:25:29,222 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-1]
-2026-02-19 19:25:29,244 p=68604 u=administrator n=ansible INFO| TASK [Configurer hostname] ***************************************************************************************************************************************************************************************************************************************************************************
-2026-02-19 19:25:29,244 p=68604 u=administrator n=ansible INFO| jeudi 19 février 2026  19:25:29 +0100 (0:00:00.806)       0:00:12.089 ********* 
-2026-02-19 19:25:30,675 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-3]
-2026-02-19 19:25:30,677 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-2]
-2026-02-19 19:25:30,698 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-1]
-2026-02-19 19:25:30,725 p=68604 u=administrator n=ansible INFO| TASK [Mettre à jour /etc/hosts avec les IPs bond0 (statiques)] ***************************************************************************************************************************************************************************************************************************************
-2026-02-19 19:25:30,726 p=68604 u=administrator n=ansible INFO| jeudi 19 février 2026  19:25:30 +0100 (0:00:01.481)       0:00:13.570 ********* 
-2026-02-19 19:25:31,488 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item={'ip': '192.168.0.11', 'name': 'k3s-node-1'})
-2026-02-19 19:25:31,500 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item={'ip': '192.168.0.11', 'name': 'k3s-node-1'})
-2026-02-19 19:25:31,513 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item={'ip': '192.168.0.11', 'name': 'k3s-node-1'})
-2026-02-19 19:25:31,918 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item={'ip': '192.168.0.12', 'name': 'k3s-node-2'})
-2026-02-19 19:25:31,959 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item={'ip': '192.168.0.12', 'name': 'k3s-node-2'})
-2026-02-19 19:25:32,028 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item={'ip': '192.168.0.12', 'name': 'k3s-node-2'})
-2026-02-19 19:25:32,351 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item={'ip': '192.168.0.13', 'name': 'k3s-node-3'})
-2026-02-19 19:25:32,392 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item={'ip': '192.168.0.13', 'name': 'k3s-node-3'})
-2026-02-19 19:25:32,548 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item={'ip': '192.168.0.13', 'name': 'k3s-node-3'})
-2026-02-19 19:25:32,578 p=68604 u=administrator n=ansible INFO| TASK [Charger les modules kernel requis] *************************************************************************************************************************************************************************************************************************************************************
-2026-02-19 19:25:32,578 p=68604 u=administrator n=ansible INFO| jeudi 19 février 2026  19:25:32 +0100 (0:00:01.852)       0:00:15.423 ********* 
-2026-02-19 19:25:33,352 p=68604 u=administrator n=ansible INFO| changed: [k3s-node-3] => (item=overlay)
-2026-02-19 19:25:33,355 p=68604 u=administrator n=ansible INFO| changed: [k3s-node-2] => (item=overlay)
-2026-02-19 19:25:33,395 p=68604 u=administrator n=ansible INFO| changed: [k3s-node-1] => (item=overlay)
-2026-02-19 19:25:33,834 p=68604 u=administrator n=ansible INFO| changed: [k3s-node-3] => (item=br_netfilter)
-2026-02-19 19:25:33,847 p=68604 u=administrator n=ansible INFO| changed: [k3s-node-2] => (item=br_netfilter)
-2026-02-19 19:25:33,973 p=68604 u=administrator n=ansible INFO| changed: [k3s-node-1] => (item=br_netfilter)
-2026-02-19 19:25:34,271 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item=kvm)
-2026-02-19 19:25:34,286 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item=kvm)
-2026-02-19 19:25:34,496 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item=kvm)
-2026-02-19 19:25:34,704 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item=kvm_intel)
-2026-02-19 19:25:34,712 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item=kvm_intel)
-2026-02-19 19:25:35,030 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item=kvm_intel)
-2026-02-19 19:25:35,146 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item=vhost_net)
-2026-02-19 19:25:35,175 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item=vhost_net)
-2026-02-19 19:25:35,562 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item=vhost_net)
-2026-02-19 19:25:35,587 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item=vhost_vsock)
-2026-02-19 19:25:35,606 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item=vhost_vsock)
-2026-02-19 19:25:36,027 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item=dm_snapshot)
-2026-02-19 19:25:36,083 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item=vhost_vsock)
-2026-02-19 19:25:36,100 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item=dm_snapshot)
-2026-02-19 19:25:36,454 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item=dm_mirror)
-2026-02-19 19:25:36,536 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item=dm_mirror)
-2026-02-19 19:25:36,612 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item=dm_snapshot)
-2026-02-19 19:25:36,883 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item=dm_thin_pool)
-2026-02-19 19:25:36,962 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item=dm_thin_pool)
-2026-02-19 19:25:37,144 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item=dm_mirror)
-2026-02-19 19:25:37,677 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item=dm_thin_pool)
-2026-02-19 19:25:37,712 p=68604 u=administrator n=ansible INFO| TASK [Rendre les modules persistants] ****************************************************************************************************************************************************************************************************************************************************************
-2026-02-19 19:25:37,712 p=68604 u=administrator n=ansible INFO| jeudi 19 février 2026  19:25:37 +0100 (0:00:05.133)       0:00:20.557 ********* 
-2026-02-19 19:25:39,383 p=68604 u=administrator n=ansible INFO| changed: [k3s-node-2]
-2026-02-19 19:25:39,385 p=68604 u=administrator n=ansible INFO| changed: [k3s-node-3]
-2026-02-19 19:25:39,419 p=68604 u=administrator n=ansible INFO| changed: [k3s-node-1]
-2026-02-19 19:25:39,446 p=68604 u=administrator n=ansible INFO| TASK [Configurer sysctl] *****************************************************************************************************************************************************************************************************************************************************************************
-2026-02-19 19:25:39,446 p=68604 u=administrator n=ansible INFO| jeudi 19 février 2026  19:25:39 +0100 (0:00:01.733)       0:00:22.291 ********* 
-2026-02-19 19:25:40,238 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item={'key': 'net.ipv4.ip_forward', 'value': 1})
-2026-02-19 19:25:40,251 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item={'key': 'net.ipv4.ip_forward', 'value': 1})
-2026-02-19 19:25:40,281 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item={'key': 'net.ipv4.ip_forward', 'value': 1})
-2026-02-19 19:25:40,680 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': 1})
-2026-02-19 19:25:40,747 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': 1})
-2026-02-19 19:25:40,823 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': 1})
-2026-02-19 19:25:41,119 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': 1})
-2026-02-19 19:25:41,190 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': 1})
-2026-02-19 19:25:41,369 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': 1})
-2026-02-19 19:25:41,624 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item={'key': 'net.core.somaxconn', 'value': 32768})
-2026-02-19 19:25:41,682 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item={'key': 'net.core.somaxconn', 'value': 32768})
-2026-02-19 19:25:41,916 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item={'key': 'net.core.somaxconn', 'value': 32768})
-2026-02-19 19:25:42,082 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item={'key': 'net.ipv4.tcp_max_syn_backlog', 'value': 8192})
-2026-02-19 19:25:42,132 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item={'key': 'net.ipv4.tcp_max_syn_backlog', 'value': 8192})
-2026-02-19 19:25:42,465 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item={'key': 'net.ipv4.tcp_max_syn_backlog', 'value': 8192})
-2026-02-19 19:25:42,532 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item={'key': 'fs.file-max', 'value': 2097152})
-2026-02-19 19:25:42,628 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item={'key': 'fs.file-max', 'value': 2097152})
-2026-02-19 19:25:42,988 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item={'key': 'fs.inotify.max_user_watches', 'value': 524288})
-2026-02-19 19:25:43,012 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item={'key': 'fs.file-max', 'value': 2097152})
-2026-02-19 19:25:43,063 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item={'key': 'fs.inotify.max_user_watches', 'value': 524288})
-2026-02-19 19:25:43,500 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item={'key': 'fs.inotify.max_user_instances', 'value': 8192})
-2026-02-19 19:25:43,579 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item={'key': 'fs.inotify.max_user_instances', 'value': 8192})
-2026-02-19 19:25:43,582 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item={'key': 'fs.inotify.max_user_watches', 'value': 524288})
-2026-02-19 19:25:43,960 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item={'key': 'vm.swappiness', 'value': 10})
-2026-02-19 19:25:44,067 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item={'key': 'vm.swappiness', 'value': 10})
-2026-02-19 19:25:44,111 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item={'key': 'fs.inotify.max_user_instances', 'value': 8192})
-2026-02-19 19:25:44,415 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item={'key': 'vm.dirty_ratio', 'value': 15})
-2026-02-19 19:25:44,570 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item={'key': 'vm.dirty_ratio', 'value': 15})
-2026-02-19 19:25:44,661 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item={'key': 'vm.swappiness', 'value': 10})
-2026-02-19 19:25:44,926 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item={'key': 'vm.dirty_background_ratio', 'value': 5})
-2026-02-19 19:25:45,059 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item={'key': 'vm.dirty_background_ratio', 'value': 5})
-2026-02-19 19:25:45,214 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item={'key': 'vm.dirty_ratio', 'value': 15})
-2026-02-19 19:25:45,755 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item={'key': 'vm.dirty_background_ratio', 'value': 5})
-2026-02-19 19:25:45,780 p=68604 u=administrator n=ansible INFO| TASK [Activer et démarrer iscsid] ********************************************************************************************************************************************************************************************************************************************************************
-2026-02-19 19:25:45,780 p=68604 u=administrator n=ansible INFO| jeudi 19 février 2026  19:25:45 +0100 (0:00:06.333)       0:00:28.624 ********* 
-2026-02-19 19:25:48,937 p=68604 u=administrator n=ansible INFO| changed: [k3s-node-1]
-2026-02-19 19:25:49,006 p=68604 u=administrator n=ansible INFO| changed: [k3s-node-2]
-2026-02-19 19:25:49,008 p=68604 u=administrator n=ansible INFO| changed: [k3s-node-3]
-2026-02-19 19:25:49,024 p=68604 u=administrator n=ansible INFO| TASK [Vérifier si Helm est déjà installé] ************************************************************************************************************************************************************************************************************************************************************
-2026-02-19 19:25:49,027 p=68604 u=administrator n=ansible INFO| jeudi 19 février 2026  19:25:49 +0100 (0:00:03.246)       0:00:31.871 ********* 
-2026-02-19 19:25:49,559 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-1]
-2026-02-19 19:25:49,589 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-2]
-2026-02-19 19:25:49,623 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-3]
-2026-02-19 19:25:49,653 p=68604 u=administrator n=ansible INFO| TASK [Télécharger et installer Helm] *****************************************************************************************************************************************************************************************************************************************************************
-2026-02-19 19:25:49,654 p=68604 u=administrator n=ansible INFO| jeudi 19 février 2026  19:25:49 +0100 (0:00:00.627)       0:00:32.498 ********* 
-2026-02-19 19:25:52,011 p=68604 u=administrator n=ansible INFO| changed: [k3s-node-1]
-2026-02-19 19:25:52,039 p=68604 u=administrator n=ansible INFO| changed: [k3s-node-3]
-2026-02-19 19:25:52,228 p=68604 u=administrator n=ansible INFO| changed: [k3s-node-2]
-2026-02-19 19:25:52,256 p=68604 u=administrator n=ansible INFO| TASK [Vérifier version Helm] *************************************************************************************************************************************************************************************************************************************************************************
-2026-02-19 19:25:52,256 p=68604 u=administrator n=ansible INFO| jeudi 19 février 2026  19:25:52 +0100 (0:00:02.602)       0:00:35.101 ********* 
-2026-02-19 19:25:52,854 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-2]
-2026-02-19 19:25:52,861 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-1]
-2026-02-19 19:25:52,887 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-3]
-2026-02-19 19:25:52,914 p=68604 u=administrator n=ansible INFO| TASK [Afficher version Helm] *************************************************************************************************************************************************************************************************************************************************************************
-2026-02-19 19:25:52,915 p=68604 u=administrator n=ansible INFO| jeudi 19 février 2026  19:25:52 +0100 (0:00:00.658)       0:00:35.759 ********* 
-2026-02-19 19:25:52,988 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+2026-02-19 21:47:04,964 p=93303 u=administrator n=ansible INFO| TASK [Configurer timezone] *********************************************************************************************************************************************
+2026-02-19 21:47:04,964 p=93303 u=administrator n=ansible INFO| jeudi 19 février 2026  21:47:04 +0100 (0:00:00.118)       0:00:18.039 ********* 
+2026-02-19 21:47:05,968 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 21:47:06,001 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-19 21:47:06,045 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 21:47:06,074 p=93303 u=administrator n=ansible INFO| TASK [Désactiver swap (requis K8s)] ************************************************************************************************************************************
+2026-02-19 21:47:06,075 p=93303 u=administrator n=ansible INFO| jeudi 19 février 2026  21:47:06 +0100 (0:00:01.110)       0:00:19.149 ********* 
+2026-02-19 21:47:06,636 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 21:47:06,648 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 21:47:06,712 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-19 21:47:06,740 p=93303 u=administrator n=ansible INFO| TASK [Désactiver swap dans fstab] **************************************************************************************************************************************
+2026-02-19 21:47:06,741 p=93303 u=administrator n=ansible INFO| jeudi 19 février 2026  21:47:06 +0100 (0:00:00.666)       0:00:19.816 ********* 
+2026-02-19 21:47:07,498 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 21:47:07,504 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 21:47:07,515 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-19 21:47:07,536 p=93303 u=administrator n=ansible INFO| TASK [Configurer hostname] *********************************************************************************************************************************************
+2026-02-19 21:47:07,536 p=93303 u=administrator n=ansible INFO| jeudi 19 février 2026  21:47:07 +0100 (0:00:00.795)       0:00:20.611 ********* 
+2026-02-19 21:47:08,894 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 21:47:08,949 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 21:47:08,950 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-19 21:47:08,981 p=93303 u=administrator n=ansible INFO| TASK [Mettre à jour /etc/hosts avec les IPs bond0 (statiques)] *********************************************************************************************************
+2026-02-19 21:47:08,982 p=93303 u=administrator n=ansible INFO| jeudi 19 février 2026  21:47:08 +0100 (0:00:01.445)       0:00:22.057 ********* 
+2026-02-19 21:47:09,764 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item={'ip': '192.168.0.11', 'name': 'k3s-node-1'})
+2026-02-19 21:47:09,782 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item={'ip': '192.168.0.11', 'name': 'k3s-node-1'})
+2026-02-19 21:47:09,793 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item={'ip': '192.168.0.11', 'name': 'k3s-node-1'})
+2026-02-19 21:47:10,283 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item={'ip': '192.168.0.12', 'name': 'k3s-node-2'})
+2026-02-19 21:47:10,316 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item={'ip': '192.168.0.12', 'name': 'k3s-node-2'})
+2026-02-19 21:47:10,337 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item={'ip': '192.168.0.12', 'name': 'k3s-node-2'})
+2026-02-19 21:47:10,812 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item={'ip': '192.168.0.13', 'name': 'k3s-node-3'})
+2026-02-19 21:47:10,839 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item={'ip': '192.168.0.13', 'name': 'k3s-node-3'})
+2026-02-19 21:47:10,855 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item={'ip': '192.168.0.13', 'name': 'k3s-node-3'})
+2026-02-19 21:47:10,890 p=93303 u=administrator n=ansible INFO| TASK [Charger les modules kernel requis] *******************************************************************************************************************************
+2026-02-19 21:47:10,890 p=93303 u=administrator n=ansible INFO| jeudi 19 février 2026  21:47:10 +0100 (0:00:01.908)       0:00:23.965 ********* 
+2026-02-19 21:47:11,696 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item=overlay)
+2026-02-19 21:47:11,698 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item=overlay)
+2026-02-19 21:47:11,702 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item=overlay)
+2026-02-19 21:47:12,193 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item=br_netfilter)
+2026-02-19 21:47:12,207 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item=br_netfilter)
+2026-02-19 21:47:12,209 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item=br_netfilter)
+2026-02-19 21:47:12,636 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item=kvm)
+2026-02-19 21:47:12,736 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item=kvm)
+2026-02-19 21:47:12,738 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item=kvm)
+2026-02-19 21:47:13,076 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item=kvm_intel)
+2026-02-19 21:47:13,232 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item=kvm_intel)
+2026-02-19 21:47:13,260 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item=kvm_intel)
+2026-02-19 21:47:13,598 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item=vhost_net)
+2026-02-19 21:47:13,764 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item=vhost_net)
+2026-02-19 21:47:13,790 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item=vhost_net)
+2026-02-19 21:47:14,110 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item=vhost_vsock)
+2026-02-19 21:47:14,263 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item=vhost_vsock)
+2026-02-19 21:47:14,335 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item=vhost_vsock)
+2026-02-19 21:47:14,555 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item=dm_snapshot)
+2026-02-19 21:47:14,706 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item=dm_snapshot)
+2026-02-19 21:47:14,869 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item=dm_snapshot)
+2026-02-19 21:47:15,088 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item=dm_mirror)
+2026-02-19 21:47:15,224 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item=dm_mirror)
+2026-02-19 21:47:15,401 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item=dm_mirror)
+2026-02-19 21:47:15,612 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item=dm_thin_pool)
+2026-02-19 21:47:15,751 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item=dm_thin_pool)
+2026-02-19 21:47:15,940 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item=dm_thin_pool)
+2026-02-19 21:47:15,977 p=93303 u=administrator n=ansible INFO| TASK [Rendre les modules persistants] **********************************************************************************************************************************
+2026-02-19 21:47:15,978 p=93303 u=administrator n=ansible INFO| jeudi 19 février 2026  21:47:15 +0100 (0:00:05.087)       0:00:29.053 ********* 
+2026-02-19 21:47:17,638 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-19 21:47:17,646 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 21:47:17,647 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 21:47:17,675 p=93303 u=administrator n=ansible INFO| TASK [Configurer sysctl] ***********************************************************************************************************************************************
+2026-02-19 21:47:17,676 p=93303 u=administrator n=ansible INFO| jeudi 19 février 2026  21:47:17 +0100 (0:00:01.698)       0:00:30.751 ********* 
+2026-02-19 21:47:18,487 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item={'key': 'net.ipv4.ip_forward', 'value': 1})
+2026-02-19 21:47:18,490 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item={'key': 'net.ipv4.ip_forward', 'value': 1})
+2026-02-19 21:47:18,501 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item={'key': 'net.ipv4.ip_forward', 'value': 1})
+2026-02-19 21:47:18,946 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': 1})
+2026-02-19 21:47:19,028 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': 1})
+2026-02-19 21:47:19,048 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': 1})
+2026-02-19 21:47:19,486 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': 1})
+2026-02-19 21:47:19,563 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': 1})
+2026-02-19 21:47:19,589 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': 1})
+2026-02-19 21:47:20,003 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item={'key': 'net.core.somaxconn', 'value': 32768})
+2026-02-19 21:47:20,110 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item={'key': 'net.core.somaxconn', 'value': 32768})
+2026-02-19 21:47:20,153 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item={'key': 'net.core.somaxconn', 'value': 32768})
+2026-02-19 21:47:20,549 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item={'key': 'net.ipv4.tcp_max_syn_backlog', 'value': 8192})
+2026-02-19 21:47:20,653 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item={'key': 'net.ipv4.tcp_max_syn_backlog', 'value': 8192})
+2026-02-19 21:47:20,702 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item={'key': 'net.ipv4.tcp_max_syn_backlog', 'value': 8192})
+2026-02-19 21:47:21,080 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item={'key': 'fs.file-max', 'value': 2097152})
+2026-02-19 21:47:21,203 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item={'key': 'fs.file-max', 'value': 2097152})
+2026-02-19 21:47:21,247 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item={'key': 'fs.file-max', 'value': 2097152})
+2026-02-19 21:47:21,614 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item={'key': 'fs.inotify.max_user_watches', 'value': 524288})
+2026-02-19 21:47:21,742 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item={'key': 'fs.inotify.max_user_watches', 'value': 524288})
+2026-02-19 21:47:21,798 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item={'key': 'fs.inotify.max_user_watches', 'value': 524288})
+2026-02-19 21:47:22,154 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item={'key': 'fs.inotify.max_user_instances', 'value': 8192})
+2026-02-19 21:47:22,257 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item={'key': 'fs.inotify.max_user_instances', 'value': 8192})
+2026-02-19 21:47:22,345 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item={'key': 'fs.inotify.max_user_instances', 'value': 8192})
+2026-02-19 21:47:22,703 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item={'key': 'vm.swappiness', 'value': 10})
+2026-02-19 21:47:22,715 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item={'key': 'vm.swappiness', 'value': 10})
+2026-02-19 21:47:22,893 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item={'key': 'vm.swappiness', 'value': 10})
+2026-02-19 21:47:23,169 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item={'key': 'vm.dirty_ratio', 'value': 15})
+2026-02-19 21:47:23,249 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item={'key': 'vm.dirty_ratio', 'value': 15})
+2026-02-19 21:47:23,443 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item={'key': 'vm.dirty_ratio', 'value': 15})
+2026-02-19 21:47:23,714 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item={'key': 'vm.dirty_background_ratio', 'value': 5})
+2026-02-19 21:47:23,807 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item={'key': 'vm.dirty_background_ratio', 'value': 5})
+2026-02-19 21:47:23,997 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item={'key': 'vm.dirty_background_ratio', 'value': 5})
+2026-02-19 21:47:24,023 p=93303 u=administrator n=ansible INFO| TASK [Activer et démarrer iscsid] **************************************************************************************************************************************
+2026-02-19 21:47:24,023 p=93303 u=administrator n=ansible INFO| jeudi 19 février 2026  21:47:24 +0100 (0:00:06.346)       0:00:37.098 ********* 
+2026-02-19 21:47:25,318 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-19 21:47:25,345 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 21:47:25,373 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 21:47:25,401 p=93303 u=administrator n=ansible INFO| TASK [Vérifier si Helm est déjà installé] ******************************************************************************************************************************
+2026-02-19 21:47:25,402 p=93303 u=administrator n=ansible INFO| jeudi 19 février 2026  21:47:25 +0100 (0:00:01.378)       0:00:38.477 ********* 
+2026-02-19 21:47:26,064 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 21:47:26,138 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 21:47:26,225 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-19 21:47:26,256 p=93303 u=administrator n=ansible INFO| TASK [Télécharger et installer Helm] ***********************************************************************************************************************************
+2026-02-19 21:47:26,256 p=93303 u=administrator n=ansible INFO| jeudi 19 février 2026  21:47:26 +0100 (0:00:00.854)       0:00:39.331 ********* 
+2026-02-19 21:47:26,303 p=93303 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-02-19 21:47:26,337 p=93303 u=administrator n=ansible INFO| skipping: [k3s-node-2]
+2026-02-19 21:47:26,357 p=93303 u=administrator n=ansible INFO| skipping: [k3s-node-3]
+2026-02-19 21:47:26,377 p=93303 u=administrator n=ansible INFO| TASK [Vérifier version Helm] *******************************************************************************************************************************************
+2026-02-19 21:47:26,377 p=93303 u=administrator n=ansible INFO| jeudi 19 février 2026  21:47:26 +0100 (0:00:00.121)       0:00:39.452 ********* 
+2026-02-19 21:47:26,983 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 21:47:26,991 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 21:47:27,046 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-19 21:47:27,078 p=93303 u=administrator n=ansible INFO| TASK [Afficher version Helm] *******************************************************************************************************************************************
+2026-02-19 21:47:27,079 p=93303 u=administrator n=ansible INFO| jeudi 19 février 2026  21:47:27 +0100 (0:00:00.701)       0:00:40.153 ********* 
+2026-02-19 21:47:27,153 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
   msg: 'Helm installé : v3.20.0+gb2e4314'
-2026-02-19 19:25:52,992 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-2] => 
+2026-02-19 21:47:27,157 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-2] => 
   msg: 'Helm installé : v3.20.0+gb2e4314'
-2026-02-19 19:25:53,019 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-3] => 
+2026-02-19 21:47:27,184 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-3] => 
   msg: 'Helm installé : v3.20.0+gb2e4314'
-2026-02-19 19:25:53,036 p=68604 u=administrator n=ansible INFO| TASK [Vérifier modules chargés] **********************************************************************************************************************************************************************************************************************************************************************
-2026-02-19 19:25:53,036 p=68604 u=administrator n=ansible INFO| jeudi 19 février 2026  19:25:53 +0100 (0:00:00.121)       0:00:35.880 ********* 
-2026-02-19 19:25:53,615 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-2]
-2026-02-19 19:25:53,627 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-1]
-2026-02-19 19:25:53,648 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-3]
-2026-02-19 19:25:53,669 p=68604 u=administrator n=ansible INFO| TASK [Résumé prérequis] ******************************************************************************************************************************************************************************************************************************************************************************
-2026-02-19 19:25:53,669 p=68604 u=administrator n=ansible INFO| jeudi 19 février 2026  19:25:53 +0100 (0:00:00.633)       0:00:36.514 ********* 
-2026-02-19 19:25:53,738 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+2026-02-19 21:47:27,211 p=93303 u=administrator n=ansible INFO| TASK [Vérifier modules chargés] ****************************************************************************************************************************************
+2026-02-19 21:47:27,212 p=93303 u=administrator n=ansible INFO| jeudi 19 février 2026  21:47:27 +0100 (0:00:00.133)       0:00:40.287 ********* 
+2026-02-19 21:47:27,828 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 21:47:27,887 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-19 21:47:27,888 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 21:47:27,917 p=93303 u=administrator n=ansible INFO| TASK [Résumé prérequis] ************************************************************************************************************************************************
+2026-02-19 21:47:27,918 p=93303 u=administrator n=ansible INFO| jeudi 19 février 2026  21:47:27 +0100 (0:00:00.705)       0:00:40.993 ********* 
+2026-02-19 21:47:27,994 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
   msg:
   - === Prérequis OK sur k3s-node-1 ===
   - 'Git     : git version 2.51.0'
@@ -234,7 +256,7 @@ ansible.errors.AnsibleError: Unexpected Exception, this is probably a bug: [Errn
   - 'Swap    : désactivé'
   - 'Modules : chargés'
   - 'iSCSI   : actif'
-2026-02-19 19:25:53,742 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-2] => 
+2026-02-19 21:47:27,999 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-2] => 
   msg:
   - === Prérequis OK sur k3s-node-2 ===
   - 'Git     : git version 2.51.0'
@@ -243,7 +265,7 @@ ansible.errors.AnsibleError: Unexpected Exception, this is probably a bug: [Errn
   - 'Swap    : désactivé'
   - 'Modules : chargés'
   - 'iSCSI   : actif'
-2026-02-19 19:25:53,774 p=68604 u=administrator n=ansible INFO| ok: [k3s-node-3] => 
+2026-02-19 21:47:28,032 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-3] => 
   msg:
   - === Prérequis OK sur k3s-node-3 ===
   - 'Git     : git version 2.51.0'
@@ -252,33 +274,534 @@ ansible.errors.AnsibleError: Unexpected Exception, this is probably a bug: [Errn
   - 'Swap    : désactivé'
   - 'Modules : chargés'
   - 'iSCSI   : actif'
-2026-02-19 19:25:53,777 p=68604 u=administrator n=ansible INFO| PLAY RECAP *******************************************************************************************************************************************************************************************************************************************************************************************
-2026-02-19 19:25:53,777 p=68604 u=administrator n=ansible INFO| k3s-node-1                 : ok=22   changed=4    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
-2026-02-19 19:25:53,777 p=68604 u=administrator n=ansible INFO| k3s-node-2                 : ok=22   changed=4    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
-2026-02-19 19:25:53,778 p=68604 u=administrator n=ansible INFO| k3s-node-3                 : ok=22   changed=4    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
-2026-02-19 19:25:53,778 p=68604 u=administrator n=ansible INFO| PLAYBOOK RECAP ***************************************************************************************************************************************************************************************************************************************************************************************
-2026-02-19 19:25:53,778 p=68604 u=administrator n=ansible INFO| Playbook run took 0 days, 0 hours, 0 minutes, 36 seconds
+2026-02-19 21:47:28,123 p=93303 u=administrator n=ansible INFO| TASK [Installation de python3-pip] *************************************************************************************************************************************
+2026-02-19 21:47:28,124 p=93303 u=administrator n=ansible INFO| jeudi 19 février 2026  21:47:28 +0100 (0:00:00.206)       0:00:41.199 ********* 
+2026-02-19 21:47:29,593 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-19 21:47:29,594 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 21:47:29,642 p=93303 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 21:47:29,672 p=93303 u=administrator n=ansible INFO| TASK [Installation de la bibliothèque python kubernetes] ***************************************************************************************************************
+2026-02-19 21:47:29,672 p=93303 u=administrator n=ansible INFO| jeudi 19 février 2026  21:47:29 +0100 (0:00:01.548)       0:00:42.747 ********* 
+2026-02-19 21:47:31,117 p=93303 u=administrator n=ansible ERROR| [ERROR]: Task failed: Module failed: 
+:stderr: error: externally-managed-environment
 
-2026-02-19 19:25:53,778 p=68604 u=administrator n=ansible INFO| TASKS RECAP ******************************************************************************************************************************************************************************************************************************************************************************************
-2026-02-19 19:25:53,778 p=68604 u=administrator n=ansible INFO| jeudi 19 février 2026  19:25:53 +0100 (0:00:00.109)       0:00:36.623 ********* 
-2026-02-19 19:25:53,779 p=68604 u=administrator n=ansible INFO| =============================================================================== 
-2026-02-19 19:25:53,779 p=68604 u=administrator n=ansible INFO| Configurer sysctl ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- 6.33s
-2026-02-19 19:25:53,779 p=68604 u=administrator n=ansible INFO| Charger les modules kernel requis ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- 5.13s
-2026-02-19 19:25:53,779 p=68604 u=administrator n=ansible INFO| Activer et démarrer iscsid -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- 3.25s
-2026-02-19 19:25:53,779 p=68604 u=administrator n=ansible INFO| Télécharger et installer Helm ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- 2.60s
-2026-02-19 19:25:53,779 p=68604 u=administrator n=ansible INFO| Gathering Facts ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- 2.42s
-2026-02-19 19:25:53,779 p=68604 u=administrator n=ansible INFO| Mise à jour complète du système --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- 1.89s
-2026-02-19 19:25:53,780 p=68604 u=administrator n=ansible INFO| Mettre à jour /etc/hosts avec les IPs bond0 (statiques) --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- 1.85s
-2026-02-19 19:25:53,780 p=68604 u=administrator n=ansible INFO| Rendre les modules persistants ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- 1.73s
-2026-02-19 19:25:53,780 p=68604 u=administrator n=ansible INFO| Mise à jour du cache apt ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- 1.51s
-2026-02-19 19:25:53,780 p=68604 u=administrator n=ansible INFO| Configurer hostname --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- 1.48s
-2026-02-19 19:25:53,780 p=68604 u=administrator n=ansible INFO| Installation des packages essentiels ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- 1.45s
-2026-02-19 19:25:53,780 p=68604 u=administrator n=ansible INFO| Installation Git ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ 1.42s
-2026-02-19 19:25:53,780 p=68604 u=administrator n=ansible INFO| Configurer timezone --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- 1.01s
-2026-02-19 19:25:53,781 p=68604 u=administrator n=ansible INFO| Désactiver swap dans fstab -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- 0.81s
-2026-02-19 19:25:53,781 p=68604 u=administrator n=ansible INFO| Vérifier version Git -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- 0.78s
-2026-02-19 19:25:53,781 p=68604 u=administrator n=ansible INFO| Vérifier version Helm ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- 0.66s
-2026-02-19 19:25:53,781 p=68604 u=administrator n=ansible INFO| Désactiver swap (requis K8s) ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ 0.64s
-2026-02-19 19:25:53,781 p=68604 u=administrator n=ansible INFO| Vérifier modules chargés ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- 0.63s
-2026-02-19 19:25:53,781 p=68604 u=administrator n=ansible INFO| Vérifier si Helm est déjà installé ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ 0.63s
-2026-02-19 19:25:53,781 p=68604 u=administrator n=ansible INFO| Afficher version Helm ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- 0.12s
+× This environment is externally managed
+╰─> To install Python packages system-wide, try apt install
+    python3-xyz, where xyz is the package you are trying to
+    install.
+    
+    If you wish to install a non-Debian-packaged Python package,
+    create a virtual environment using python3 -m venv path/to/venv.
+    Then use path/to/venv/bin/python and path/to/venv/bin/pip. Make
+    sure you have python3-full installed.
+    
+    If you wish to install a non-Debian packaged Python application,
+    it may be easiest to use pipx install xyz, which will manage a
+    virtual environment for you. Make sure you have pipx installed.
+    
+    See /usr/share/doc/python3.13/README.venv for more information.
+
+note: If you believe this is a mistake, please contact your Python installation or OS distribution provider. You can override this, at the risk of breaking your Python installation or OS, by passing --break-system-packages.
+hint: See PEP 668 for the detailed specification.
+
+Origin: /home/administrator/git/k3s-kubevirt/playbooks/prerequisites.yml:213:7
+
+211       tags: [setup, python]
+212
+213     - name: Installation de la bibliothèque python kubernetes
+          ^ column 7
+
+
+2026-02-19 21:47:31,120 p=93303 u=administrator n=ansible INFO| fatal: [k3s-node-2]: FAILED! => changed=false 
+  cmd:
+  - /usr/bin/python3
+  - -m
+  - pip
+  - install
+  - kubernetes
+  msg: |2-
+  
+    :stderr: error: externally-managed-environment
+  
+    × This environment is externally managed
+    ╰─> To install Python packages system-wide, try apt install
+        python3-xyz, where xyz is the package you are trying to
+        install.
+  
+        If you wish to install a non-Debian-packaged Python package,
+        create a virtual environment using python3 -m venv path/to/venv.
+        Then use path/to/venv/bin/python and path/to/venv/bin/pip. Make
+        sure you have python3-full installed.
+  
+        If you wish to install a non-Debian packaged Python application,
+        it may be easiest to use pipx install xyz, which will manage a
+        virtual environment for you. Make sure you have pipx installed.
+  
+        See /usr/share/doc/python3.13/README.venv for more information.
+  
+    note: If you believe this is a mistake, please contact your Python installation or OS distribution provider. You can override this, at the risk of breaking your Python installation or OS, by passing --break-system-packages.
+    hint: See PEP 668 for the detailed specification.
+2026-02-19 21:47:31,252 p=93303 u=administrator n=ansible INFO| fatal: [k3s-node-3]: FAILED! => changed=false 
+  cmd:
+  - /usr/bin/python3
+  - -m
+  - pip
+  - install
+  - kubernetes
+  msg: |2-
+  
+    :stderr: error: externally-managed-environment
+  
+    × This environment is externally managed
+    ╰─> To install Python packages system-wide, try apt install
+        python3-xyz, where xyz is the package you are trying to
+        install.
+  
+        If you wish to install a non-Debian-packaged Python package,
+        create a virtual environment using python3 -m venv path/to/venv.
+        Then use path/to/venv/bin/python and path/to/venv/bin/pip. Make
+        sure you have python3-full installed.
+  
+        If you wish to install a non-Debian packaged Python application,
+        it may be easiest to use pipx install xyz, which will manage a
+        virtual environment for you. Make sure you have pipx installed.
+  
+        See /usr/share/doc/python3.13/README.venv for more information.
+  
+    note: If you believe this is a mistake, please contact your Python installation or OS distribution provider. You can override this, at the risk of breaking your Python installation or OS, by passing --break-system-packages.
+    hint: See PEP 668 for the detailed specification.
+2026-02-19 21:47:31,254 p=93303 u=administrator n=ansible INFO| fatal: [k3s-node-1]: FAILED! => changed=false 
+  cmd:
+  - /usr/bin/python3
+  - -m
+  - pip
+  - install
+  - kubernetes
+  msg: |2-
+  
+    :stderr: error: externally-managed-environment
+  
+    × This environment is externally managed
+    ╰─> To install Python packages system-wide, try apt install
+        python3-xyz, where xyz is the package you are trying to
+        install.
+  
+        If you wish to install a non-Debian-packaged Python package,
+        create a virtual environment using python3 -m venv path/to/venv.
+        Then use path/to/venv/bin/python and path/to/venv/bin/pip. Make
+        sure you have python3-full installed.
+  
+        If you wish to install a non-Debian packaged Python application,
+        it may be easiest to use pipx install xyz, which will manage a
+        virtual environment for you. Make sure you have pipx installed.
+  
+        See /usr/share/doc/python3.13/README.venv for more information.
+  
+    note: If you believe this is a mistake, please contact your Python installation or OS distribution provider. You can override this, at the risk of breaking your Python installation or OS, by passing --break-system-packages.
+    hint: See PEP 668 for the detailed specification.
+2026-02-19 21:47:31,256 p=93303 u=administrator n=ansible INFO| PLAY RECAP *************************************************************************************************************************************************************
+2026-02-19 21:47:31,256 p=93303 u=administrator n=ansible INFO| k3s-node-1                 : ok=22   changed=1    unreachable=0    failed=1    skipped=1    rescued=0    ignored=0   
+2026-02-19 21:47:31,256 p=93303 u=administrator n=ansible INFO| k3s-node-2                 : ok=22   changed=1    unreachable=0    failed=1    skipped=1    rescued=0    ignored=0   
+2026-02-19 21:47:31,257 p=93303 u=administrator n=ansible INFO| k3s-node-3                 : ok=22   changed=1    unreachable=0    failed=1    skipped=1    rescued=0    ignored=0   
+2026-02-19 21:47:31,257 p=93303 u=administrator n=ansible INFO| PLAYBOOK RECAP *********************************************************************************************************************************************************
+2026-02-19 21:47:31,257 p=93303 u=administrator n=ansible INFO| Playbook run took 0 days, 0 hours, 0 minutes, 44 seconds
+
+2026-02-19 21:47:31,257 p=93303 u=administrator n=ansible INFO| TASKS RECAP ************************************************************************************************************************************************************
+2026-02-19 21:47:31,257 p=93303 u=administrator n=ansible INFO| jeudi 19 février 2026  21:47:31 +0100 (0:00:01.584)       0:00:44.332 ********* 
+2026-02-19 21:47:31,258 p=93303 u=administrator n=ansible INFO| =============================================================================== 
+2026-02-19 21:47:31,258 p=93303 u=administrator n=ansible INFO| Mise à jour du cache apt ---------------------------------------------------------------------------------------------------------------------------------------- 7.87s
+2026-02-19 21:47:31,258 p=93303 u=administrator n=ansible INFO| Configurer sysctl ----------------------------------------------------------------------------------------------------------------------------------------------- 6.35s
+2026-02-19 21:47:31,258 p=93303 u=administrator n=ansible INFO| Charger les modules kernel requis ------------------------------------------------------------------------------------------------------------------------------- 5.09s
+2026-02-19 21:47:31,258 p=93303 u=administrator n=ansible INFO| Gathering Facts ------------------------------------------------------------------------------------------------------------------------------------------------- 4.04s
+2026-02-19 21:47:31,259 p=93303 u=administrator n=ansible INFO| Mise à jour complète du système --------------------------------------------------------------------------------------------------------------------------------- 2.04s
+2026-02-19 21:47:31,259 p=93303 u=administrator n=ansible INFO| Mettre à jour /etc/hosts avec les IPs bond0 (statiques) --------------------------------------------------------------------------------------------------------- 1.91s
+2026-02-19 21:47:31,259 p=93303 u=administrator n=ansible INFO| Rendre les modules persistants ---------------------------------------------------------------------------------------------------------------------------------- 1.70s
+2026-02-19 21:47:31,259 p=93303 u=administrator n=ansible INFO| Installation de la bibliothèque python kubernetes --------------------------------------------------------------------------------------------------------------- 1.59s
+2026-02-19 21:47:31,259 p=93303 u=administrator n=ansible INFO| Installation Git ------------------------------------------------------------------------------------------------------------------------------------------------ 1.55s
+2026-02-19 21:47:31,259 p=93303 u=administrator n=ansible INFO| Installation de python3-pip ------------------------------------------------------------------------------------------------------------------------------------- 1.55s
+2026-02-19 21:47:31,260 p=93303 u=administrator n=ansible INFO| Installation des packages essentiels ---------------------------------------------------------------------------------------------------------------------------- 1.55s
+2026-02-19 21:47:31,260 p=93303 u=administrator n=ansible INFO| Configurer hostname --------------------------------------------------------------------------------------------------------------------------------------------- 1.45s
+2026-02-19 21:47:31,260 p=93303 u=administrator n=ansible INFO| Activer et démarrer iscsid -------------------------------------------------------------------------------------------------------------------------------------- 1.38s
+2026-02-19 21:47:31,260 p=93303 u=administrator n=ansible INFO| Configurer timezone --------------------------------------------------------------------------------------------------------------------------------------------- 1.11s
+2026-02-19 21:47:31,260 p=93303 u=administrator n=ansible INFO| Vérifier si Helm est déjà installé ------------------------------------------------------------------------------------------------------------------------------ 0.85s
+2026-02-19 21:47:31,260 p=93303 u=administrator n=ansible INFO| Vérifier version Git -------------------------------------------------------------------------------------------------------------------------------------------- 0.83s
+2026-02-19 21:47:31,261 p=93303 u=administrator n=ansible INFO| Désactiver swap dans fstab -------------------------------------------------------------------------------------------------------------------------------------- 0.80s
+2026-02-19 21:47:31,261 p=93303 u=administrator n=ansible INFO| Vérifier modules chargés ---------------------------------------------------------------------------------------------------------------------------------------- 0.71s
+2026-02-19 21:47:31,261 p=93303 u=administrator n=ansible INFO| Vérifier version Helm ------------------------------------------------------------------------------------------------------------------------------------------- 0.70s
+2026-02-19 21:47:31,261 p=93303 u=administrator n=ansible INFO| Désactiver swap (requis K8s) ------------------------------------------------------------------------------------------------------------------------------------ 0.67s
+2026-02-19 21:49:29,486 p=94934 u=administrator n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+
+2026-02-19 21:49:29,487 p=94934 u=administrator n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be removed from collection 'community.general' version 12.0.0.
+
+2026-02-19 21:49:29,547 p=94934 u=administrator n=ansible INFO| PLAY [Installation prérequis système, Git et Helm] *********************************************************************************************************************
+2026-02-19 21:49:29,572 p=94934 u=administrator n=ansible INFO| TASK [Gathering Facts] *************************************************************************************************************************************************
+2026-02-19 21:49:29,572 p=94934 u=administrator n=ansible INFO| jeudi 19 février 2026  21:49:29 +0100 (0:00:00.049)       0:00:00.049 ********* 
+2026-02-19 21:49:32,687 p=94934 u=administrator n=ansible ERROR| [ERROR]: Task failed: Data could not be sent to remote host "192.168.0.11". Make sure this host can be reached over ssh: administrator@192.168.0.11: Permission denied (publickey,password).
+
+2026-02-19 21:49:32,689 p=94934 u=administrator n=ansible INFO| fatal: [k3s-node-1]: UNREACHABLE! => changed=false 
+  msg: 'Task failed: Data could not be sent to remote host "192.168.0.11". Make sure this host can be reached over ssh: administrator@192.168.0.11: Permission denied (publickey,password).'
+  unreachable: true
+2026-02-19 21:49:33,653 p=94934 u=administrator n=ansible ERROR| [ERROR]: Task failed: Data could not be sent to remote host "192.168.0.12". Make sure this host can be reached over ssh: administrator@192.168.0.12: Permission denied (publickey,password).
+
+2026-02-19 21:49:33,654 p=94934 u=administrator n=ansible INFO| fatal: [k3s-node-2]: UNREACHABLE! => changed=false 
+  msg: 'Task failed: Data could not be sent to remote host "192.168.0.12". Make sure this host can be reached over ssh: administrator@192.168.0.12: Permission denied (publickey,password).'
+  unreachable: true
+2026-02-19 21:49:34,745 p=94934 u=administrator n=ansible ERROR| [ERROR]: Task failed: Data could not be sent to remote host "192.168.0.13". Make sure this host can be reached over ssh: administrator@192.168.0.13: Permission denied (publickey,password).
+
+2026-02-19 21:49:34,746 p=94934 u=administrator n=ansible INFO| fatal: [k3s-node-3]: UNREACHABLE! => changed=false 
+  msg: 'Task failed: Data could not be sent to remote host "192.168.0.13". Make sure this host can be reached over ssh: administrator@192.168.0.13: Permission denied (publickey,password).'
+  unreachable: true
+2026-02-19 21:49:34,748 p=94934 u=administrator n=ansible INFO| PLAY RECAP *************************************************************************************************************************************************************
+2026-02-19 21:49:34,748 p=94934 u=administrator n=ansible INFO| k3s-node-1                 : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0   
+2026-02-19 21:49:34,748 p=94934 u=administrator n=ansible INFO| k3s-node-2                 : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0   
+2026-02-19 21:49:34,749 p=94934 u=administrator n=ansible INFO| k3s-node-3                 : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0   
+2026-02-19 21:49:34,749 p=94934 u=administrator n=ansible INFO| PLAYBOOK RECAP *********************************************************************************************************************************************************
+2026-02-19 21:49:34,749 p=94934 u=administrator n=ansible INFO| Playbook run took 0 days, 0 hours, 0 minutes, 5 seconds
+
+2026-02-19 21:49:34,749 p=94934 u=administrator n=ansible INFO| TASKS RECAP ************************************************************************************************************************************************************
+2026-02-19 21:49:34,750 p=94934 u=administrator n=ansible INFO| jeudi 19 février 2026  21:49:34 +0100 (0:00:05.177)       0:00:05.226 ********* 
+2026-02-19 21:49:34,750 p=94934 u=administrator n=ansible INFO| =============================================================================== 
+2026-02-19 21:49:34,750 p=94934 u=administrator n=ansible INFO| Gathering Facts ------------------------------------------------------------------------------------------------------------------------------------------------- 5.18s
+2026-02-19 21:49:40,245 p=95015 u=administrator n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+
+2026-02-19 21:49:40,245 p=95015 u=administrator n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be removed from collection 'community.general' version 12.0.0.
+
+2026-02-19 21:49:40,319 p=95015 u=administrator n=ansible INFO| PLAY [Installation prérequis système, Git et Helm] *********************************************************************************************************************
+2026-02-19 21:49:40,344 p=95015 u=administrator n=ansible INFO| TASK [Gathering Facts] *************************************************************************************************************************************************
+2026-02-19 21:49:40,344 p=95015 u=administrator n=ansible INFO| jeudi 19 février 2026  21:49:40 +0100 (0:00:00.054)       0:00:00.054 ********* 
+2026-02-19 21:49:43,938 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 21:49:44,046 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-19 21:49:44,183 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 21:49:44,211 p=95015 u=administrator n=ansible INFO| TASK [Mise à jour du cache apt] ****************************************************************************************************************************************
+2026-02-19 21:49:44,211 p=95015 u=administrator n=ansible INFO| jeudi 19 février 2026  21:49:44 +0100 (0:00:03.867)       0:00:03.921 ********* 
+2026-02-19 21:49:45,575 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-19 21:49:45,673 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 21:49:45,693 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 21:49:45,723 p=95015 u=administrator n=ansible INFO| TASK [Mise à jour complète du système] *********************************************************************************************************************************
+2026-02-19 21:49:45,724 p=95015 u=administrator n=ansible INFO| jeudi 19 février 2026  21:49:45 +0100 (0:00:01.512)       0:00:05.433 ********* 
+2026-02-19 21:49:47,519 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 21:49:47,583 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-19 21:49:47,735 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 21:49:47,763 p=95015 u=administrator n=ansible INFO| TASK [Installation des packages essentiels] ****************************************************************************************************************************
+2026-02-19 21:49:47,764 p=95015 u=administrator n=ansible INFO| jeudi 19 février 2026  21:49:47 +0100 (0:00:02.039)       0:00:07.473 ********* 
+2026-02-19 21:49:49,197 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-19 21:49:49,263 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 21:49:49,279 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 21:49:49,318 p=95015 u=administrator n=ansible INFO| TASK [Installation Git] ************************************************************************************************************************************************
+2026-02-19 21:49:49,318 p=95015 u=administrator n=ansible INFO| jeudi 19 février 2026  21:49:49 +0100 (0:00:01.554)       0:00:09.028 ********* 
+2026-02-19 21:49:50,772 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-19 21:49:50,824 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 21:49:50,863 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 21:49:50,892 p=95015 u=administrator n=ansible INFO| TASK [Vérifier version Git] ********************************************************************************************************************************************
+2026-02-19 21:49:50,892 p=95015 u=administrator n=ansible INFO| jeudi 19 février 2026  21:49:50 +0100 (0:00:01.574)       0:00:10.602 ********* 
+2026-02-19 21:49:51,684 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 21:49:51,686 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 21:49:51,689 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-19 21:49:51,711 p=95015 u=administrator n=ansible INFO| TASK [Afficher version Git] ********************************************************************************************************************************************
+2026-02-19 21:49:51,711 p=95015 u=administrator n=ansible INFO| jeudi 19 février 2026  21:49:51 +0100 (0:00:00.819)       0:00:11.421 ********* 
+2026-02-19 21:49:51,779 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg: 'Git installé : git version 2.51.0'
+2026-02-19 21:49:51,783 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-2] => 
+  msg: 'Git installé : git version 2.51.0'
+2026-02-19 21:49:51,809 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-3] => 
+  msg: 'Git installé : git version 2.51.0'
+2026-02-19 21:49:51,827 p=95015 u=administrator n=ansible INFO| TASK [Configurer timezone] *********************************************************************************************************************************************
+2026-02-19 21:49:51,828 p=95015 u=administrator n=ansible INFO| jeudi 19 février 2026  21:49:51 +0100 (0:00:00.116)       0:00:11.537 ********* 
+2026-02-19 21:49:52,823 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-19 21:49:52,839 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 21:49:52,889 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 21:49:52,918 p=95015 u=administrator n=ansible INFO| TASK [Désactiver swap (requis K8s)] ************************************************************************************************************************************
+2026-02-19 21:49:52,918 p=95015 u=administrator n=ansible INFO| jeudi 19 février 2026  21:49:52 +0100 (0:00:01.090)       0:00:12.628 ********* 
+2026-02-19 21:49:53,477 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 21:49:53,525 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 21:49:53,531 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-19 21:49:53,554 p=95015 u=administrator n=ansible INFO| TASK [Désactiver swap dans fstab] **************************************************************************************************************************************
+2026-02-19 21:49:53,554 p=95015 u=administrator n=ansible INFO| jeudi 19 février 2026  21:49:53 +0100 (0:00:00.636)       0:00:13.264 ********* 
+2026-02-19 21:49:54,316 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 21:49:54,345 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-19 21:49:54,347 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 21:49:54,375 p=95015 u=administrator n=ansible INFO| TASK [Configurer hostname] *********************************************************************************************************************************************
+2026-02-19 21:49:54,375 p=95015 u=administrator n=ansible INFO| jeudi 19 février 2026  21:49:54 +0100 (0:00:00.820)       0:00:14.085 ********* 
+2026-02-19 21:49:55,913 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 21:49:55,956 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-19 21:49:56,021 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 21:49:56,051 p=95015 u=administrator n=ansible INFO| TASK [Mettre à jour /etc/hosts avec les IPs bond0 (statiques)] *********************************************************************************************************
+2026-02-19 21:49:56,052 p=95015 u=administrator n=ansible INFO| jeudi 19 février 2026  21:49:56 +0100 (0:00:01.676)       0:00:15.761 ********* 
+2026-02-19 21:49:56,847 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item={'ip': '192.168.0.11', 'name': 'k3s-node-1'})
+2026-02-19 21:49:56,851 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item={'ip': '192.168.0.11', 'name': 'k3s-node-1'})
+2026-02-19 21:49:56,854 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item={'ip': '192.168.0.11', 'name': 'k3s-node-1'})
+2026-02-19 21:49:57,360 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item={'ip': '192.168.0.12', 'name': 'k3s-node-2'})
+2026-02-19 21:49:57,365 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item={'ip': '192.168.0.12', 'name': 'k3s-node-2'})
+2026-02-19 21:49:57,397 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item={'ip': '192.168.0.12', 'name': 'k3s-node-2'})
+2026-02-19 21:49:57,894 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item={'ip': '192.168.0.13', 'name': 'k3s-node-3'})
+2026-02-19 21:49:57,899 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item={'ip': '192.168.0.13', 'name': 'k3s-node-3'})
+2026-02-19 21:49:57,930 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item={'ip': '192.168.0.13', 'name': 'k3s-node-3'})
+2026-02-19 21:49:57,965 p=95015 u=administrator n=ansible INFO| TASK [Charger les modules kernel requis] *******************************************************************************************************************************
+2026-02-19 21:49:57,965 p=95015 u=administrator n=ansible INFO| jeudi 19 février 2026  21:49:57 +0100 (0:00:01.913)       0:00:17.675 ********* 
+2026-02-19 21:49:58,728 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item=overlay)
+2026-02-19 21:49:58,761 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item=overlay)
+2026-02-19 21:49:58,768 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item=overlay)
+2026-02-19 21:49:59,167 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item=br_netfilter)
+2026-02-19 21:49:59,262 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item=br_netfilter)
+2026-02-19 21:49:59,289 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item=br_netfilter)
+2026-02-19 21:49:59,609 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item=kvm)
+2026-02-19 21:49:59,700 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item=kvm)
+2026-02-19 21:49:59,816 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item=kvm)
+2026-02-19 21:50:00,050 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item=kvm_intel)
+2026-02-19 21:50:00,145 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item=kvm_intel)
+2026-02-19 21:50:00,346 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item=kvm_intel)
+2026-02-19 21:50:00,490 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item=vhost_net)
+2026-02-19 21:50:00,586 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item=vhost_net)
+2026-02-19 21:50:00,895 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item=vhost_net)
+2026-02-19 21:50:00,936 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item=vhost_vsock)
+2026-02-19 21:50:01,116 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item=vhost_vsock)
+2026-02-19 21:50:01,376 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item=dm_snapshot)
+2026-02-19 21:50:01,420 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item=vhost_vsock)
+2026-02-19 21:50:01,644 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item=dm_snapshot)
+2026-02-19 21:50:01,818 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item=dm_mirror)
+2026-02-19 21:50:01,965 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item=dm_snapshot)
+2026-02-19 21:50:02,163 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item=dm_mirror)
+2026-02-19 21:50:02,247 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item=dm_thin_pool)
+2026-02-19 21:50:02,500 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item=dm_mirror)
+2026-02-19 21:50:02,694 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item=dm_thin_pool)
+2026-02-19 21:50:03,038 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item=dm_thin_pool)
+2026-02-19 21:50:03,076 p=95015 u=administrator n=ansible INFO| TASK [Rendre les modules persistants] **********************************************************************************************************************************
+2026-02-19 21:50:03,077 p=95015 u=administrator n=ansible INFO| jeudi 19 février 2026  21:50:03 +0100 (0:00:05.111)       0:00:22.786 ********* 
+2026-02-19 21:50:04,738 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-19 21:50:04,741 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 21:50:04,781 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 21:50:04,812 p=95015 u=administrator n=ansible INFO| TASK [Configurer sysctl] ***********************************************************************************************************************************************
+2026-02-19 21:50:04,812 p=95015 u=administrator n=ansible INFO| jeudi 19 février 2026  21:50:04 +0100 (0:00:01.735)       0:00:24.522 ********* 
+2026-02-19 21:50:05,625 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item={'key': 'net.ipv4.ip_forward', 'value': 1})
+2026-02-19 21:50:05,645 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item={'key': 'net.ipv4.ip_forward', 'value': 1})
+2026-02-19 21:50:05,648 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item={'key': 'net.ipv4.ip_forward', 'value': 1})
+2026-02-19 21:50:06,157 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': 1})
+2026-02-19 21:50:06,180 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': 1})
+2026-02-19 21:50:06,197 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item={'key': 'net.bridge.bridge-nf-call-iptables', 'value': 1})
+2026-02-19 21:50:06,677 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': 1})
+2026-02-19 21:50:06,681 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': 1})
+2026-02-19 21:50:06,733 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item={'key': 'net.bridge.bridge-nf-call-ip6tables', 'value': 1})
+2026-02-19 21:50:07,139 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item={'key': 'net.core.somaxconn', 'value': 32768})
+2026-02-19 21:50:07,148 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item={'key': 'net.core.somaxconn', 'value': 32768})
+2026-02-19 21:50:07,275 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item={'key': 'net.core.somaxconn', 'value': 32768})
+2026-02-19 21:50:07,669 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item={'key': 'net.ipv4.tcp_max_syn_backlog', 'value': 8192})
+2026-02-19 21:50:07,691 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item={'key': 'net.ipv4.tcp_max_syn_backlog', 'value': 8192})
+2026-02-19 21:50:07,824 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item={'key': 'net.ipv4.tcp_max_syn_backlog', 'value': 8192})
+2026-02-19 21:50:08,204 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item={'key': 'fs.file-max', 'value': 2097152})
+2026-02-19 21:50:08,233 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item={'key': 'fs.file-max', 'value': 2097152})
+2026-02-19 21:50:08,372 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item={'key': 'fs.file-max', 'value': 2097152})
+2026-02-19 21:50:08,748 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item={'key': 'fs.inotify.max_user_watches', 'value': 524288})
+2026-02-19 21:50:08,756 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item={'key': 'fs.inotify.max_user_watches', 'value': 524288})
+2026-02-19 21:50:08,925 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item={'key': 'fs.inotify.max_user_watches', 'value': 524288})
+2026-02-19 21:50:09,292 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item={'key': 'fs.inotify.max_user_instances', 'value': 8192})
+2026-02-19 21:50:09,294 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item={'key': 'fs.inotify.max_user_instances', 'value': 8192})
+2026-02-19 21:50:09,474 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item={'key': 'fs.inotify.max_user_instances', 'value': 8192})
+2026-02-19 21:50:09,808 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item={'key': 'vm.swappiness', 'value': 10})
+2026-02-19 21:50:09,818 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item={'key': 'vm.swappiness', 'value': 10})
+2026-02-19 21:50:10,020 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item={'key': 'vm.swappiness', 'value': 10})
+2026-02-19 21:50:10,256 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item={'key': 'vm.dirty_ratio', 'value': 15})
+2026-02-19 21:50:10,280 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item={'key': 'vm.dirty_ratio', 'value': 15})
+2026-02-19 21:50:10,571 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item={'key': 'vm.dirty_ratio', 'value': 15})
+2026-02-19 21:50:10,708 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-3] => (item={'key': 'vm.dirty_background_ratio', 'value': 5})
+2026-02-19 21:50:10,812 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-2] => (item={'key': 'vm.dirty_background_ratio', 'value': 5})
+2026-02-19 21:50:11,121 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-1] => (item={'key': 'vm.dirty_background_ratio', 'value': 5})
+2026-02-19 21:50:11,143 p=95015 u=administrator n=ansible INFO| TASK [Activer et démarrer iscsid] **************************************************************************************************************************************
+2026-02-19 21:50:11,143 p=95015 u=administrator n=ansible INFO| jeudi 19 février 2026  21:50:11 +0100 (0:00:06.330)       0:00:30.853 ********* 
+2026-02-19 21:50:12,500 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 21:50:12,516 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-19 21:50:12,521 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 21:50:12,550 p=95015 u=administrator n=ansible INFO| TASK [Vérifier si Helm est déjà installé] ******************************************************************************************************************************
+2026-02-19 21:50:12,550 p=95015 u=administrator n=ansible INFO| jeudi 19 février 2026  21:50:12 +0100 (0:00:01.406)       0:00:32.260 ********* 
+2026-02-19 21:50:13,298 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 21:50:13,327 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-19 21:50:13,333 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 21:50:13,364 p=95015 u=administrator n=ansible INFO| TASK [Télécharger et installer Helm] ***********************************************************************************************************************************
+2026-02-19 21:50:13,364 p=95015 u=administrator n=ansible INFO| jeudi 19 février 2026  21:50:13 +0100 (0:00:00.814)       0:00:33.074 ********* 
+2026-02-19 21:50:13,411 p=95015 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-02-19 21:50:13,445 p=95015 u=administrator n=ansible INFO| skipping: [k3s-node-2]
+2026-02-19 21:50:13,464 p=95015 u=administrator n=ansible INFO| skipping: [k3s-node-3]
+2026-02-19 21:50:13,485 p=95015 u=administrator n=ansible INFO| TASK [Vérifier version Helm] *******************************************************************************************************************************************
+2026-02-19 21:50:13,485 p=95015 u=administrator n=ansible INFO| jeudi 19 février 2026  21:50:13 +0100 (0:00:00.120)       0:00:33.195 ********* 
+2026-02-19 21:50:14,092 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 21:50:14,125 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 21:50:14,156 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-19 21:50:14,185 p=95015 u=administrator n=ansible INFO| TASK [Afficher version Helm] *******************************************************************************************************************************************
+2026-02-19 21:50:14,185 p=95015 u=administrator n=ansible INFO| jeudi 19 février 2026  21:50:14 +0100 (0:00:00.700)       0:00:33.895 ********* 
+2026-02-19 21:50:14,252 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg: 'Helm installé : v3.20.0+gb2e4314'
+2026-02-19 21:50:14,255 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-2] => 
+  msg: 'Helm installé : v3.20.0+gb2e4314'
+2026-02-19 21:50:14,281 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-3] => 
+  msg: 'Helm installé : v3.20.0+gb2e4314'
+2026-02-19 21:50:14,299 p=95015 u=administrator n=ansible INFO| TASK [Vérifier modules chargés] ****************************************************************************************************************************************
+2026-02-19 21:50:14,299 p=95015 u=administrator n=ansible INFO| jeudi 19 février 2026  21:50:14 +0100 (0:00:00.113)       0:00:34.008 ********* 
+2026-02-19 21:50:14,896 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 21:50:14,928 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 21:50:14,964 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-19 21:50:14,992 p=95015 u=administrator n=ansible INFO| TASK [Résumé prérequis] ************************************************************************************************************************************************
+2026-02-19 21:50:14,992 p=95015 u=administrator n=ansible INFO| jeudi 19 février 2026  21:50:14 +0100 (0:00:00.693)       0:00:34.702 ********* 
+2026-02-19 21:50:15,068 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg:
+  - === Prérequis OK sur k3s-node-1 ===
+  - 'Git     : git version 2.51.0'
+  - 'Helm    : v3.20.0+gb2e4314'
+  - 'Hostname: k3s-node-1'
+  - 'Swap    : désactivé'
+  - 'Modules : chargés'
+  - 'iSCSI   : actif'
+2026-02-19 21:50:15,072 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-2] => 
+  msg:
+  - === Prérequis OK sur k3s-node-2 ===
+  - 'Git     : git version 2.51.0'
+  - 'Helm    : v3.20.0+gb2e4314'
+  - 'Hostname: k3s-node-2'
+  - 'Swap    : désactivé'
+  - 'Modules : chargés'
+  - 'iSCSI   : actif'
+2026-02-19 21:50:15,106 p=95015 u=administrator n=ansible INFO| ok: [k3s-node-3] => 
+  msg:
+  - === Prérequis OK sur k3s-node-3 ===
+  - 'Git     : git version 2.51.0'
+  - 'Helm    : v3.20.0+gb2e4314'
+  - 'Hostname: k3s-node-3'
+  - 'Swap    : désactivé'
+  - 'Modules : chargés'
+  - 'iSCSI   : actif'
+2026-02-19 21:50:15,133 p=95015 u=administrator n=ansible INFO| TASK [Installation du paquet python3-kubernetes] ***********************************************************************************************************************
+2026-02-19 21:50:15,133 p=95015 u=administrator n=ansible INFO| jeudi 19 février 2026  21:50:15 +0100 (0:00:00.140)       0:00:34.843 ********* 
+2026-02-19 21:50:32,415 p=95015 u=administrator n=ansible INFO| changed: [k3s-node-2]
+2026-02-19 21:50:32,738 p=95015 u=administrator n=ansible INFO| changed: [k3s-node-3]
+2026-02-19 21:50:32,878 p=95015 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-02-19 21:50:32,882 p=95015 u=administrator n=ansible INFO| PLAY RECAP *************************************************************************************************************************************************************
+2026-02-19 21:50:32,883 p=95015 u=administrator n=ansible INFO| k3s-node-1                 : ok=22   changed=1    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0   
+2026-02-19 21:50:32,883 p=95015 u=administrator n=ansible INFO| k3s-node-2                 : ok=22   changed=1    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0   
+2026-02-19 21:50:32,883 p=95015 u=administrator n=ansible INFO| k3s-node-3                 : ok=22   changed=1    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0   
+2026-02-19 21:50:32,884 p=95015 u=administrator n=ansible INFO| PLAYBOOK RECAP *********************************************************************************************************************************************************
+2026-02-19 21:50:32,884 p=95015 u=administrator n=ansible INFO| Playbook run took 0 days, 0 hours, 0 minutes, 52 seconds
+
+2026-02-19 21:50:32,884 p=95015 u=administrator n=ansible INFO| TASKS RECAP ************************************************************************************************************************************************************
+2026-02-19 21:50:32,885 p=95015 u=administrator n=ansible INFO| jeudi 19 février 2026  21:50:32 +0100 (0:00:17.751)       0:00:52.594 ********* 
+2026-02-19 21:50:32,885 p=95015 u=administrator n=ansible INFO| =============================================================================== 
+2026-02-19 21:50:32,885 p=95015 u=administrator n=ansible INFO| Installation du paquet python3-kubernetes ---------------------------------------------------------------------------------------------------------------------- 17.75s
+2026-02-19 21:50:32,885 p=95015 u=administrator n=ansible INFO| Configurer sysctl ----------------------------------------------------------------------------------------------------------------------------------------------- 6.33s
+2026-02-19 21:50:32,886 p=95015 u=administrator n=ansible INFO| Charger les modules kernel requis ------------------------------------------------------------------------------------------------------------------------------- 5.11s
+2026-02-19 21:50:32,886 p=95015 u=administrator n=ansible INFO| Gathering Facts ------------------------------------------------------------------------------------------------------------------------------------------------- 3.87s
+2026-02-19 21:50:32,886 p=95015 u=administrator n=ansible INFO| Mise à jour complète du système --------------------------------------------------------------------------------------------------------------------------------- 2.04s
+2026-02-19 21:50:32,886 p=95015 u=administrator n=ansible INFO| Mettre à jour /etc/hosts avec les IPs bond0 (statiques) --------------------------------------------------------------------------------------------------------- 1.91s
+2026-02-19 21:50:32,886 p=95015 u=administrator n=ansible INFO| Rendre les modules persistants ---------------------------------------------------------------------------------------------------------------------------------- 1.74s
+2026-02-19 21:50:32,887 p=95015 u=administrator n=ansible INFO| Configurer hostname --------------------------------------------------------------------------------------------------------------------------------------------- 1.68s
+2026-02-19 21:50:32,887 p=95015 u=administrator n=ansible INFO| Installation Git ------------------------------------------------------------------------------------------------------------------------------------------------ 1.57s
+2026-02-19 21:50:32,887 p=95015 u=administrator n=ansible INFO| Installation des packages essentiels ---------------------------------------------------------------------------------------------------------------------------- 1.55s
+2026-02-19 21:50:32,887 p=95015 u=administrator n=ansible INFO| Mise à jour du cache apt ---------------------------------------------------------------------------------------------------------------------------------------- 1.51s
+2026-02-19 21:50:32,887 p=95015 u=administrator n=ansible INFO| Activer et démarrer iscsid -------------------------------------------------------------------------------------------------------------------------------------- 1.41s
+2026-02-19 21:50:32,887 p=95015 u=administrator n=ansible INFO| Configurer timezone --------------------------------------------------------------------------------------------------------------------------------------------- 1.09s
+2026-02-19 21:50:32,888 p=95015 u=administrator n=ansible INFO| Désactiver swap dans fstab -------------------------------------------------------------------------------------------------------------------------------------- 0.82s
+2026-02-19 21:50:32,888 p=95015 u=administrator n=ansible INFO| Vérifier version Git -------------------------------------------------------------------------------------------------------------------------------------------- 0.82s
+2026-02-19 21:50:32,888 p=95015 u=administrator n=ansible INFO| Vérifier si Helm est déjà installé ------------------------------------------------------------------------------------------------------------------------------ 0.81s
+2026-02-19 21:50:32,888 p=95015 u=administrator n=ansible INFO| Vérifier version Helm ------------------------------------------------------------------------------------------------------------------------------------------- 0.70s
+2026-02-19 21:50:32,888 p=95015 u=administrator n=ansible INFO| Vérifier modules chargés ---------------------------------------------------------------------------------------------------------------------------------------- 0.69s
+2026-02-19 21:50:32,889 p=95015 u=administrator n=ansible INFO| Désactiver swap (requis K8s) ------------------------------------------------------------------------------------------------------------------------------------ 0.64s
+2026-02-19 21:50:32,889 p=95015 u=administrator n=ansible INFO| Résumé prérequis ------------------------------------------------------------------------------------------------------------------------------------------------ 0.14s
+2026-02-19 21:50:47,038 p=96592 u=administrator n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+
+2026-02-19 21:50:47,039 p=96592 u=administrator n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be removed from collection 'community.general' version 12.0.0.
+
+2026-02-19 21:50:47,080 p=96592 u=administrator n=ansible INFO| PLAY [Déploiement de la redirection Kwaba Kinésiologie] ****************************************************************************************************************
+2026-02-19 21:50:47,091 p=96592 u=administrator n=ansible INFO| TASK [Créer le namespace] **********************************************************************************************************************************************
+2026-02-19 21:50:47,092 p=96592 u=administrator n=ansible INFO| jeudi 19 février 2026  21:50:47 +0100 (0:00:00.017)       0:00:00.017 ********* 
+2026-02-19 21:50:48,953 p=96592 u=administrator n=ansible WARNING| [WARNING]: Collection cloud.common does not support Ansible version 2.19.0
+
+2026-02-19 21:50:48,954 p=96592 u=administrator n=ansible ERROR| [ERROR]: Task failed: Module failed: Could not create API client: Invalid kube-config file. No configuration found.
+Origin: /home/administrator/git/k3s-kubevirt/playbooks/kwaba_deploy_redirect.yml:14:7
+
+12
+13   tasks:
+14     - name: Créer le namespace
+         ^ column 7
+
+
+2026-02-19 21:50:48,954 p=96592 u=administrator n=ansible INFO| fatal: [k3s-node-1]: FAILED! => changed=false 
+  msg: 'Could not create API client: Invalid kube-config file. No configuration found.'
+2026-02-19 21:50:48,955 p=96592 u=administrator n=ansible INFO| PLAY RECAP *************************************************************************************************************************************************************
+2026-02-19 21:50:48,956 p=96592 u=administrator n=ansible INFO| k3s-node-1                 : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0   
+2026-02-19 21:50:48,956 p=96592 u=administrator n=ansible INFO| PLAYBOOK RECAP *********************************************************************************************************************************************************
+2026-02-19 21:50:48,956 p=96592 u=administrator n=ansible INFO| Playbook run took 0 days, 0 hours, 0 minutes, 1 seconds
+
+2026-02-19 21:50:48,956 p=96592 u=administrator n=ansible INFO| TASKS RECAP ************************************************************************************************************************************************************
+2026-02-19 21:50:48,956 p=96592 u=administrator n=ansible INFO| jeudi 19 février 2026  21:50:48 +0100 (0:00:01.864)       0:00:01.882 ********* 
+2026-02-19 21:50:48,957 p=96592 u=administrator n=ansible INFO| =============================================================================== 
+2026-02-19 21:50:48,957 p=96592 u=administrator n=ansible INFO| Créer le namespace ---------------------------------------------------------------------------------------------------------------------------------------------- 1.86s
+2026-02-19 21:53:18,160 p=96813 u=administrator n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+
+2026-02-19 21:53:18,161 p=96813 u=administrator n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be removed from collection 'community.general' version 12.0.0.
+
+2026-02-19 21:53:18,215 p=96813 u=administrator n=ansible INFO| PLAY [Déploiement de la redirection Kwaba Kinésiologie] ****************************************************************************************************************
+2026-02-19 21:53:18,233 p=96813 u=administrator n=ansible INFO| TASK [Gathering Facts] *************************************************************************************************************************************************
+2026-02-19 21:53:18,233 p=96813 u=administrator n=ansible INFO| jeudi 19 février 2026  21:53:18 +0100 (0:00:00.026)       0:00:00.026 ********* 
+2026-02-19 21:53:21,921 p=96813 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 21:53:21,945 p=96813 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-19 21:53:22,114 p=96813 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 21:53:22,127 p=96813 u=administrator n=ansible INFO| TASK [Installation du paquet python3-kubernetes] ***********************************************************************************************************************
+2026-02-19 21:53:22,128 p=96813 u=administrator n=ansible INFO| jeudi 19 février 2026  21:53:22 +0100 (0:00:03.894)       0:00:03.920 ********* 
+2026-02-19 21:53:24,879 p=96813 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-19 21:53:25,221 p=96813 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-19 21:53:25,330 p=96813 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 21:53:25,347 p=96813 u=administrator n=ansible INFO| TASK [Créer le namespace] **********************************************************************************************************************************************
+2026-02-19 21:53:25,347 p=96813 u=administrator n=ansible INFO| jeudi 19 février 2026  21:53:25 +0100 (0:00:03.219)       0:00:07.139 ********* 
+2026-02-19 21:53:27,183 p=96813 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-19 21:53:27,212 p=96813 u=administrator n=ansible WARNING| [WARNING]: Collection cloud.common does not support Ansible version 2.19.0
+
+2026-02-19 21:53:27,213 p=96813 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-02-19 21:53:27,265 p=96813 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-19 21:53:27,279 p=96813 u=administrator n=ansible INFO| TASK [Créer la ConfigMap] **********************************************************************************************************************************************
+2026-02-19 21:53:27,280 p=96813 u=administrator n=ansible INFO| jeudi 19 février 2026  21:53:27 +0100 (0:00:01.932)       0:00:09.072 ********* 
+2026-02-19 21:53:27,329 p=96813 u=administrator n=ansible ERROR| [ERROR]: Task failed: Finalization of task args for 'kubernetes.core.k8s' failed: Error while resolving value for 'definition': The lookup plugin 'file' failed: Unable to access the file 'index_kwaba_kinesiologie.html': File not found. Use -vvvvv to see paths searched.
+
+Task failed.
+Origin: /home/administrator/git/k3s-kubevirt/playbooks/kwaba_deploy_redirect.yml:31:7
+
+29             name: "{{ target_namespace }}"
+30
+31     - name: Créer la ConfigMap
+         ^ column 7
+
+<<< caused by >>>
+
+Finalization of task args for 'kubernetes.core.k8s' failed.
+Origin: /home/administrator/git/k3s-kubevirt/playbooks/kwaba_deploy_redirect.yml:32:7
+
+30
+31     - name: Créer la ConfigMap
+32       kubernetes.core.k8s:
+         ^ column 7
+
+<<< caused by >>>
+
+Error while resolving value for 'definition': The lookup plugin 'file' failed: Unable to access the file 'index_kwaba_kinesiologie.html': File not found. Use -vvvvv to see paths searched.
+Origin: /home/administrator/git/k3s-kubevirt/playbooks/kwaba_deploy_redirect.yml:36:11
+
+34         state: present
+35         definition:
+36           apiVersion: v1
+             ^ column 11
+
+
+2026-02-19 21:53:27,331 p=96813 u=administrator n=ansible INFO| fatal: [k3s-node-1]: FAILED! => changed=false 
+  msg: 'Task failed: Finalization of task args for ''kubernetes.core.k8s'' failed: Error while resolving value for ''definition'': The lookup plugin ''file'' failed: Unable to access the file ''index_kwaba_kinesiologie.html'': File not found. Use -vvvvv to see paths searched.'
+2026-02-19 21:53:27,342 p=96813 u=administrator n=ansible INFO| fatal: [k3s-node-2]: FAILED! => changed=false 
+  msg: 'Task failed: Finalization of task args for ''kubernetes.core.k8s'' failed: Error while resolving value for ''definition'': The lookup plugin ''file'' failed: Unable to access the file ''index_kwaba_kinesiologie.html'': File not found. Use -vvvvv to see paths searched.'
+2026-02-19 21:53:27,354 p=96813 u=administrator n=ansible INFO| fatal: [k3s-node-3]: FAILED! => changed=false 
+  msg: 'Task failed: Finalization of task args for ''kubernetes.core.k8s'' failed: Error while resolving value for ''definition'': The lookup plugin ''file'' failed: Unable to access the file ''index_kwaba_kinesiologie.html'': File not found. Use -vvvvv to see paths searched.'
+2026-02-19 21:53:27,356 p=96813 u=administrator n=ansible INFO| PLAY RECAP *************************************************************************************************************************************************************
+2026-02-19 21:53:27,356 p=96813 u=administrator n=ansible INFO| k3s-node-1                 : ok=3    changed=1    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0   
+2026-02-19 21:53:27,356 p=96813 u=administrator n=ansible INFO| k3s-node-2                 : ok=3    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0   
+2026-02-19 21:53:27,356 p=96813 u=administrator n=ansible INFO| k3s-node-3                 : ok=3    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0   
+2026-02-19 21:53:27,356 p=96813 u=administrator n=ansible INFO| PLAYBOOK RECAP *********************************************************************************************************************************************************
+2026-02-19 21:53:27,357 p=96813 u=administrator n=ansible INFO| Playbook run took 0 days, 0 hours, 0 minutes, 9 seconds
+
+2026-02-19 21:53:27,357 p=96813 u=administrator n=ansible INFO| TASKS RECAP ************************************************************************************************************************************************************
+2026-02-19 21:53:27,357 p=96813 u=administrator n=ansible INFO| jeudi 19 février 2026  21:53:27 +0100 (0:00:00.077)       0:00:09.149 ********* 
+2026-02-19 21:53:27,357 p=96813 u=administrator n=ansible INFO| =============================================================================== 
+2026-02-19 21:53:27,357 p=96813 u=administrator n=ansible INFO| Gathering Facts ------------------------------------------------------------------------------------------------------------------------------------------------- 3.89s
+2026-02-19 21:53:27,357 p=96813 u=administrator n=ansible INFO| Installation du paquet python3-kubernetes ----------------------------------------------------------------------------------------------------------------------- 3.22s
+2026-02-19 21:53:27,358 p=96813 u=administrator n=ansible INFO| Créer le namespace ---------------------------------------------------------------------------------------------------------------------------------------------- 1.93s
+2026-02-19 21:53:27,358 p=96813 u=administrator n=ansible INFO| Créer la ConfigMap ---------------------------------------------------------------------------------------------------------------------------------------------- 0.08s

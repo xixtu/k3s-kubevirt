@@ -1,0 +1,123 @@
+---
+- name: Déploiement de la redirection Kwaba Kinésiologie
+  hosts: k3s_cluster
+  become: true
+  vars:
+    target_namespace: "kwaba-kinesiologie-redirect"
+    app_name: "kwaba-redirect"
+    fqdn: "kwaba-kinesiologie.corp.lcl"
+    source_html: "index_kwaba_kinesiologie.html"
+    # Chemin standard pour K3s
+    k3s_config: "/etc/rancher/k3s/k3s.yaml"
+
+  tasks:
+    - name: Installation du paquet python3-kubernetes
+      ansible.builtin.apt:
+        name: python3-kubernetes
+        state: present
+        update_cache: yes
+      tags: [setup, python]
+
+    - name: Créer le namespace
+      kubernetes.core.k8s:
+        kubeconfig: "{{ k3s_config }}"
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: "{{ target_namespace }}"
+
+    - name: Créer la ConfigMap
+      kubernetes.core.k8s:
+        kubeconfig: "{{ k3s_config }}"
+        state: present
+        definition:
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: "{{ app_name }}-html"
+            namespace: "{{ target_namespace }}"
+          data:
+            # Utilise le contenu du fichier index.html fourni
+            index.html: "{{ lookup('file', source_html) }}"
+
+    - name: Déployer Nginx
+      kubernetes.core.k8s:
+        kubeconfig: "{{ k3s_config }}"
+        state: present
+        definition:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: "{{ app_name }}"
+            namespace: "{{ target_namespace }}"
+            labels:
+              app: "{{ app_name }}"
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                app: "{{ app_name }}"
+            template:
+              metadata:
+                labels:
+                  app: "{{ app_name }}"
+              spec:
+                containers:
+                  - name: nginx
+                    image: nginx:alpine
+                    ports:
+                      - containerPort: 80
+                    volumeMounts:
+                      - name: html-volume
+                        mountPath: /usr/share/nginx/html/index.html
+                        subPath: index.html
+                volumes:
+                  - name: html-volume
+                    configMap:
+                      name: "{{ app_name }}-html"
+
+    - name: Créer le Service
+      kubernetes.core.k8s:
+        kubeconfig: "{{ k3s_config }}"
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: "{{ app_name }}-service"
+            namespace: "{{ target_namespace }}"
+          spec:
+            selector:
+              app: "{{ app_name }}"
+            ports:
+              - protocol: TCP
+                port: 80
+                targetPort: 80
+            type: ClusterIP
+
+    - name: Créer l'Ingress
+      kubernetes.core.k8s:
+        kubeconfig: "{{ k3s_config }}"
+        state: present
+        definition:
+          apiVersion: networking.k8s.io/v1
+          kind: Ingress
+          metadata:
+            name: "{{ app_name }}-ingress"
+            namespace: "{{ target_namespace }}"
+            annotations:
+              kubernetes.io/ingress.class: "nginx"
+          spec:
+            rules:
+              - host: "{{ fqdn }}"
+                http:
+                  paths:
+                    - path: /
+                      pathType: Prefix
+                      backend:
+                        service:
+                          name: "{{ app_name }}-service"
+                          port:
+                            number: 80
