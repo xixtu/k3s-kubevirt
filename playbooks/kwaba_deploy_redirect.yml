@@ -5,7 +5,7 @@
   vars:
     target_namespace: "kwaba-kinesiologie-redirect"
     app_name: "kwaba-redirect"
-    fqdn: "kwaba-kinesiologie.app.corp.lcl"
+    fqdn: "kwaba-kinesiologie.xixtu.eu"
     source_html: "{{ playbook_dir }}/../files/index_kwaba_kinesiologie.html"
     # Chemin standard pour K3s
     k3s_config: "/etc/rancher/k3s/k3s.yaml"
@@ -109,8 +109,13 @@
             namespace: "{{ target_namespace }}"
             annotations:
               kubernetes.io/ingress.class: "traefik"
+              cert-manager.io/cluster-issuer: "letsencrypt-production"
           spec:
             ingressClassName: traefik
+            tls:
+              - hosts:
+                  - "{{ fqdn }}"
+                secretName: "{{ app_name }}-tls"
             rules:
               - host: "{{ fqdn }}"
                 http:

@@ -81,9 +81,12 @@ longhorn_storage_classes:
 
 # --- Domaines et certificats ---
 cluster_domain: "cluster.local"
-# external_domain: "mondomaine.com"    # À décommenter et configurer
-letsencrypt_email: "admin@mondomaine.com"
-letsencrypt_server: "https://acme-v02.api.letsencrypt.org/directory"
+letsencrypt_email: "admin@xixtu.eu"    # ⚠ Mettre l'email réel du compte Let's Encrypt
+
+# Domaines publics exposés via Traefik + cert-manager
+external_domains:
+  headlamp: "headlamp.app.xixtu.eu"
+  kwaba: "kwaba-kinesiologie.xixtu.eu"
 
 # --- Monitoring ---
 monitoring_config:

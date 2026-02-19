@@ -1,0 +1,175 @@
+---
+# =============================================================
+# PLAYBOOK : Installation cert-manager + Let's Encrypt
+# =============================================================
+# Usage : ansible-playbook -i inventory/hosts.yml playbooks/letsencrypt.yml
+# Tags :
+#   certmanager-install → Installer cert-manager via Helm
+#   certmanager-verify  → Vérifier les pods cert-manager
+#   letsencrypt-config  → Créer ClusterIssuers (staging + prod)
+# Prérequis : K3s + MetalLB + Traefik installés
+# Namespace  : sys-letsencrypt
+# Challenge  : HTTP-01 via Traefik (port 80 public requis)
+#
+# Certificats gérés :
+#   - headlamp.app.xixtu.eu       (namespace: headlamp)
+#   - kwaba-kinesiologie.xixtu.eu (namespace: kwaba-kinesiologie-redirect)
+#
+# ⚠ PRÉREQUIS DNS (dans Netim) :
+#   headlamp.app.xixtu.eu       → A → <IP publique>
+#   kwaba-kinesiologie.xixtu.eu → A → <IP publique>
+#   Port 80 et 443 doivent être joignables depuis Internet.
+# =============================================================
+
+- name: "cert-manager + Let's Encrypt"
+  hosts: k3s-node-1
+  become: true
+  gather_facts: false
+  vars_files:
+    - "../group_vars/k3s_cluster.yml"
+
+  tasks:
+
+    # ==========================================================
+    # PRÉPARATION HELM
+    # ==========================================================
+
+    - name: Ajouter le repo Helm Jetstack (cert-manager)
+      ansible.builtin.command: helm repo add jetstack https://charts.jetstack.io
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [certmanager, certmanager-install]
+
+    - name: Mettre à jour les repos Helm
+      ansible.builtin.command: helm repo update
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [certmanager, certmanager-install]
+
+    - name: Vérifier si cert-manager est déjà installé
+      ansible.builtin.command: helm status cert-manager -n sys-letsencrypt
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: certmanager_helm_status
+      failed_when: false
+      changed_when: false
+      tags: [certmanager, certmanager-install]
+
+    # ==========================================================
+    # INSTALLATION CERT-MANAGER
+    # ==========================================================
+
+    - name: Installer cert-manager via Helm
+      ansible.builtin.command: >
+        helm install cert-manager jetstack/cert-manager
+        --namespace sys-letsencrypt
+        --create-namespace
+        --version {{ cert_manager_version }}
+        --set installCRDs=true
+        --set global.leaderElection.namespace=sys-letsencrypt
+        --wait
+        --timeout 5m
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      when: certmanager_helm_status.rc != 0
+      tags: [certmanager, certmanager-install]
+
+    # ==========================================================
+    # VÉRIFICATION
+    # ==========================================================
+
+    - name: Attendre que les pods cert-manager soient Ready
+      ansible.builtin.command: >
+        k3s kubectl wait --for=condition=Ready pods
+        --all -n sys-letsencrypt
+        --timeout=180s
+      register: certmanager_pods_ready
+      changed_when: false
+      tags: [certmanager, certmanager-verify]
+
+    - name: Vérifier les pods cert-manager
+      ansible.builtin.command: k3s kubectl get pods -n sys-letsencrypt -o wide
+      register: certmanager_pods
+      changed_when: false
+      tags: [certmanager, certmanager-verify]
+
+    - name: Résumé cert-manager
+      ansible.builtin.debug:
+        msg:
+          - "================================================"
+          - "  cert-manager {{ cert_manager_version }} installé"
+          - "================================================"
+          - "Namespace : sys-letsencrypt"
+          - "Pods      : {{ certmanager_pods.stdout_lines }}"
+          - "================================================"
+      tags: [certmanager, certmanager-verify]
+
+    # ==========================================================
+    # CLUSTERISSUERS LET'S ENCRYPT
+    # ==========================================================
+
+    - name: Créer le ClusterIssuer staging (tests)
+      kubernetes.core.k8s:
+        kubeconfig: /etc/rancher/k3s/k3s.yaml
+        state: present
+        definition:
+          apiVersion: cert-manager.io/v1
+          kind: ClusterIssuer
+          metadata:
+            name: letsencrypt-staging
+          spec:
+            acme:
+              server: https://acme-staging-v02.api.letsencrypt.org/directory
+              email: "{{ letsencrypt_email }}"
+              privateKeySecretRef:
+                name: letsencrypt-staging-key
+              solvers:
+                - http01:
+                    ingress:
+                      ingressClassName: traefik
+      tags: [certmanager, letsencrypt-config]
+
+    - name: Créer le ClusterIssuer production
+      kubernetes.core.k8s:
+        kubeconfig: /etc/rancher/k3s/k3s.yaml
+        state: present
+        definition:
+          apiVersion: cert-manager.io/v1
+          kind: ClusterIssuer
+          metadata:
+            name: letsencrypt-production
+          spec:
+            acme:
+              server: https://acme-v02.api.letsencrypt.org/directory
+              email: "{{ letsencrypt_email }}"
+              privateKeySecretRef:
+                name: letsencrypt-production-key
+              solvers:
+                - http01:
+                    ingress:
+                      ingressClassName: traefik
+      tags: [certmanager, letsencrypt-config]
+
+    - name: Vérifier les ClusterIssuers
+      ansible.builtin.command: >
+        k3s kubectl get clusterissuers -o wide
+      register: cluster_issuers
+      changed_when: false
+      tags: [certmanager, letsencrypt-config, certmanager-verify]
+
+    - name: Afficher les ClusterIssuers
+      ansible.builtin.debug:
+        msg:
+          - "================================================"
+          - "  ClusterIssuers Let's Encrypt"
+          - "================================================"
+          - "{{ cluster_issuers.stdout_lines }}"
+          - "================================================"
+          - "IMPORTANT : Vérifier que READY=True avant de"
+          - "déployer les certificats applicatifs."
+          - "Relancer headlamp.yml et kwaba_deploy_redirect.yml"
+          - "avec le tag --tags letsencrypt-tls"
+          - "================================================"
+      tags: [certmanager, letsencrypt-config, certmanager-verify]

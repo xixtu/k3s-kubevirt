@@ -70,12 +70,21 @@
             enabled: true
             className: traefik
             annotations:
-              traefik.ingress.kubernetes.io/router.entrypoints: web
+              traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+              cert-manager.io/cluster-issuer: letsencrypt-production
             hosts:
               - host: "{{ headlamp_config.hostname }}"
                 paths:
                   - path: /
                     type: Prefix
+              - host: "{{ external_domains.headlamp }}"
+                paths:
+                  - path: /
+                    type: Prefix
+            tls:
+              - hosts:
+                  - "{{ external_domains.headlamp }}"
+                secretName: headlamp-tls
 
           # Resources
           resources:
@@ -186,8 +195,10 @@
           - "================================================"
           - "  Headlamp v{{ headlamp_version }} installé"
           - "================================================"
-          - "URL     : http://{{ headlamp_config.hostname }}"
-          - "Ingress : traefik (entrypoint: web)"
+          - "URL interne : http://{{ headlamp_config.hostname }}"
+          - "URL publique: https://{{ external_domains.headlamp }}"
+          - "Ingress : traefik (entrypoints: web, websecure)"
+          - "TLS     : cert-manager / letsencrypt-production"
           - "Pods    : {{ headlamp_pods.stdout_lines }}"
           - "Service : {{ headlamp_svc.stdout_lines }}"
           - "Ingress : {{ headlamp_ingress.stdout_lines }}"
