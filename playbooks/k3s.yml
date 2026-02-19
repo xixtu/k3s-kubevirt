@@ -299,6 +299,19 @@
       become: false
       tags: [k3s, kubeconfig]
 
+    # ---------------------------------------------------------
+    # KUBECONFIG SYSTÈME (helm, kubectl sans k3s wrapper)
+    # ---------------------------------------------------------
+
+    - name: Configurer KUBECONFIG dans /etc/profile.d (tous les utilisateurs)
+      ansible.builtin.copy:
+        dest: /etc/profile.d/k3s-env.sh
+        mode: '0644'
+        content: |
+          # K3s - KUBECONFIG pour kubectl, helm, flux, etc.
+          export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+      tags: [k3s, k3s-env, kubeconfig]
+
     - name: Résumé installation K3s
       ansible.builtin.debug:
         msg:
