@@ -1,0 +1,44 @@
+---
+- name: Maintenance et Diagnostic SSD
+  hosts: all
+  become: yes
+  tasks:
+    - name: Installation de smartmontools
+      apt:
+        name: smartmontools
+        state: present
+        update_cache: yes
+
+    - name: Exécution du TRIM (Optimisation des SSD)
+      shell: fstrim -av
+      register: trim_output
+
+    - name: Affichage du résultat du TRIM
+      debug:
+        msg: "{{ trim_output.stdout_lines }}"
+
+    - name: Récupération des données SMART pour les disques principaux
+      shell: |
+        echo "=== SMART REPORT FOR {{ item }} ==="
+        smartctl -H /dev/{{ item }}
+        smartctl -A /dev/{{ item }} | grep -E "Percentage_Used|Total_LBAs_Written|Wear_Leveling_Count|Reallocated_Sector_Ct"
+      loop:
+        - sda
+        - sdb
+        - sdc
+        - sdd
+        - sde
+        - sdf
+      register: smart_reports
+      ignore_errors: yes
+
+    - name: Sauvegarde des rapports SMART localement
+      copy:
+        content: |
+          {% for result in smart_reports.results %}
+          {{ result.stdout }}
+          ---------------------------------------
+          {% endfor %}
+        dest: "./smart_report_{{ inventory_hostname }}.txt"
+      delegate_to: localhost
+      become: no

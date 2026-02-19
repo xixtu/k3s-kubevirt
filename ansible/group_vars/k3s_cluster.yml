@@ -1,0 +1,142 @@
+---
+# =============================================================
+# VARIABLES GLOBALES - Tous les nœuds K3s
+# =============================================================
+
+# --- Version des composants ---
+k3s_version: "v1.30.0+k3s1"
+longhorn_version: "1.6.0"
+kubevirt_version: "v1.2.0"
+metallb_version: "v0.13.12"
+cert_manager_version: "v1.13.0"
+traefik_version: "26.0.0"
+prometheus_stack_version: "55.5.0"
+rancher_version: "2.8.0"
+
+# --- Configuration réseau cluster ---
+cluster_network:
+  pod_cidr: "10.42.0.0/16"
+  service_cidr: "10.43.0.0/16"
+  cluster_dns: "10.43.0.10"
+  metallb_pool: "192.168.1.100-192.168.1.150"
+  vm_network: "192.168.10.0/24"
+  api_server_ip: "192.168.1.11"    # Node 1 = primary
+
+# --- Configuration K3s ---
+k3s_config:
+  disable:
+    - traefik
+    - servicelb
+  flannel_backend: vxlan
+  write_kubeconfig_mode: "644"
+  kubelet_args:
+    - "topology-manager-policy=best-effort"
+    - "cpu-manager-policy=static"
+
+# --- Configuration Longhorn globale ---
+longhorn_config:
+  default_replica_count: 2
+  storage_minimal_available_percentage: 15
+  storage_over_provisioning_percentage: 150
+  guaranteed_engine_manager_cpu: 5
+  guaranteed_replica_manager_cpu: 5
+  backup_target: ""                # À configurer si backup S3
+
+# --- Longhorn Storage Classes ---
+longhorn_storage_classes:
+  - name: longhorn-ultra
+    default: false
+    replica_count: 2
+    disk_selector: ultra
+    node_selector: ""
+    data_locality: best-effort
+    reclaim_policy: Delete
+    fs_type: ext4
+
+  - name: longhorn-fast
+    default: true                  # Classe par défaut
+    replica_count: 2
+    disk_selector: fast
+    node_selector: ""
+    data_locality: best-effort
+    reclaim_policy: Delete
+    fs_type: ext4
+
+  - name: longhorn-slow
+    default: false
+    replica_count: 2
+    disk_selector: slow
+    node_selector: ""
+    data_locality: best-effort
+    reclaim_policy: Delete
+    fs_type: ext4
+
+# --- Domaines et certificats ---
+cluster_domain: "cluster.local"
+# external_domain: "mondomaine.com"    # À décommenter et configurer
+letsencrypt_email: "admin@mondomaine.com"
+letsencrypt_server: "https://acme-v02.api.letsencrypt.org/directory"
+
+# --- Monitoring ---
+monitoring_config:
+  prometheus_retention: "15d"
+  prometheus_storage: "50Gi"
+  prometheus_storage_class: "longhorn-fast"
+  grafana_storage: "10Gi"
+  grafana_storage_class: "longhorn-fast"
+  alertmanager_storage: "10Gi"
+  alertmanager_storage_class: "longhorn-fast"
+
+# --- Packages Ubuntu à installer ---
+common_packages:
+  - git
+  - curl
+  - wget
+  - vim
+  - htop
+  - net-tools
+  - open-iscsi
+  - nfs-common
+  - jq
+  - unzip
+  - python3-pip
+  - lvm2
+  - smartmontools
+  - nvme-cli
+  - iotop
+  - sysstat
+  - net-tools
+  - glances
+  - cmatrix
+  - hollywood
+  - btop 
+
+# --- Configuration système ---
+system_config:
+  swapoff: true
+  timezone: "Europe/Paris"
+  locale: "fr_FR.UTF-8"
+
+# --- Kernel modules requis ---
+kernel_modules:
+  - kvm
+  - kvm_intel
+  - vhost_net
+  - vhost_vsock
+  - dm_snapshot
+  - dm_mirror
+  - dm_thin_pool
+
+# --- Sysctl tuning ---
+sysctl_settings:
+  net.ipv4.ip_forward: 1
+  net.bridge.bridge-nf-call-iptables: 1
+  net.bridge.bridge-nf-call-ip6tables: 1
+  net.core.somaxconn: 32768
+  net.ipv4.tcp_max_syn_backlog: 8192
+  fs.file-max: 2097152
+  fs.inotify.max_user_watches: 524288
+  fs.inotify.max_user_instances: 8192
+  vm.swappiness: 10
+  vm.dirty_ratio: 15
+  vm.dirty_background_ratio: 5

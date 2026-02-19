@@ -1,0 +1,206 @@
+---
+# =============================================================
+# PLAYBOOK : Configuration LVM - 3 tiers de stockage
+# =============================================================
+# Usage : ansible-playbook -i inventory/hosts.yml playbooks/lvm.yml
+# =============================================================
+
+- name: Configuration LVM - 3 tiers de stockage Longhorn
+  hosts: k3s_cluster
+  become: true
+  gather_facts: true
+
+  vars:
+    lvm_packages:
+      - lvm2
+      - e2fsprogs
+      - xfsprogs
+
+  pre_tasks:
+
+    - name: Vérifier que lvm2 est installé
+      ansible.builtin.apt:
+        name: "{{ lvm_packages }}"
+        state: present
+        update_cache: yes
+      tags: [lvm, packages]
+
+    - name: Afficher la configuration disques du nœud
+      ansible.builtin.debug:
+        msg:
+          - "=== Configuration disques : {{ inventory_hostname }} ==="
+          - "OS      : {{ disk_os.device }} ({{ disk_os.size_gb }} GB)"
+          - "Ultra   : {{ disk_tier_ultra.devices | map(attribute='device') | list }}"
+          - "Fast    : {{ disk_tier_fast.devices | map(attribute='device') | list }}"
+          - "Slow    : {{ disk_tier_slow.devices | map(attribute='device') | list }}"
+      tags: [lvm, debug]
+
+  tasks:
+
+    # =========================================================
+    # TIER 1 - ULTRA (Samsung 860 Pro)
+    # =========================================================
+
+    - name: "[ULTRA] Créer Physical Volume"
+      community.general.lvg:
+        vg: "{{ disk_tier_ultra.vg_name }}"
+        pvs: "{{ disk_tier_ultra.devices | map(attribute='device') | join(',') }}"
+        state: present
+      tags: [lvm, ultra]
+
+    - name: "[ULTRA] Créer Logical Volume"
+      community.general.lvol:
+        vg: "{{ disk_tier_ultra.vg_name }}"
+        lv: "{{ disk_tier_ultra.lv_name }}"
+        size: "100%FREE"
+        state: present
+      tags: [lvm, ultra]
+
+    - name: "[ULTRA] Formater en ext4"
+      community.general.filesystem:
+        fstype: "{{ disk_tier_ultra.filesystem }}"
+        dev: "/dev/{{ disk_tier_ultra.vg_name }}/{{ disk_tier_ultra.lv_name }}"
+        opts: "-L data_ultra"
+      tags: [lvm, ultra]
+
+    - name: "[ULTRA] Créer point de montage"
+      ansible.builtin.file:
+        path: "{{ disk_tier_ultra.mountpoint }}"
+        state: directory
+        mode: '0755'
+        owner: root
+        group: root
+      tags: [lvm, ultra]
+
+    - name: "[ULTRA] Monter le volume"
+      ansible.posix.mount:
+        path: "{{ disk_tier_ultra.mountpoint }}"
+        src: "/dev/{{ disk_tier_ultra.vg_name }}/{{ disk_tier_ultra.lv_name }}"
+        fstype: "{{ disk_tier_ultra.filesystem }}"
+        opts: defaults,noatime
+        state: mounted
+      tags: [lvm, ultra]
+
+    # =========================================================
+    # TIER 2 - FAST (Samsung 870 x2)
+    # =========================================================
+
+    - name: "[FAST] Créer Physical Volume"
+      community.general.lvg:
+        vg: "{{ disk_tier_fast.vg_name }}"
+        pvs: "{{ disk_tier_fast.devices | map(attribute='device') | join(',') }}"
+        state: present
+      tags: [lvm, fast]
+
+    - name: "[FAST] Créer Logical Volume"
+      community.general.lvol:
+        vg: "{{ disk_tier_fast.vg_name }}"
+        lv: "{{ disk_tier_fast.lv_name }}"
+        size: "100%FREE"
+        state: present
+      tags: [lvm, fast]
+
+    - name: "[FAST] Formater en ext4"
+      community.general.filesystem:
+        fstype: "{{ disk_tier_fast.filesystem }}"
+        dev: "/dev/{{ disk_tier_fast.vg_name }}/{{ disk_tier_fast.lv_name }}"
+        opts: "-L data_fast"
+      tags: [lvm, fast]
+
+    - name: "[FAST] Créer point de montage"
+      ansible.builtin.file:
+        path: "{{ disk_tier_fast.mountpoint }}"
+        state: directory
+        mode: '0755'
+        owner: root
+        group: root
+      tags: [lvm, fast]
+
+    - name: "[FAST] Monter le volume"
+      ansible.posix.mount:
+        path: "{{ disk_tier_fast.mountpoint }}"
+        src: "/dev/{{ disk_tier_fast.vg_name }}/{{ disk_tier_fast.lv_name }}"
+        fstype: "{{ disk_tier_fast.filesystem }}"
+        opts: defaults,noatime
+        state: mounted
+      tags: [lvm, fast]
+
+    # =========================================================
+    # TIER 3 - SLOW (HDD Seagate x2)
+    # =========================================================
+
+    - name: "[SLOW] Créer Physical Volume"
+      community.general.lvg:
+        vg: "{{ disk_tier_slow.vg_name }}"
+        pvs: "{{ disk_tier_slow.devices | map(attribute='device') | join(',') }}"
+        state: present
+      tags: [lvm, slow]
+
+    - name: "[SLOW] Créer Logical Volume"
+      community.general.lvol:
+        vg: "{{ disk_tier_slow.vg_name }}"
+        lv: "{{ disk_tier_slow.lv_name }}"
+        size: "100%FREE"
+        state: present
+      tags: [lvm, slow]
+
+    - name: "[SLOW] Formater en ext4"
+      community.general.filesystem:
+        fstype: "{{ disk_tier_slow.filesystem }}"
+        dev: "/dev/{{ disk_tier_slow.vg_name }}/{{ disk_tier_slow.lv_name }}"
+        opts: "-L data_slow"
+      tags: [lvm, slow]
+
+    - name: "[SLOW] Créer point de montage"
+      ansible.builtin.file:
+        path: "{{ disk_tier_slow.mountpoint }}"
+        state: directory
+        mode: '0755'
+        owner: root
+        group: root
+      tags: [lvm, slow]
+
+    - name: "[SLOW] Monter le volume"
+      ansible.posix.mount:
+        path: "{{ disk_tier_slow.mountpoint }}"
+        src: "/dev/{{ disk_tier_slow.vg_name }}/{{ disk_tier_slow.lv_name }}"
+        fstype: "{{ disk_tier_slow.filesystem }}"
+        opts: defaults,noatime
+        state: mounted
+      tags: [lvm, slow]
+
+    # =========================================================
+    # VÉRIFICATION FINALE
+    # =========================================================
+
+    - name: Vérifier tous les montages
+      ansible.builtin.command: lsblk -f
+      register: lsblk_output
+      changed_when: false
+      tags: [lvm, verify]
+
+    - name: Afficher le résultat lsblk
+      ansible.builtin.debug:
+        var: lsblk_output.stdout_lines
+      tags: [lvm, verify]
+
+    - name: Vérifier l'espace disponible
+      ansible.builtin.command: df -h
+      register: df_output
+      changed_when: false
+      tags: [lvm, verify]
+
+    - name: Afficher l'espace disque
+      ansible.builtin.debug:
+        var: df_output.stdout_lines
+      tags: [lvm, verify]
+
+    - name: Résumé configuration LVM
+      ansible.builtin.debug:
+        msg:
+          - "=== LVM configuré sur {{ inventory_hostname }} ==="
+          - "ULTRA : {{ disk_tier_ultra.mountpoint }} ({{ disk_tier_ultra.usable_gb }} GB)"
+          - "FAST  : {{ disk_tier_fast.mountpoint }} ({{ disk_tier_fast.usable_gb }} GB)"
+          - "SLOW  : {{ disk_tier_slow.mountpoint }} ({{ disk_tier_slow.usable_gb }} GB)"
+          - "Total : {{ disk_tier_ultra.usable_gb + disk_tier_fast.usable_gb + disk_tier_slow.usable_gb }} GB"
+      tags: [lvm, verify]

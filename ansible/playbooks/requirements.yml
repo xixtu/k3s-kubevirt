@@ -1,0 +1,27 @@
+---
+# =============================================================
+# Collections Ansible Galaxy requises
+# =============================================================
+# Installation : ansible-galaxy collection install -r requirements.yml
+# =============================================================
+
+collections:
+  # Modules POSIX (mount, sysctl, firewall...)
+  - name: ansible.posix
+    version: ">=1.5.0"
+
+  # Modules communautaires (lvg, lvol, filesystem, timezone...)
+  - name: community.general
+    version: ">=7.0.0"
+
+  # Modules Kubernetes (kubectl, helm...)
+  - name: kubernetes.core
+    version: ">=2.4.0"
+
+  # Modules crypto (certificats...)
+  - name: community.crypto
+    version: ">=2.15.0"
+
+  # Modules Docker (si besoin)
+  - name: community.docker
+    version: ">=3.4.0"

@@ -1,0 +1,163 @@
+---
+# =============================================================
+# PLAYBOOK : Prérequis système + Git
+# =============================================================
+# Usage : ansible-playbook -i inventory/hosts.yml playbooks/prerequisites.yml
+# =============================================================
+
+- name: Installation prérequis système et Git
+  hosts: k3s_cluster
+  become: true
+  gather_facts: true
+  vars_files:
+    - "../group_vars/k3s_cluster.yml"
+  tasks:
+
+    # =========================================================
+    # SYSTÈME DE BASE
+    # =========================================================
+
+    - name: Mise à jour du cache apt
+      ansible.builtin.apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      tags: [prereq, apt]
+
+    - name: Mise à jour complète du système
+      ansible.builtin.apt:
+        upgrade: dist
+        autoremove: yes
+      tags: [prereq, apt]
+
+    - name: Installation des packages essentiels
+      ansible.builtin.apt:
+        name: "{{ common_packages }}"
+        state: present
+      tags: [prereq, packages]
+
+    - name: Installation Git
+      ansible.builtin.apt:
+        name:
+          - git
+          - git-lfs
+        state: present
+      tags: [prereq, git]
+
+    - name: Vérifier version Git
+      ansible.builtin.command: git --version
+      register: git_version
+      changed_when: false
+      tags: [prereq, git]
+
+    - name: Afficher version Git
+      ansible.builtin.debug:
+        msg: "Git installé : {{ git_version.stdout }}"
+      tags: [prereq, git]
+
+    # =========================================================
+    # CONFIGURATION SYSTÈME
+    # =========================================================
+
+    - name: Configurer timezone
+      community.general.timezone:
+        name: "{{ system_config.timezone }}"
+      tags: [prereq, system]
+
+    - name: Désactiver swap (requis K8s)
+      ansible.builtin.command: swapoff -a
+      when: system_config.swapoff
+      changed_when: false
+      tags: [prereq, system]
+
+    - name: Désactiver swap dans fstab
+      ansible.builtin.replace:
+        path: /etc/fstab
+        regexp: '^([^#].*\s+swap\s+.*)$'
+        replace: '# \1'
+      when: system_config.swapoff
+      tags: [prereq, system]
+
+    - name: Configurer hostname
+      ansible.builtin.hostname:
+        name: "{{ node_name }}"
+      tags: [prereq, system]
+
+    - name: Mettre à jour /etc/hosts
+      ansible.builtin.lineinfile:
+        path: /etc/hosts
+        line: "{{ item }}"
+        state: present
+      loop:
+        - "192.168.1.174    k3s-node-1"
+        - "192.168.1.12    k3s-node-2"
+        - "192.168.1.13    k3s-node-3"
+      tags: [prereq, network]
+
+    # =========================================================
+    # MODULES KERNEL
+    # =========================================================
+
+    - name: Charger les modules kernel requis
+      community.general.modprobe:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ kernel_modules }}"
+      tags: [prereq, kernel]
+
+    - name: Rendre les modules persistants
+      ansible.builtin.copy:
+        dest: /etc/modules-load.d/k3s-kubevirt.conf
+        content: |
+          # Modules K3s + KubeVirt
+          {% for module in kernel_modules %}
+          {{ module }}
+          {% endfor %}
+        mode: '0644'
+      tags: [prereq, kernel]
+
+    # =========================================================
+    # SYSCTL TUNING
+    # =========================================================
+
+    - name: Configurer sysctl
+      ansible.posix.sysctl:
+        name: "{{ item.key }}"
+        value: "{{ item.value }}"
+        state: present
+        reload: yes
+        sysctl_file: /etc/sysctl.d/99-k3s.conf
+      loop: "{{ sysctl_settings | dict2items }}"
+      tags: [prereq, sysctl]
+
+    # =========================================================
+    # OPEN-ISCSI (requis pour Longhorn)
+    # =========================================================
+
+    - name: Activer et démarrer iscsid
+      ansible.builtin.systemd:
+        name: iscsid
+        state: started
+        enabled: yes
+      tags: [prereq, iscsi]
+
+    # =========================================================
+    # VÉRIFICATION FINALE
+    # =========================================================
+
+    - name: Vérifier modules chargés
+      ansible.builtin.shell: lsmod | grep -E "{{ kernel_modules | join('|') }}"
+      register: modules_check
+      changed_when: false
+      failed_when: false
+      tags: [prereq, verify]
+
+    - name: Résumé prérequis
+      ansible.builtin.debug:
+        msg:
+          - "=== Prérequis OK sur {{ inventory_hostname }} ==="
+          - "Git     : {{ git_version.stdout }}"
+          - "Hostname: {{ node_name }}"
+          - "Swap    : désactivé"
+          - "Modules : chargés"
+          - "iSCSI   : actif"
+      tags: [prereq, verify]
