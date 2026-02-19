@@ -44,7 +44,9 @@ network:
           - {{ dns }}
 {% endfor %}
         search:
-          - {{ network_domain }}
+{% for domain in network_search_domains %}
+          - {{ domain }}
+{% endfor %}
       parameters:
         mode: {{ bond_mode }}
         lacp-rate: {{ bond_lacp_rate }}
