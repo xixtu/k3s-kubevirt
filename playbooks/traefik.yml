@@ -59,11 +59,14 @@
           deployment:
             replicas: 1
 
-          # Service LoadBalancer avec IP fixe via MetalLB
+          # Service LoadBalancer avec IP fixe via MetalLB (pool dédié traefik-pool)
           service:
             type: LoadBalancer
             spec:
               loadBalancerIP: "{{ cluster_network.traefik_ip }}"
+            annotations:
+              metallb.io/address-pool: traefik-pool
+              metallb.io/loadBalancerIPs: "{{ cluster_network.traefik_ip }}"
 
           # IngressClass par défaut pour tout le cluster
           ingressClass:

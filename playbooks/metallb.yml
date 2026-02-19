@@ -117,7 +117,18 @@
         mode: '0644'
         content: |
           ---
-          # Plage d'IPs disponibles pour les services LoadBalancer
+          # Pool dédié Traefik - IP fixe, pas d'auto-assignation
+          apiVersion: metallb.io/v1beta1
+          kind: IPAddressPool
+          metadata:
+            name: traefik-pool
+            namespace: metallb-system
+          spec:
+            addresses:
+              - {{ cluster_network.traefik_ip }}/32
+            autoAssign: false
+          ---
+          # Plage d'IPs dynamiques pour les autres services LoadBalancer
           apiVersion: metallb.io/v1beta1
           kind: IPAddressPool
           metadata:
@@ -127,7 +138,7 @@
             addresses:
               - {{ cluster_network.metallb_pool }}
           ---
-          # Activer le mode Layer 2 (ARP) sur la plage main-pool
+          # Activer le mode Layer 2 (ARP) sur les deux pools
           apiVersion: metallb.io/v1beta1
           kind: L2Advertisement
           metadata:
@@ -136,6 +147,7 @@
           spec:
             ipAddressPools:
               - main-pool
+              - traefik-pool
       tags: [metallb, metallb-config]
 
     - name: Appliquer la configuration MetalLB
@@ -181,8 +193,8 @@
           - "  MetalLB {{ metallb_version }} installé"
           - "================================================"
           - "Mode         : Layer 2 (ARP)"
-          - "Plage IP     : {{ cluster_network.metallb_pool }}"
-          - "IP Traefik   : {{ cluster_network.traefik_ip }} (réservée)"
+          - "Pool main    : {{ cluster_network.metallb_pool }} (dynamique)"
+          - "Pool traefik : {{ cluster_network.traefik_ip }}/32 (réservée, autoAssign=false)"
           - "Pods         : {{ metallb_pods.stdout_lines }}"
           - "Pool         : {{ pool_status.stdout_lines }}"
           - "L2Advert     : {{ l2_status.stdout_lines }}"

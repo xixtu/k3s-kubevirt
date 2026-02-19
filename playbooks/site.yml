@@ -11,6 +11,7 @@
 #   longhorn  → Installation Longhorn
 #   metallb   → Installation MetalLB
 #   traefik   → Installation Traefik
+#   headlamp  → Installation Headlamp Dashboard
 #   monitoring→ Prometheus + Grafana + Alertmanager
 #   kubevirt  → Installation KubeVirt
 #   rancher   → Installation Rancher UI
@@ -51,17 +52,22 @@
   import_playbook: traefik.yml
   tags: [traefik]
 
-# PHASE 7 : Monitoring (à venir)
-# - name: "PHASE 7 - Monitoring Stack"
+# PHASE 7 : Headlamp - Dashboard Kubernetes
+- name: "PHASE 7 - Headlamp Dashboard"
+  import_playbook: headlamp.yml
+  tags: [headlamp]
+
+# PHASE 8 : Monitoring (à venir)
+# - name: "PHASE 8 - Monitoring Stack"
 #   import_playbook: monitoring.yml
 #   tags: [monitoring]
 
-# PHASE 8 : KubeVirt (à venir)
-# - name: "PHASE 8 - KubeVirt"
+# PHASE 9 : KubeVirt (à venir)
+# - name: "PHASE 9 - KubeVirt"
 #   import_playbook: kubevirt.yml
 #   tags: [kubevirt]
 
-# PHASE 9 : Rancher (à venir)
-# - name: "PHASE 9 - Rancher UI"
+# PHASE 10 : Rancher (à venir)
+# - name: "PHASE 10 - Rancher UI"
 #   import_playbook: rancher.yml
 #   tags: [rancher]

@@ -10,8 +10,13 @@ kubevirt_version: "v1.2.0"
 metallb_version: "v0.13.12"
 cert_manager_version: "v1.13.0"
 traefik_version: "26.0.0"
+headlamp_version: "0.25.0"
 prometheus_stack_version: "55.5.0"
 rancher_version: "2.8.0"
+
+# --- Headlamp dashboard ---
+headlamp_config:
+  hostname: "headlamp.{{ cluster_network.traefik_ip }}.nip.io"  # Pas de DNS requis
 
 # --- Configuration réseau cluster ---
 cluster_network:
