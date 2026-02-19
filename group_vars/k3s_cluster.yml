@@ -23,8 +23,8 @@ cluster_network:
   pod_cidr: "10.42.0.0/16"
   service_cidr: "10.43.0.0/16"
   cluster_dns: "10.43.0.10"
-  metallb_pool: "192.168.0.30-192.168.0.60"
-  traefik_ip: "192.168.0.14"       # IP fixe assignée à Traefik via MetalLB
+  metallb_pool: "192.168.0.20-192.168.0.60"
+  traefik_ip: "192.168.0.20"       # IP fixe assignée à Traefik via MetalLB
   vm_network: "192.168.10.0/24"
   api_server_ip: "192.168.0.11"    # Node 1 = primary
 
