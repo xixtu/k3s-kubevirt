@@ -81,6 +81,8 @@
                 default: true
               exposedPort: 80
               protocol: TCP
+              redirectTo:
+                port: websecure
             websecure:
               port: 8443
               expose:
@@ -116,9 +118,9 @@
     # INSTALLATION TRAEFIK
     # ==========================================================
 
-    - name: Installer Traefik via Helm
+    - name: Installer / Mettre à jour Traefik via Helm
       ansible.builtin.command: >
-        helm install traefik traefik/traefik
+        helm upgrade --install traefik traefik/traefik
         --namespace traefik
         --create-namespace
         --version {{ traefik_version }}
@@ -127,7 +129,7 @@
         --timeout 5m
       environment:
         KUBECONFIG: /etc/rancher/k3s/k3s.yaml
-      when: traefik_helm_status.rc != 0
+      changed_when: false
       tags: [traefik, traefik-install]
 
     - name: Supprimer le fichier de valeurs temporaire
