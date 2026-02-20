@@ -14,7 +14,7 @@
 #   - bond0 en mode 802.3ad (LACP) via netplan
 #   - 4 interfaces esclaves : enp10s0f0/1 + enp11s0f0/1
 #   - IP statique bond_ip par nœud (depuis inventaire)
-#   - Gateway 192.168.0.254 + DNS 192.168.0.100
+#   - Gateway 192.168.0.254 + DNS 192.168.0.21
 #   - /etc/hosts avec les IPs cluster
 #
 # NE TOUCHE PAS l'interface de management (DHCP) :
