@@ -93,7 +93,39 @@
               exposedPort: 443
               protocol: TCP
               tls:
-                enabled: false    # TLS géré par cert-manager en phase suivante
+                enabled: true
+
+          # ============================================
+          # SÉCURISATION SSL/TLS - Objectif SSL Labs A+
+          # ============================================
+          # Corrections appliquées :
+          #   1. Suppression cipher suites CBC (WEAK)
+          #   2. Activation HSTS (Strict Transport Security)
+          #   3. sniStrict pour masquer le certificat par défaut Traefik
+          #   4. TLS activé au niveau entrypoint websecure
+          #   5. Préférence courbes elliptiques fortes
+          #
+          # Non corrigeable côté Traefik :
+          #   - OCSP Stapling (non supporté par Traefik v3)
+          #   - DNS CAA (à configurer chez le registrar DNS)
+
+          # TLS Options par défaut - appliqué à tous les routers HTTPS
+          tlsOptions:
+            default:
+              minVersion: VersionTLS12
+              cipherSuites:
+                - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
+                - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+                - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+              curvePreferences:
+                - X25519
+                - CurveP256
+                - CurveP384
+              sniStrict: true
+
+          # Appliquer le middleware security-headers sur tout le trafic HTTPS
+          additionalArguments:
+            - "--entryPoints.websecure.http.middlewares=traefik-security-headers@kubernetescrd"
 
           # Logs
           logs:
@@ -105,7 +137,7 @@
           # Dashboard Traefik (accessible en interne uniquement)
           ingressRoute:
             dashboard:
-              enabled: false    # Désactivé par sécurité, à activer si besoin
+              enabled: false
 
           # Resources
           resources:
@@ -115,6 +147,19 @@
             limits:
               cpu: "300m"
               memory: "150Mi"
+
+          # Middleware HSTS + en-têtes de sécurité
+          extraObjects:
+            - apiVersion: traefik.io/v1alpha1
+              kind: Middleware
+              metadata:
+                name: security-headers
+              spec:
+                headers:
+                  stsSeconds: 63072000
+                  stsIncludeSubdomains: true
+                  stsPreload: true
+                  forceSTSHeader: true
       tags: [traefik, traefik-install]
 
     # ==========================================================
@@ -183,6 +228,20 @@
       changed_when: false
       tags: [traefik, traefik-verify]
 
+    - name: Vérifier la TLSOption par défaut (sécurisation SSL)
+      ansible.builtin.command: k3s kubectl get tlsoption -n traefik
+      register: traefik_tlsoption
+      changed_when: false
+      failed_when: false
+      tags: [traefik, traefik-verify]
+
+    - name: Vérifier le Middleware security-headers (HSTS)
+      ansible.builtin.command: k3s kubectl get middleware -n traefik
+      register: traefik_middleware
+      changed_when: false
+      failed_when: false
+      tags: [traefik, traefik-verify]
+
     - name: Résumé Traefik
       ansible.builtin.debug:
         msg:
@@ -196,6 +255,15 @@
           - "IngressClass : traefik (default)"
           - "Pods         : {{ traefik_pods.stdout_lines }}"
           - "Service      : {{ traefik_svc.stdout_lines }}"
+          - "================================================"
+          - "  SSL/TLS Hardening"
+          - "================================================"
+          - "TLS min      : 1.2 (TLS 1.3 supporté)"
+          - "Ciphers      : GCM + CHACHA20 uniquement (CBC supprimé)"
+          - "SNI Strict   : Oui (certificat par défaut masqué)"
+          - "HSTS         : 2 ans, includeSubdomains, preload"
+          - "TLSOption    : {{ traefik_tlsoption.stdout_lines | default(['Non vérifié']) }}"
+          - "Middleware    : {{ traefik_middleware.stdout_lines | default(['Non vérifié']) }}"
           - "================================================"
       tags: [traefik, traefik-verify]
 
