@@ -109,6 +109,8 @@
             namespace: "{{ target_namespace }}"
             annotations:
               cert-manager.io/cluster-issuer: "letsencrypt-production"
+              cert-manager.io/private-key-algorithm: "ECDSA"
+              cert-manager.io/private-key-size: "256"
               traefik.ingress.kubernetes.io/router.entrypoints: "web"
           spec:
             ingressClassName: traefik
@@ -127,6 +129,35 @@
                           name: "{{ app_name }}-service"
                           port:
                             number: 80
+
+    - name: Vérifier le type de clé du certificat kwaba actuel
+      ansible.builtin.shell: >
+        k3s kubectl get secret {{ app_name }}-tls -n {{ target_namespace }}
+        -o jsonpath='{.data.tls\.key}' | base64 -d
+        | openssl ec -noout 2>/dev/null && echo "ECDSA" || echo "RSA"
+      environment:
+        KUBECONFIG: "{{ k3s_config }}"
+      register: kwaba_cert_key_type
+      changed_when: false
+      failed_when: false
+
+    - name: Supprimer l'ancien certificat RSA kwaba pour renouvellement ECDSA
+      ansible.builtin.command: >
+        k3s kubectl delete certificate {{ app_name }}-tls
+        -n {{ target_namespace }} --ignore-not-found
+      environment:
+        KUBECONFIG: "{{ k3s_config }}"
+      when: kwaba_cert_key_type.stdout is defined and 'ECDSA' not in kwaba_cert_key_type.stdout
+      changed_when: true
+
+    - name: Supprimer l'ancien secret TLS RSA kwaba
+      ansible.builtin.command: >
+        k3s kubectl delete secret {{ app_name }}-tls
+        -n {{ target_namespace }} --ignore-not-found
+      environment:
+        KUBECONFIG: "{{ k3s_config }}"
+      when: kwaba_cert_key_type.stdout is defined and 'ECDSA' not in kwaba_cert_key_type.stdout
+      changed_when: true
 
     - name: Créer l'IngressRoute HTTPS (Traefik CRD - router websecure explicite)
       kubernetes.core.k8s:
