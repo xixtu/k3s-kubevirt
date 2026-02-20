@@ -47,6 +47,15 @@
       changed_when: false
       tags: [headlamp, headlamp-install]
 
+    - name: Créer le namespace headlamp (si absent)
+      ansible.builtin.command: k3s kubectl create namespace headlamp
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: ns_create
+      failed_when: ns_create.rc != 0 and 'already exists' not in ns_create.stderr
+      changed_when: ns_create.rc == 0
+      tags: [headlamp, headlamp-install]
+
     # ==========================================================
     # FICHIER DE VALEURS HELM
     # ==========================================================
@@ -71,11 +80,16 @@
             className: traefik
             annotations:
               traefik.ingress.kubernetes.io/router.entrypoints: web
+              cert-manager.io/cluster-issuer: letsencrypt-production
             hosts:
-              - host: "{{ headlamp_config.hostname }}"
+              - host: "{{ external_domains.headlamp }}"
                 paths:
                   - path: /
                     type: Prefix
+            tls:
+              - hosts:
+                  - "{{ external_domains.headlamp }}"
+                secretName: headlamp-tls
 
           # Resources
           resources:
@@ -107,6 +121,46 @@
     - name: Supprimer le fichier de valeurs temporaire
       ansible.builtin.file:
         path: /tmp/headlamp-values.yml
+        state: absent
+      tags: [headlamp, headlamp-install]
+
+    # ==========================================================
+    # INGRESSROUTE HTTPS (Traefik CRD - router websecure explicite)
+    # ==========================================================
+
+    - name: Écrire l'IngressRoute HTTPS Headlamp
+      ansible.builtin.copy:
+        dest: /tmp/headlamp-ingressroute.yml
+        mode: '0644'
+        content: |
+          apiVersion: traefik.io/v1alpha1
+          kind: IngressRoute
+          metadata:
+            name: headlamp-https
+            namespace: headlamp
+          spec:
+            entryPoints:
+              - websecure
+            routes:
+              - match: Host(`{{ external_domains.headlamp }}`)
+                kind: Rule
+                services:
+                  - name: headlamp
+                    port: 4466
+            tls:
+              secretName: headlamp-tls
+      tags: [headlamp, headlamp-install]
+
+    - name: Appliquer l'IngressRoute HTTPS Headlamp
+      ansible.builtin.command: k3s kubectl apply -f /tmp/headlamp-ingressroute.yml
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [headlamp, headlamp-install]
+
+    - name: Supprimer le fichier IngressRoute temporaire
+      ansible.builtin.file:
+        path: /tmp/headlamp-ingressroute.yml
         state: absent
       tags: [headlamp, headlamp-install]
 
@@ -186,8 +240,10 @@
           - "================================================"
           - "  Headlamp v{{ headlamp_version }} installé"
           - "================================================"
-          - "URL     : http://{{ headlamp_config.hostname }}"
-          - "Ingress : traefik (entrypoint: web)"
+          - "URL interne : http://{{ headlamp_config.hostname }}"
+          - "URL publique: https://{{ external_domains.headlamp }}"
+          - "Ingress : traefik (entrypoints: web, websecure)"
+          - "TLS     : cert-manager / letsencrypt-production"
           - "Pods    : {{ headlamp_pods.stdout_lines }}"
           - "Service : {{ headlamp_svc.stdout_lines }}"
           - "Ingress : {{ headlamp_ingress.stdout_lines }}"
