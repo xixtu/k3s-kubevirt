@@ -259,36 +259,11 @@
       changed_when: "'deleted' in sc_delete.stdout"
       tags: [longhorn, longhorn-storage]
 
-    - name: Écrire le manifeste des StorageClasses Longhorn
+    - name: Ecrire le manifeste des StorageClasses Longhorn
       ansible.builtin.copy:
         dest: /tmp/longhorn-storageclasses.yml
         mode: '0644'
-        content: |
-          {% for sc in longhorn_storage_classes %}
-          ---
-          apiVersion: storage.k8s.io/v1
-          kind: StorageClass
-          metadata:
-            name: {{ sc.name }}
-            annotations:
-              {% if sc.default %}
-              storageclass.kubernetes.io/is-default-class: "true"
-              {% endif %}
-          provisioner: driver.longhorn.io
-          allowVolumeExpansion: true
-          reclaimPolicy: {{ sc.reclaim_policy }}
-          volumeBindingMode: Immediate
-          parameters:
-            numberOfReplicas: "{{ sc.replica_count }}"
-            staleReplicaTimeout: "2880"
-            fromBackup: ""
-            fsType: "{{ sc.fs_type }}"
-            dataLocality: "{{ sc.data_locality }}"
-            diskSelector: "{{ sc.disk_selector }}"
-            {% if sc.node_selector %}
-            nodeSelector: "{{ sc.node_selector }}"
-            {% endif %}
-          {% endfor %}
+        content: "{% for sc in longhorn_storage_classes %}---\napiVersion: storage.k8s.io/v1\nkind: StorageClass\nmetadata:\n  name: {{ sc.name }}\n  annotations:\n    storageclass.kubernetes.io/is-default-class: \"{{ sc.default | lower }}\"\nprovisioner: driver.longhorn.io\nallowVolumeExpansion: true\nreclaimPolicy: {{ sc.reclaim_policy }}\nvolumeBindingMode: Immediate\nparameters:\n  numberOfReplicas: \"{{ sc.replica_count }}\"\n  staleReplicaTimeout: \"2880\"\n  fromBackup: \"\"\n  fsType: \"{{ sc.fs_type }}\"\n  dataLocality: \"{{ sc.data_locality }}\"\n  diskSelector: \"{{ sc.disk_selector }}\"\n{% endfor %}"
       tags: [longhorn, longhorn-storage]
 
     - name: Appliquer les StorageClasses Longhorn
