@@ -56,9 +56,9 @@
   register: post_step_version
   changed_when: false
 
-- name: "Confirmer l'upgrade v{{ step_version }}"
+- name: "Confirmer l'upgrade manager v{{ step_version }}"
   ansible.builtin.debug:
-    msg: "✓ Étape {{ step_index + 1 }}/{{ upgrade_steps | length }} terminée — Longhorn v{{ post_step_version.stdout | trim }}"
+    msg: "✓ Étape {{ step_index + 1 }}/{{ upgrade_steps | length }} — Manager Longhorn v{{ post_step_version.stdout | trim }}"
 
 - name: "Échec upgrade v{{ step_version }}"
   ansible.builtin.fail:
@@ -67,3 +67,63 @@
       Version détectée : v{{ post_step_version.stdout | trim }}.
       Vérifier les logs : kubectl logs -n longhorn-system -l app=longhorn-manager --tail=100
   when: post_step_version.stdout | trim is version(step_version, '<')
+
+# --- Auto-upgrade des engines (volumes, CSI, replicas) ---
+# Le setting concurrentAutomaticEngineUpgradePerNodeLimit: 3 déclenche
+# l'upgrade automatique des engines après l'upgrade du manager.
+
+- name: "Récupérer l'engine image par défaut (v{{ step_version }})"
+  ansible.builtin.shell: >
+    k3s kubectl get engineimages.longhorn.io -n longhorn-system -o json
+    | jq -r '.items[] | select(.status.default == true) | .metadata.name'
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  register: default_engine_image
+  changed_when: false
+
+- name: "Afficher l'engine image par défaut"
+  ansible.builtin.debug:
+    msg: "Engine image par défaut : {{ default_engine_image.stdout | trim }}"
+
+- name: "Vérifier si des volumes existent"
+  ansible.builtin.shell: >
+    k3s kubectl get volumes.longhorn.io -n longhorn-system -o json
+    | jq -r '.items | length'
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  register: volume_count
+  changed_when: false
+
+- name: "Attendre l'auto-upgrade des engines (v{{ step_version }})"
+  ansible.builtin.shell: |
+    # Compter les volumes dont l'engine n'est pas encore upgradé
+    PENDING=$(k3s kubectl get volumes.longhorn.io -n longhorn-system -o json \
+      | jq -r --arg img "{{ default_engine_image.stdout | trim }}" \
+        '[.items[] | select(.status.currentImage != null) | select(.status.currentImage | contains($img) | not)] | length')
+    echo "$PENDING"
+    [ "$PENDING" -eq 0 ]
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  register: engine_upgrade_wait
+  changed_when: false
+  retries: 30
+  delay: 20
+  until: engine_upgrade_wait.rc == 0
+  when: (volume_count.stdout | trim | int) > 0
+
+- name: "Statut engine upgrade (v{{ step_version }})"
+  ansible.builtin.shell: >
+    k3s kubectl get volumes.longhorn.io -n longhorn-system
+    -o custom-columns='NAME:.metadata.name,STATE:.status.state,ROBUSTNESS:.status.robustness,ENGINE_IMAGE:.status.currentImage'
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  register: engine_status
+  changed_when: false
+  when: (volume_count.stdout | trim | int) > 0
+
+- name: "Confirmer upgrade complet v{{ step_version }}"
+  ansible.builtin.debug:
+    msg: >-
+      ✓ Étape {{ step_index + 1 }}/{{ upgrade_steps | length }} terminée —
+      Manager + Engines upgradés vers v{{ post_step_version.stdout | trim }}
+      {{ '(' ~ (volume_count.stdout | trim) ~ ' volumes)' if (volume_count.stdout | trim | int) > 0 else '(aucun volume)' }}

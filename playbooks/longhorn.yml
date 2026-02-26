@@ -79,6 +79,7 @@
             guaranteedReplicaManagerCPU: {{ longhorn_config.guaranteed_replica_manager_cpu }}
             replicaSoftAntiAffinity: true
             replicaAutoBalance: best-effort
+            concurrentAutomaticEngineUpgradePerNodeLimit: 3
           longhornUI:
             replicas: 1
           ingress:

@@ -188,6 +188,7 @@
             guaranteedReplicaManagerCPU: {{ longhorn_config.guaranteed_replica_manager_cpu }}
             replicaSoftAntiAffinity: true
             replicaAutoBalance: best-effort
+            concurrentAutomaticEngineUpgradePerNodeLimit: 3
           longhornUI:
             replicas: 1
           ingress:
@@ -257,6 +258,27 @@
       failed_when: false
       tags: [longhorn-upgrade, longhorn-upgrade-verify]
 
+    - name: Vérifier les engine images
+      ansible.builtin.shell: >
+        k3s kubectl get engineimages.longhorn.io -n longhorn-system
+        -o custom-columns='NAME:.metadata.name,STATE:.status.state,DEFAULT:.status.default,IMAGE:.status.image'
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: final_engine_images
+      changed_when: false
+      tags: [longhorn-upgrade, longhorn-upgrade-verify]
+
+    - name: Statut détaillé des engines par volume
+      ansible.builtin.shell: >
+        k3s kubectl get volumes.longhorn.io -n longhorn-system
+        -o custom-columns='VOLUME:.metadata.name,STATE:.status.state,ROBUSTNESS:.status.robustness,ENGINE:.status.currentImage'
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: final_volume_engines
+      changed_when: false
+      failed_when: false
+      tags: [longhorn-upgrade, longhorn-upgrade-verify]
+
     - name: Résumé upgrade Longhorn
       ansible.builtin.debug:
         msg:
@@ -267,6 +289,14 @@
           - "Version après   : {{ final_version.stdout }}"
           - "Étapes réalisées: {{ upgrade_steps | length }}"
           - "Chemin suivi    : v{{ current_longhorn_version }} → {{ upgrade_steps | map('regex_replace', '^(.*)$', 'v\\1') | join(' → ') }}"
+          - "================================================"
+          - "  Engine Images"
+          - "================================================"
+          - "{{ final_engine_images.stdout_lines }}"
+          - "================================================"
+          - "  Volumes + Engine Status"
+          - "================================================"
+          - "{{ final_volume_engines.stdout_lines | default(['Aucun volume']) }}"
           - "================================================"
           - "  Pods"
           - "================================================"
@@ -279,9 +309,5 @@
           - "  Nœuds Longhorn"
           - "================================================"
           - "{{ final_nodes.stdout_lines }}"
-          - "================================================"
-          - "  Volumes"
-          - "================================================"
-          - "{{ final_volumes.stdout_lines | default(['Aucun volume']) }}"
           - "================================================"
       tags: [longhorn-upgrade, longhorn-upgrade-verify]
