@@ -85,6 +85,37 @@ longhorn_storage_classes:
     reclaim_policy: Delete
     fs_type: ext4
 
+# --- NAS Configuration (Option C Hybride) ---
+# Architecture :
+#   Longhorn PVC (RWX - longhorn-slow)
+#   ├── Samba Server (RW) → SMB shares pour postes de travail + Nextcloud
+#   └── Plex (RO) → Streaming média direct depuis le volume
+#
+# Flux :
+#   Postes de travail ──SMB──► Samba Pod ──écrit──► Volume Longhorn
+#   Nextcloud          ──SMB──► Samba Pod ──écrit──►       │
+#   Plex               ◄──lit directement (read-only)──────┘
+nas_config:
+  storage_class: "longhorn-slow"
+  nas_storage_size: "2Ti"                # ⚠ Ajuster selon besoin (~10.5 TB dispo avec replica:2)
+  plex_config_storage_class: "longhorn-fast"
+  plex_config_storage_size: "20Gi"       # Config Plex + base de données métadonnées
+  samba_ip: "192.168.0.30"              # IP fixe MetalLB pour Samba (\\192.168.0.30\media)
+  plex_ip: "192.168.0.31"              # IP fixe MetalLB pour Plex (http://192.168.0.31:32400)
+  samba_user: "nasuser"
+  samba_password: "ch4nge-me-n4s"       # ⚠ Changer en production (ou ansible-vault)
+  plex_claim_token: ""                  # Obtenir sur https://plex.tv/claim (optionnel, config via UI)
+  shares:
+    - name: media
+      path: /nas/media
+      comment: "Fichiers media (vidéos, musique, photos)"
+    - name: documents
+      path: /nas/documents
+      comment: "Documents partagés"
+    - name: shared
+      path: /nas/shared
+      comment: "Partage commun"
+
 # --- Domaines et certificats ---
 cluster_domain: "cluster.local"
 letsencrypt_email: "admin@xixtu.eu"    # ⚠ Mettre l'email réel du compte Let's Encrypt

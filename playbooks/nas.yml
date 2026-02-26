@@ -1,0 +1,486 @@
+---
+# =============================================================
+# PLAYBOOK : Déploiement NAS - Option C Hybride
+# =============================================================
+# Architecture :
+#   Longhorn PVC (RWX - longhorn-slow)
+#   ├── Samba Server (RW) → SMB shares pour postes + Nextcloud
+#   └── Plex (RO) → Streaming média direct
+#
+# Usage : ansible-playbook -i inventory/hosts.yml playbooks/nas.yml
+# Tags :
+#   nas-install  → Namespace, Secrets, PVC, Samba, Plex
+#   nas-samba    → Samba Deployment + Service uniquement
+#   nas-plex     → Plex Deployment + Service uniquement
+#   nas-verify   → Vérification pods, services, PVC
+# Prérequis :
+#   - K3s + MetalLB + Longhorn installés
+#   - Longhorn StorageClass longhorn-slow + longhorn-fast
+#   - nfs-common installé sur tous les nœuds (requis pour RWX)
+#   - MetalLB pool : 192.168.0.21-192.168.0.60
+# Accès :
+#   Samba : \\192.168.0.30\media, \\192.168.0.30\documents, \\192.168.0.30\shared
+#   Plex  : http://192.168.0.31:32400/web
+# =============================================================
+
+- name: "NAS - Stockage partagé (Option C Hybride)"
+  hosts: k3s-node-1
+  become: true
+  gather_facts: false
+  vars_files:
+    - "../group_vars/k3s_cluster.yml"
+  vars:
+    target_namespace: "nas"
+    samba_image: "dperson/samba:latest"
+    plex_image: "linuxserver/plex:latest"
+
+  tasks:
+
+    # ==========================================================
+    # NAMESPACE
+    # ==========================================================
+
+    - name: Créer le namespace NAS
+      ansible.builtin.command: k3s kubectl create namespace {{ target_namespace }}
+      register: ns_create
+      failed_when: ns_create.rc != 0 and 'already exists' not in ns_create.stderr
+      changed_when: ns_create.rc == 0
+      tags: [nas, nas-install]
+
+    # ==========================================================
+    # SECRETS (Samba credentials)
+    # ==========================================================
+
+    - name: Créer le Secret Samba credentials
+      ansible.builtin.shell: |
+        k3s kubectl create secret generic samba-credentials \
+          --namespace {{ target_namespace }} \
+          --from-literal=username={{ nas_config.samba_user }} \
+          --from-literal=password={{ nas_config.samba_password }} \
+          --dry-run=client -o yaml | k3s kubectl apply -f -
+      changed_when: true
+      tags: [nas, nas-install]
+
+    # ==========================================================
+    # PVC - NAS Data (RWX - longhorn-slow)
+    # ==========================================================
+    # Longhorn RWX utilise un Share Manager (NFS interne) automatiquement.
+    # nfs-common doit être installé sur tous les nœuds.
+    # ==========================================================
+
+    - name: Écrire les PVC NAS
+      ansible.builtin.copy:
+        dest: /tmp/nas-pvc.yml
+        mode: '0644'
+        content: |
+          ---
+          apiVersion: v1
+          kind: PersistentVolumeClaim
+          metadata:
+            name: nas-data
+            namespace: {{ target_namespace }}
+            labels:
+              app: nas
+              tier: slow
+          spec:
+            accessModes:
+              - ReadWriteMany
+            storageClassName: {{ nas_config.storage_class }}
+            resources:
+              requests:
+                storage: {{ nas_config.nas_storage_size }}
+          ---
+          apiVersion: v1
+          kind: PersistentVolumeClaim
+          metadata:
+            name: plex-config
+            namespace: {{ target_namespace }}
+            labels:
+              app: plex
+              tier: fast
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            storageClassName: {{ nas_config.plex_config_storage_class }}
+            resources:
+              requests:
+                storage: {{ nas_config.plex_config_storage_size }}
+      tags: [nas, nas-install]
+
+    - name: Appliquer les PVC NAS
+      ansible.builtin.command: k3s kubectl apply -f /tmp/nas-pvc.yml
+      register: pvc_apply
+      changed_when: "'configured' in pvc_apply.stdout or 'created' in pvc_apply.stdout"
+      tags: [nas, nas-install]
+
+    - name: Supprimer le fichier PVC temporaire
+      ansible.builtin.file:
+        path: /tmp/nas-pvc.yml
+        state: absent
+      tags: [nas, nas-install]
+
+    # ==========================================================
+    # SAMBA SERVER (seul writer sur le volume)
+    # ==========================================================
+    # Image : dperson/samba
+    # Shares exposés via SMB (port 445) :
+    #   \\<samba_ip>\media      → /nas/media
+    #   \\<samba_ip>\documents  → /nas/documents
+    #   \\<samba_ip>\shared     → /nas/shared
+    # Nextcloud se connecte via plugin "External Storage: SMB/CIFS"
+    # ==========================================================
+
+    - name: Écrire le Deployment Samba
+      ansible.builtin.copy:
+        dest: /tmp/nas-samba.yml
+        mode: '0644'
+        content: |
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: samba
+            namespace: {{ target_namespace }}
+            labels:
+              app: samba
+          spec:
+            replicas: 1
+            strategy:
+              type: Recreate
+            selector:
+              matchLabels:
+                app: samba
+            template:
+              metadata:
+                labels:
+                  app: samba
+              spec:
+                # --- Init container : créer l'arborescence NAS ---
+                initContainers:
+                  - name: init-nas-dirs
+                    image: busybox:1.36
+                    command:
+                      - sh
+                      - -c
+                      - |
+                        mkdir -p /nas/media /nas/documents /nas/shared
+                        chown -R 1000:1000 /nas
+                        chmod -R 0775 /nas
+                        echo "Arborescence NAS initialisée"
+                        ls -la /nas/
+                    volumeMounts:
+                      - name: nas-data
+                        mountPath: /nas
+                # --- Samba container ---
+                containers:
+                  - name: samba
+                    image: {{ samba_image }}
+                    env:
+                      - name: SAMBA_USER
+                        valueFrom:
+                          secretKeyRef:
+                            name: samba-credentials
+                            key: username
+                      - name: SAMBA_PASSWORD
+                        valueFrom:
+                          secretKeyRef:
+                            name: samba-credentials
+                            key: password
+                    command:
+                      - /bin/bash
+                      - -c
+                      - |
+                        samba.sh \
+                          -u "${SAMBA_USER};${SAMBA_PASSWORD}" \
+                          -s "media;/nas/media;yes;no;no;${SAMBA_USER};${SAMBA_USER};;Fichiers media" \
+                          -s "documents;/nas/documents;yes;no;no;${SAMBA_USER};${SAMBA_USER};;Documents" \
+                          -s "shared;/nas/shared;yes;no;no;${SAMBA_USER};${SAMBA_USER};;Partage commun" \
+                          -G "force user=${SAMBA_USER}" \
+                          -G "force group=smb" \
+                          -G "create mask=0664" \
+                          -G "directory mask=0775" \
+                          -p
+                    ports:
+                      - containerPort: 445
+                        name: smb
+                        protocol: TCP
+                    volumeMounts:
+                      - name: nas-data
+                        mountPath: /nas
+                    resources:
+                      requests:
+                        cpu: 100m
+                        memory: 128Mi
+                      limits:
+                        memory: 512Mi
+                volumes:
+                  - name: nas-data
+                    persistentVolumeClaim:
+                      claimName: nas-data
+          ---
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: samba-service
+            namespace: {{ target_namespace }}
+            annotations:
+              metallb.universe.tf/loadBalancerIPs: "{{ nas_config.samba_ip }}"
+          spec:
+            selector:
+              app: samba
+            ports:
+              - name: smb
+                protocol: TCP
+                port: 445
+                targetPort: 445
+            type: LoadBalancer
+      tags: [nas, nas-install, nas-samba]
+
+    - name: Appliquer le Deployment Samba
+      ansible.builtin.command: k3s kubectl apply -f /tmp/nas-samba.yml
+      register: samba_apply
+      changed_when: "'configured' in samba_apply.stdout or 'created' in samba_apply.stdout"
+      tags: [nas, nas-install, nas-samba]
+
+    - name: Supprimer le fichier Samba temporaire
+      ansible.builtin.file:
+        path: /tmp/nas-samba.yml
+        state: absent
+      tags: [nas, nas-install, nas-samba]
+
+    - name: Attendre que Samba soit Ready
+      ansible.builtin.command: >
+        k3s kubectl wait --for=condition=Ready pods
+        -l app=samba
+        -n {{ target_namespace }}
+        --timeout=300s
+      changed_when: false
+      tags: [nas, nas-install, nas-samba]
+
+    # ==========================================================
+    # PLEX MEDIA SERVER (read-only sur le volume NAS)
+    # ==========================================================
+    # Image : linuxserver/plex (PUID/PGID=1000 pour lire les fichiers Samba)
+    # Monte le PVC NAS en read-only → pas de conflit d'écriture
+    # Config/DB Plex sur PVC séparé (longhorn-fast) pour performance
+    # Accès : http://<plex_ip>:32400/web
+    # ==========================================================
+
+    - name: Écrire le Deployment Plex
+      ansible.builtin.copy:
+        dest: /tmp/nas-plex.yml
+        mode: '0644'
+        content: |
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: plex
+            namespace: {{ target_namespace }}
+            labels:
+              app: plex
+          spec:
+            replicas: 1
+            strategy:
+              type: Recreate
+            selector:
+              matchLabels:
+                app: plex
+            template:
+              metadata:
+                labels:
+                  app: plex
+              spec:
+                containers:
+                  - name: plex
+                    image: {{ plex_image }}
+                    env:
+                      - name: PUID
+                        value: "1000"
+                      - name: PGID
+                        value: "1000"
+                      - name: TZ
+                        value: "{{ system_config.timezone }}"
+                      - name: VERSION
+                        value: "docker"
+                      {% if nas_config.plex_claim_token | default('') | length > 0 %}
+
+                      - name: PLEX_CLAIM
+                        value: "{{ nas_config.plex_claim_token }}"
+                      {% endif %}
+
+                    ports:
+                      - containerPort: 32400
+                        name: plex-web
+                        protocol: TCP
+                    volumeMounts:
+                      # Config Plex (RW) - sur longhorn-fast pour performance BDD
+                      - name: plex-config
+                        mountPath: /config
+                      # Données NAS (READ-ONLY) - streaming direct
+                      - name: nas-data
+                        mountPath: /data
+                        readOnly: true
+                    resources:
+                      requests:
+                        cpu: 500m
+                        memory: 512Mi
+                      limits:
+                        memory: 4Gi
+                    livenessProbe:
+                      httpGet:
+                        path: /identity
+                        port: 32400
+                      initialDelaySeconds: 30
+                      periodSeconds: 30
+                      timeoutSeconds: 10
+                    readinessProbe:
+                      httpGet:
+                        path: /identity
+                        port: 32400
+                      initialDelaySeconds: 15
+                      periodSeconds: 10
+                      timeoutSeconds: 5
+                volumes:
+                  - name: plex-config
+                    persistentVolumeClaim:
+                      claimName: plex-config
+                  - name: nas-data
+                    persistentVolumeClaim:
+                      claimName: nas-data
+                      readOnly: true
+          ---
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: plex-service
+            namespace: {{ target_namespace }}
+            annotations:
+              metallb.universe.tf/loadBalancerIPs: "{{ nas_config.plex_ip }}"
+          spec:
+            selector:
+              app: plex
+            ports:
+              - name: plex-web
+                protocol: TCP
+                port: 32400
+                targetPort: 32400
+            type: LoadBalancer
+      tags: [nas, nas-install, nas-plex]
+
+    - name: Appliquer le Deployment Plex
+      ansible.builtin.command: k3s kubectl apply -f /tmp/nas-plex.yml
+      register: plex_apply
+      changed_when: "'configured' in plex_apply.stdout or 'created' in plex_apply.stdout"
+      tags: [nas, nas-install, nas-plex]
+
+    - name: Supprimer le fichier Plex temporaire
+      ansible.builtin.file:
+        path: /tmp/nas-plex.yml
+        state: absent
+      tags: [nas, nas-install, nas-plex]
+
+    - name: Attendre que Plex soit Ready
+      ansible.builtin.command: >
+        k3s kubectl wait --for=condition=Ready pods
+        -l app=plex
+        -n {{ target_namespace }}
+        --timeout=300s
+      changed_when: false
+      tags: [nas, nas-install, nas-plex]
+
+    # ==========================================================
+    # VÉRIFICATION
+    # ==========================================================
+
+    - name: Vérifier les pods NAS
+      ansible.builtin.command: k3s kubectl get pods -n {{ target_namespace }} -o wide
+      register: nas_pods
+      changed_when: false
+      tags: [nas, nas-verify]
+
+    - name: Vérifier les services NAS
+      ansible.builtin.command: k3s kubectl get svc -n {{ target_namespace }}
+      register: nas_svc
+      changed_when: false
+      tags: [nas, nas-verify]
+
+    - name: Vérifier les PVC NAS
+      ansible.builtin.command: k3s kubectl get pvc -n {{ target_namespace }}
+      register: nas_pvc
+      changed_when: false
+      tags: [nas, nas-verify]
+
+    - name: Vérifier les endpoints Samba
+      ansible.builtin.command: k3s kubectl get endpoints samba-service -n {{ target_namespace }}
+      register: nas_samba_ep
+      changed_when: false
+      failed_when: false
+      tags: [nas, nas-verify]
+
+    - name: Vérifier les endpoints Plex
+      ansible.builtin.command: k3s kubectl get endpoints plex-service -n {{ target_namespace }}
+      register: nas_plex_ep
+      changed_when: false
+      failed_when: false
+      tags: [nas, nas-verify]
+
+    # ==========================================================
+    # RÉSUMÉ
+    # ==========================================================
+
+    - name: Résumé NAS
+      ansible.builtin.debug:
+        msg:
+          - "================================================================"
+          - "  NAS déployé - Option C Hybride"
+          - "================================================================"
+          - ""
+          - "  Architecture :"
+          - "  Longhorn PVC (RWX - {{ nas_config.storage_class }})"
+          - "  ├── Samba Server (RW) → SMB shares"
+          - "  └── Plex (RO) → Streaming média"
+          - ""
+          - "================================================================"
+          - "  Namespace    : {{ target_namespace }}"
+          - "  Volume NAS   : {{ nas_config.nas_storage_size }} ({{ nas_config.storage_class }}, replica:2)"
+          - "  Volume Plex  : {{ nas_config.plex_config_storage_size }} ({{ nas_config.plex_config_storage_class }})"
+          - "================================================================"
+          - ""
+          - "  SAMBA ({{ nas_config.samba_ip }}:445)"
+          - "  ────────────────────────────────────"
+          - "  Windows : \\\\{{ nas_config.samba_ip }}\\media"
+          - "            \\\\{{ nas_config.samba_ip }}\\documents"
+          - "            \\\\{{ nas_config.samba_ip }}\\shared"
+          - "  Linux   : smb://{{ nas_config.samba_ip }}/media"
+          - "  User    : {{ nas_config.samba_user }}"
+          - ""
+          - "  Nextcloud (External Storage SMB/CIFS) :"
+          - "    Host interne : samba-service.{{ target_namespace }}.svc.cluster.local"
+          - "    Host externe : {{ nas_config.samba_ip }}"
+          - "    Share : media / documents / shared"
+          - ""
+          - "  PLEX ({{ nas_config.plex_ip }}:32400)"
+          - "  ────────────────────────────────────"
+          - "  Web UI  : http://{{ nas_config.plex_ip }}:32400/web"
+          - "  Médias  : /data/media (read-only depuis le volume NAS)"
+          - "  Config  : /config ({{ nas_config.plex_config_storage_class }})"
+          - ""
+          - "================================================================"
+          - "  Pods"
+          - "================================================================"
+          - "{{ nas_pods.stdout_lines }}"
+          - "================================================================"
+          - "  Services"
+          - "================================================================"
+          - "{{ nas_svc.stdout_lines }}"
+          - "================================================================"
+          - "  PVC"
+          - "================================================================"
+          - "{{ nas_pvc.stdout_lines }}"
+          - "================================================================"
+          - ""
+          - "  IMPORTANT : Changer samba_password en production !"
+          - "  IMPORTANT : Obtenir PLEX_CLAIM sur https://plex.tv/claim"
+          - "  OPTIONNEL : DNS AdGuard → nas.corp.lcl → {{ nas_config.samba_ip }}"
+          - ""
+          - "================================================================"
+      tags: [nas, nas-verify]
