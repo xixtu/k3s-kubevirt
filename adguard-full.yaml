@@ -19,7 +19,19 @@ spec:
     requests:
       storage: 5Gi
 ---
-# 3. Le Déploiement AdGuard
+# 3. Secret pour les credentials AdGuard Home API (utilisé par l'exporter)
+#    Remplacer les valeurs par les vrais identifiants de l'interface web AdGuard
+apiVersion: v1
+kind: Secret
+metadata:
+  name: adguard-credentials
+  namespace: adguardhome
+type: Opaque
+stringData:
+  username: "admin"
+  password: "admin"
+---
+# 4. Le Déploiement AdGuard + Exporter Prometheus (sidecar)
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -54,6 +66,40 @@ spec:
           mountPath: /opt/adguardhome/conf
         - name: work
           mountPath: /opt/adguardhome/work
+      # Sidecar : Exporter Prometheus pour AdGuard Home
+      - name: adguard-exporter
+        image: ebrianne/adguard-exporter:latest
+        ports:
+        - containerPort: 9617
+          name: metrics
+        env:
+        - name: ADGUARD_PROTOCOL
+          value: "http"
+        - name: ADGUARD_HOSTNAME
+          value: "127.0.0.1"
+        - name: ADGUARD_PORT
+          value: "80"
+        - name: ADGUARD_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: adguard-credentials
+              key: username
+        - name: ADGUARD_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: adguard-credentials
+              key: password
+        - name: SERVER_PORT
+          value: "9617"
+        - name: INTERVAL
+          value: "10s"
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            cpu: 100m
+            memory: 64Mi
       volumes:
       - name: config
         persistentVolumeClaim:
@@ -61,7 +107,7 @@ spec:
       - name: work
         emptyDir: {}
 ---
-# 4. Le Service LoadBalancer pour l'IP Fixe (192.168.0.21)
+# 5. Le Service LoadBalancer pour l'IP Fixe (192.168.0.21)
 apiVersion: v1
 kind: Service
 metadata:
@@ -88,3 +134,41 @@ spec:
   - name: http-web
     port: 80
     targetPort: 80
+---
+# 6. Service ClusterIP dédié aux métriques (scraping Prometheus)
+apiVersion: v1
+kind: Service
+metadata:
+  name: adguard-metrics
+  namespace: adguardhome
+  labels:
+    app: adguardhome
+spec:
+  selector:
+    app: adguardhome
+  type: ClusterIP
+  ports:
+  - name: metrics
+    port: 9617
+    targetPort: 9617
+    protocol: TCP
+---
+# 7. ServiceMonitor pour Prometheus (découverte automatique)
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: adguard-servicemonitor
+  namespace: adguardhome
+  labels:
+    app: adguardhome
+spec:
+  selector:
+    matchLabels:
+      app: adguardhome
+  namespaceSelector:
+    matchNames:
+    - adguardhome
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics
