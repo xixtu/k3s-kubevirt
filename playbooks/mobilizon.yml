@@ -230,7 +230,7 @@
               spec:
                 containers:
                   - name: mobilizon
-                    image: framasoft/mobilizon:latest
+                    image: kaihuri/mobilizon:5.1.4
                     ports:
                       - containerPort: 4000
                     env:
