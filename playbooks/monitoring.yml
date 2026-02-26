@@ -81,6 +81,7 @@
           # --- Prometheus ---
           prometheus:
             prometheusSpec:
+              externalUrl: "https://{{ external_domains.prometheus }}"
               retention: "{{ monitoring_config.prometheus_retention }}"
               storageSpec:
                 volumeClaimTemplate:
@@ -108,6 +109,9 @@
           grafana:
             adminUser: admin
             adminPassword: admin
+            grafana.ini:
+              server:
+                root_url: "https://{{ external_domains.grafana }}"
             persistence:
               enabled: true
               storageClassName: "{{ monitoring_config.grafana_storage_class }}"
@@ -132,6 +136,7 @@
           # --- Alertmanager ---
           alertmanager:
             alertmanagerSpec:
+              externalUrl: "https://{{ external_domains.alertmanager }}"
               storage:
                 volumeClaimTemplate:
                   spec:
