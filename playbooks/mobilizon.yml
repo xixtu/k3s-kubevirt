@@ -50,7 +50,7 @@
       tags: [mobilizon, mobilizon-install]
 
     # ==========================================================
-    # SECRET (mot de passe PostgreSQL)
+    # SECRETS (PostgreSQL + Mobilizon)
     # ==========================================================
 
     - name: Créer le Secret PostgreSQL
@@ -61,6 +61,28 @@
           --from-literal=POSTGRES_USER={{ db_user }} \
           --from-literal=POSTGRES_DB={{ db_name }} \
           --dry-run=client -o yaml | k3s kubectl apply -f -
+      changed_when: true
+      tags: [mobilizon, mobilizon-install]
+
+    - name: Vérifier si le Secret Mobilizon existe déjà
+      ansible.builtin.command: >
+        k3s kubectl get secret {{ app_name }}-secret
+        -n {{ target_namespace }} -o name
+      register: mobilizon_secret_check
+      failed_when: false
+      changed_when: false
+      tags: [mobilizon, mobilizon-install]
+
+    - name: Générer les clés secrètes Mobilizon
+      ansible.builtin.shell: |
+        SECRET_KEY_BASE=$(openssl rand -base64 48)
+        SECRET_KEY=$(openssl rand -base64 48)
+        k3s kubectl create secret generic {{ app_name }}-secret \
+          --namespace {{ target_namespace }} \
+          --from-literal=MOBILIZON_INSTANCE_SECRET_KEY_BASE="${SECRET_KEY_BASE}" \
+          --from-literal=MOBILIZON_INSTANCE_SECRET_KEY="${SECRET_KEY}" \
+          --dry-run=client -o yaml | k3s kubectl apply -f -
+      when: mobilizon_secret_check.rc != 0
       changed_when: true
       tags: [mobilizon, mobilizon-install]
 
@@ -233,6 +255,9 @@
                     image: kaihuri/mobilizon:5.1.4
                     ports:
                       - containerPort: 4000
+                    envFrom:
+                      - secretRef:
+                          name: {{ app_name }}-secret
                     env:
                       - name: MOBILIZON_INSTANCE_HOST
                         value: "{{ external_domains.mobilizon }}"
