@@ -43,10 +43,10 @@
   import_playbook: k3s_storage_setup.yml
   tags: [storage]
 
-# PHASE 4 : Longhorn (en attente - vérification disques nodes 2-3)
-# - name: "PHASE 4 - Longhorn Storage"
-#   import_playbook: longhorn.yml
-#   tags: [longhorn]
+# PHASE 4 : Longhorn - Stockage distribué 3 tiers (ultra/fast/slow)
+- name: "PHASE 4 - Longhorn Storage"
+  import_playbook: longhorn.yml
+  tags: [longhorn]
 
 # PHASE 5 : MetalLB - Load Balancer Layer 2 (plage 192.168.0.30-60)
 - name: "PHASE 5 - MetalLB"

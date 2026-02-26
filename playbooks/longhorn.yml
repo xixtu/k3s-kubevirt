@@ -1,0 +1,435 @@
+---
+# =============================================================
+# PLAYBOOK : Installation Longhorn - Stockage distribué 3 tiers
+# =============================================================
+# Usage : ansible-playbook -i inventory/hosts.yml playbooks/longhorn.yml
+# Tags :
+#   longhorn-install → Installer Longhorn via Helm
+#   longhorn-disks   → Configurer les 3 disques par nœud (ultra/fast/slow)
+#   longhorn-storage → Créer les StorageClasses
+#   longhorn-ingress → IngressRoute UI Longhorn
+#   longhorn-verify  → Vérifier pods, disques, StorageClasses
+# Prérequis :
+#   - K3s installé + k3s_storage_setup.yml exécuté (répertoires Longhorn créés)
+#   - MetalLB + Traefik installés (pour IngressRoute UI)
+# URL UI : http://longhorn.app.corp.lcl
+# =============================================================
+
+# =============================================================
+# PLAY 1 : Installation Longhorn via Helm
+# =============================================================
+- name: "Longhorn - Installation via Helm"
+  hosts: k3s-node-1
+  become: true
+  gather_facts: false
+  vars_files:
+    - "../group_vars/k3s_cluster.yml"
+
+  tasks:
+
+    # ==========================================================
+    # PRÉPARATION
+    # ==========================================================
+
+    - name: Ajouter le repo Helm Longhorn
+      ansible.builtin.command: helm repo add longhorn https://charts.longhorn.io
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [longhorn, longhorn-install]
+
+    - name: Mettre à jour les repos Helm
+      ansible.builtin.command: helm repo update
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [longhorn, longhorn-install]
+
+    - name: Vérifier si Longhorn est déjà installé
+      ansible.builtin.command: helm status longhorn -n longhorn-system
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: longhorn_helm_status
+      failed_when: false
+      changed_when: false
+      tags: [longhorn, longhorn-install]
+
+    # ==========================================================
+    # FICHIER DE VALEURS HELM
+    # ==========================================================
+
+    - name: Écrire le fichier de valeurs Longhorn
+      ansible.builtin.copy:
+        dest: /tmp/longhorn-values.yml
+        mode: '0644'
+        content: |
+          # Longhorn Helm values - cluster k3s
+          # Namespace : longhorn-system (créé par Helm)
+
+          # Désactiver la StorageClass par défaut (on crée les nôtres)
+          persistence:
+            defaultClass: false
+            defaultClassReplicaCount: {{ longhorn_config.default_replica_count }}
+            defaultFsType: ext4
+            defaultDataLocality: best-effort
+            reclaimPolicy: Delete
+
+          # Settings globaux Longhorn
+          defaultSettings:
+            # Ne PAS créer de disque par défaut sur tous les nœuds
+            # On configure les 3 disques manuellement via kubectl patch
+            createDefaultDiskLabeledNodes: true
+            defaultReplicaCount: {{ longhorn_config.default_replica_count }}
+            storageOverProvisioningPercentage: {{ longhorn_config.storage_over_provisioning_percentage }}
+            storageMinimalAvailablePercentage: {{ longhorn_config.storage_minimal_available_percentage }}
+            guaranteedEngineManagerCPU: {{ longhorn_config.guaranteed_engine_manager_cpu }}
+            guaranteedReplicaManagerCPU: {{ longhorn_config.guaranteed_replica_manager_cpu }}
+            {% if longhorn_config.backup_target %}
+            backupTarget: "{{ longhorn_config.backup_target }}"
+            {% endif %}
+            replicaSoftAntiAffinity: true
+            replicaAutoBalance: best-effort
+
+          # UI Longhorn (service ClusterIP, exposé via Traefik IngressRoute)
+          longhornUI:
+            replicas: 1
+
+          # Désactiver l'ingress intégré (on utilise IngressRoute Traefik)
+          ingress:
+            enabled: false
+      tags: [longhorn, longhorn-install]
+
+    # ==========================================================
+    # INSTALLATION LONGHORN
+    # ==========================================================
+
+    - name: Installer / Mettre à jour Longhorn via Helm
+      ansible.builtin.command: >
+        helm upgrade --install longhorn longhorn/longhorn
+        --namespace longhorn-system
+        --create-namespace
+        --version {{ longhorn_version }}
+        --values /tmp/longhorn-values.yml
+        --wait
+        --timeout 10m
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [longhorn, longhorn-install]
+
+    - name: Supprimer le fichier de valeurs temporaire
+      ansible.builtin.file:
+        path: /tmp/longhorn-values.yml
+        state: absent
+      tags: [longhorn, longhorn-install]
+
+    # ==========================================================
+    # ATTENTE DES COMPOSANTS
+    # ==========================================================
+
+    - name: Attendre que les pods Longhorn soient Ready
+      ansible.builtin.command: >
+        k3s kubectl wait --for=condition=Ready pods
+        --all -n longhorn-system
+        --timeout=300s
+      register: longhorn_pods_ready
+      changed_when: false
+      retries: 3
+      delay: 15
+      until: longhorn_pods_ready.rc == 0
+      tags: [longhorn, longhorn-install]
+
+    - name: Attendre que le CRD nodes.longhorn.io soit établi
+      ansible.builtin.command: >
+        k3s kubectl wait --for=condition=Established
+        crd/nodes.longhorn.io
+        --timeout=120s
+      changed_when: false
+      tags: [longhorn, longhorn-install]
+
+# =============================================================
+# PLAY 2 : Configuration des disques par nœud (3 tiers)
+# =============================================================
+- name: "Longhorn - Configuration des disques par nœud"
+  hosts: k3s-node-1
+  become: true
+  gather_facts: false
+  vars_files:
+    - "../group_vars/k3s_cluster.yml"
+
+  tasks:
+
+    - name: Pause pour laisser Longhorn découvrir les nœuds
+      ansible.builtin.pause:
+        seconds: 30
+      tags: [longhorn, longhorn-disks]
+
+    - name: Attendre que les Longhorn nodes existent
+      ansible.builtin.command: >
+        k3s kubectl get nodes.longhorn.io {{ item }} -n longhorn-system
+      loop:
+        - k3s-node-1
+        - k3s-node-2
+        - k3s-node-3
+      register: longhorn_nodes_check
+      changed_when: false
+      retries: 12
+      delay: 10
+      until: longhorn_nodes_check is not failed
+      tags: [longhorn, longhorn-disks]
+
+    # ---------------------------------------------------------
+    # PATCH DISQUES : 3 disques par nœud avec tags
+    # Le merge patch remplace spec.disks → supprime le défaut
+    # ---------------------------------------------------------
+
+    - name: Écrire le patch disques pour chaque nœud
+      ansible.builtin.copy:
+        dest: "/tmp/longhorn-disk-patch-{{ item }}.yml"
+        mode: '0644'
+        content: |
+          spec:
+            disks:
+              disk-ultra:
+                allowScheduling: true
+                evictionRequested: false
+                path: "{{ longhorn_config.disk_paths.ultra }}"
+                storageReserved: 0
+                tags:
+                  - ultra
+              disk-fast:
+                allowScheduling: true
+                evictionRequested: false
+                path: "{{ longhorn_config.disk_paths.fast }}"
+                storageReserved: 0
+                tags:
+                  - fast
+              disk-slow:
+                allowScheduling: true
+                evictionRequested: false
+                path: "{{ longhorn_config.disk_paths.slow }}"
+                storageReserved: 0
+                tags:
+                  - slow
+      loop:
+        - k3s-node-1
+        - k3s-node-2
+        - k3s-node-3
+      tags: [longhorn, longhorn-disks]
+
+    - name: Appliquer le patch disques sur chaque nœud Longhorn
+      ansible.builtin.command: >
+        k3s kubectl -n longhorn-system patch nodes.longhorn.io {{ item }}
+        --type merge --patch-file /tmp/longhorn-disk-patch-{{ item }}.yml
+      loop:
+        - k3s-node-1
+        - k3s-node-2
+        - k3s-node-3
+      register: disk_patch_result
+      changed_when: "'patched' in disk_patch_result.stdout"
+      tags: [longhorn, longhorn-disks]
+
+    - name: Supprimer les fichiers patch temporaires
+      ansible.builtin.file:
+        path: "/tmp/longhorn-disk-patch-{{ item }}.yml"
+        state: absent
+      loop:
+        - k3s-node-1
+        - k3s-node-2
+        - k3s-node-3
+      tags: [longhorn, longhorn-disks]
+
+    - name: Vérifier les disques configurés sur chaque nœud
+      ansible.builtin.command: >
+        k3s kubectl get nodes.longhorn.io {{ item }} -n longhorn-system
+        -o jsonpath='{.spec.disks}'
+      loop:
+        - k3s-node-1
+        - k3s-node-2
+        - k3s-node-3
+      register: node_disks_check
+      changed_when: false
+      tags: [longhorn, longhorn-disks]
+
+# =============================================================
+# PLAY 3 : StorageClasses + IngressRoute + Vérification
+# =============================================================
+- name: "Longhorn - StorageClasses, IngressRoute et vérification"
+  hosts: k3s-node-1
+  become: true
+  gather_facts: false
+  vars_files:
+    - "../group_vars/k3s_cluster.yml"
+
+  tasks:
+
+    # ==========================================================
+    # STORAGECLASSES
+    # ==========================================================
+
+    - name: Supprimer la StorageClass longhorn par défaut si elle existe
+      ansible.builtin.command: >
+        k3s kubectl delete storageclass longhorn --ignore-not-found
+      register: sc_delete
+      changed_when: "'deleted' in sc_delete.stdout"
+      tags: [longhorn, longhorn-storage]
+
+    - name: Écrire le manifeste des StorageClasses Longhorn
+      ansible.builtin.copy:
+        dest: /tmp/longhorn-storageclasses.yml
+        mode: '0644'
+        content: |
+          {% for sc in longhorn_storage_classes %}
+          ---
+          apiVersion: storage.k8s.io/v1
+          kind: StorageClass
+          metadata:
+            name: {{ sc.name }}
+            annotations:
+              {% if sc.default %}
+              storageclass.kubernetes.io/is-default-class: "true"
+              {% endif %}
+          provisioner: driver.longhorn.io
+          allowVolumeExpansion: true
+          reclaimPolicy: {{ sc.reclaim_policy }}
+          volumeBindingMode: Immediate
+          parameters:
+            numberOfReplicas: "{{ sc.replica_count }}"
+            staleReplicaTimeout: "2880"
+            fromBackup: ""
+            fsType: "{{ sc.fs_type }}"
+            dataLocality: "{{ sc.data_locality }}"
+            diskSelector: "{{ sc.disk_selector }}"
+            {% if sc.node_selector %}
+            nodeSelector: "{{ sc.node_selector }}"
+            {% endif %}
+          {% endfor %}
+      tags: [longhorn, longhorn-storage]
+
+    - name: Appliquer les StorageClasses Longhorn
+      ansible.builtin.command: k3s kubectl apply -f /tmp/longhorn-storageclasses.yml
+      register: sc_apply
+      changed_when: "'configured' in sc_apply.stdout or 'created' in sc_apply.stdout"
+      tags: [longhorn, longhorn-storage]
+
+    - name: Supprimer le fichier StorageClasses temporaire
+      ansible.builtin.file:
+        path: /tmp/longhorn-storageclasses.yml
+        state: absent
+      tags: [longhorn, longhorn-storage]
+
+    # ==========================================================
+    # INGRESSROUTE LONGHORN UI
+    # ==========================================================
+
+    - name: Écrire l'IngressRoute Longhorn UI
+      ansible.builtin.copy:
+        dest: /tmp/longhorn-ingressroute.yml
+        mode: '0644'
+        content: |
+          apiVersion: traefik.io/v1alpha1
+          kind: IngressRoute
+          metadata:
+            name: longhorn-ui
+            namespace: longhorn-system
+          spec:
+            entryPoints:
+              - web
+            routes:
+              - match: Host(`longhorn.{{ cluster_network.apps_domain }}`)
+                kind: Rule
+                services:
+                  - name: longhorn-frontend
+                    port: 80
+                # TODO: Ajouter middleware Authelia quand disponible
+                # middlewares:
+                #   - name: authelia
+                #     namespace: authelia
+      tags: [longhorn, longhorn-ingress]
+
+    - name: Appliquer l'IngressRoute Longhorn UI
+      ansible.builtin.command: k3s kubectl apply -f /tmp/longhorn-ingressroute.yml
+      changed_when: false
+      tags: [longhorn, longhorn-ingress]
+
+    - name: Supprimer le fichier IngressRoute temporaire
+      ansible.builtin.file:
+        path: /tmp/longhorn-ingressroute.yml
+        state: absent
+      tags: [longhorn, longhorn-ingress]
+
+    # ==========================================================
+    # VÉRIFICATION
+    # ==========================================================
+
+    - name: Vérifier les pods Longhorn
+      ansible.builtin.command: k3s kubectl get pods -n longhorn-system -o wide
+      register: longhorn_pods
+      changed_when: false
+      tags: [longhorn, longhorn-verify]
+
+    - name: Vérifier les StorageClasses
+      ansible.builtin.command: k3s kubectl get storageclass
+      register: storage_classes
+      changed_when: false
+      tags: [longhorn, longhorn-verify]
+
+    - name: Vérifier les nœuds Longhorn et disques
+      ansible.builtin.command: >
+        k3s kubectl get nodes.longhorn.io -n longhorn-system -o wide
+      register: longhorn_nodes
+      changed_when: false
+      tags: [longhorn, longhorn-verify]
+
+    - name: Vérifier l'IngressRoute Longhorn
+      ansible.builtin.command: >
+        k3s kubectl get ingressroute -n longhorn-system
+      register: longhorn_ingress
+      changed_when: false
+      failed_when: false
+      tags: [longhorn, longhorn-verify]
+
+    - name: Vérifier que les volumes sont programmables
+      ansible.builtin.shell: >
+        k3s kubectl get nodes.longhorn.io -n longhorn-system
+        -o jsonpath='{range .items[*]}{.metadata.name}{": schedulable="}{.status.conditions[?(@.type=="Schedulable")].status}{"\n"}{end}'
+      register: schedulable_check
+      changed_when: false
+      tags: [longhorn, longhorn-verify]
+
+    # ==========================================================
+    # RÉSUMÉ
+    # ==========================================================
+
+    - name: Résumé Longhorn
+      ansible.builtin.debug:
+        msg:
+          - "================================================"
+          - "  Longhorn v{{ longhorn_version }} installé"
+          - "================================================"
+          - "Namespace    : longhorn-system"
+          - "Replicas     : {{ longhorn_config.default_replica_count }}"
+          - "UI           : http://longhorn.{{ cluster_network.apps_domain }}"
+          - "================================================"
+          - "  StorageClasses"
+          - "================================================"
+          - "{{ storage_classes.stdout_lines }}"
+          - "================================================"
+          - "  Disques par noeud (3 tiers)"
+          - "================================================"
+          - "Ultra : {{ longhorn_config.disk_paths.ultra }} (tag: ultra)"
+          - "Fast  : {{ longhorn_config.disk_paths.fast }} (tag: fast)"
+          - "Slow  : {{ longhorn_config.disk_paths.slow }} (tag: slow)"
+          - "================================================"
+          - "  Noeuds Longhorn"
+          - "================================================"
+          - "{{ longhorn_nodes.stdout_lines }}"
+          - "Schedulable  : {{ schedulable_check.stdout_lines }}"
+          - "================================================"
+          - "  Pods"
+          - "================================================"
+          - "{{ longhorn_pods.stdout_lines }}"
+          - "================================================"
+          - "  Authelia : middleware a ajouter quand disponible"
+          - "================================================"
+      tags: [longhorn, longhorn-verify]
