@@ -12,7 +12,8 @@
 # Prérequis :
 #   - K3s installé + k3s_storage_setup.yml exécuté (répertoires Longhorn créés)
 #   - MetalLB + Traefik installés (pour IngressRoute UI)
-# URL UI : http://longhorn.app.corp.lcl
+# URL interne  : http://longhorn.app.corp.lcl
+# URL publique : https://longhorn.app.xixtu.eu
 # =============================================================
 
 # =============================================================
@@ -290,10 +291,10 @@
       tags: [longhorn, longhorn-storage]
 
     # ==========================================================
-    # INGRESSROUTE LONGHORN UI
+    # INGRESSROUTE LONGHORN UI (interne - app.corp.lcl)
     # ==========================================================
 
-    - name: Écrire l'IngressRoute Longhorn UI
+    - name: Écrire l'IngressRoute interne Longhorn UI
       ansible.builtin.copy:
         dest: /tmp/longhorn-ingressroute.yml
         mode: '0644'
@@ -318,7 +319,7 @@
                 #     namespace: authelia
       tags: [longhorn, longhorn-ingress]
 
-    - name: Appliquer l'IngressRoute Longhorn UI
+    - name: Appliquer l'IngressRoute interne Longhorn UI
       ansible.builtin.command: k3s kubectl apply -f /tmp/longhorn-ingressroute.yml
       changed_when: false
       tags: [longhorn, longhorn-ingress]
@@ -328,6 +329,104 @@
         path: /tmp/longhorn-ingressroute.yml
         state: absent
       tags: [longhorn, longhorn-ingress]
+
+    # ==========================================================
+    # TLS - CERTIFICAT LET'S ENCRYPT (longhorn.app.xixtu.eu)
+    # ==========================================================
+    # Pattern : Ingress K8s (déclenche cert-manager) + IngressRoute HTTPS
+    # Le middleware redirect-to-https redirige HTTP→HTTPS sur l'Ingress,
+    # mais n'affecte PAS le solver cert-manager (Ingress temporaire séparé).
+    # ==========================================================
+
+    - name: Créer l'Ingress Longhorn (cert-manager + redirect HTTP→HTTPS)
+      kubernetes.core.k8s:
+        kubeconfig: /etc/rancher/k3s/k3s.yaml
+        state: present
+        definition:
+          apiVersion: networking.k8s.io/v1
+          kind: Ingress
+          metadata:
+            name: longhorn-ingress-tls
+            namespace: longhorn-system
+            annotations:
+              cert-manager.io/cluster-issuer: letsencrypt-production
+              cert-manager.io/private-key-algorithm: "ECDSA"
+              cert-manager.io/private-key-size: "256"
+              traefik.ingress.kubernetes.io/router.entrypoints: "web"
+              traefik.ingress.kubernetes.io/router.middlewares: "traefik-redirect-to-https@kubernetescrd"
+          spec:
+            ingressClassName: traefik
+            tls:
+              - hosts:
+                  - "{{ external_domains.longhorn }}"
+                secretName: longhorn-tls
+            rules:
+              - host: "{{ external_domains.longhorn }}"
+                http:
+                  paths:
+                    - path: /
+                      pathType: Prefix
+                      backend:
+                        service:
+                          name: longhorn-frontend
+                          port:
+                            number: 80
+      tags: [longhorn, longhorn-ingress, letsencrypt-tls]
+
+    - name: Vérifier le type de clé du certificat Longhorn actuel
+      ansible.builtin.shell: >
+        k3s kubectl get secret longhorn-tls -n longhorn-system
+        -o jsonpath='{.data.tls\.key}' | base64 -d
+        | openssl ec -noout 2>/dev/null && echo "ECDSA" || echo "RSA"
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: longhorn_cert_key_type
+      changed_when: false
+      failed_when: false
+      tags: [longhorn, longhorn-ingress, letsencrypt-tls]
+
+    - name: Supprimer l'ancien certificat RSA Longhorn pour renouvellement ECDSA
+      ansible.builtin.command: >
+        k3s kubectl delete certificate longhorn-tls
+        -n longhorn-system --ignore-not-found
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      when: longhorn_cert_key_type.stdout is defined and 'ECDSA' not in longhorn_cert_key_type.stdout
+      changed_when: true
+      tags: [longhorn, longhorn-ingress, letsencrypt-tls]
+
+    - name: Supprimer l'ancien secret TLS RSA Longhorn
+      ansible.builtin.command: >
+        k3s kubectl delete secret longhorn-tls
+        -n longhorn-system --ignore-not-found
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      when: longhorn_cert_key_type.stdout is defined and 'ECDSA' not in longhorn_cert_key_type.stdout
+      changed_when: true
+      tags: [longhorn, longhorn-ingress, letsencrypt-tls]
+
+    - name: Créer l'IngressRoute HTTPS Longhorn (websecure)
+      kubernetes.core.k8s:
+        kubeconfig: /etc/rancher/k3s/k3s.yaml
+        state: present
+        definition:
+          apiVersion: traefik.io/v1alpha1
+          kind: IngressRoute
+          metadata:
+            name: longhorn-https
+            namespace: longhorn-system
+          spec:
+            entryPoints:
+              - websecure
+            routes:
+              - match: "Host(`{{ external_domains.longhorn }}`)"
+                kind: Rule
+                services:
+                  - name: longhorn-frontend
+                    port: 80
+            tls:
+              secretName: longhorn-tls
+      tags: [longhorn, longhorn-ingress, letsencrypt-tls]
 
     # ==========================================================
     # VÉRIFICATION
@@ -380,7 +479,9 @@
           - "================================================"
           - "Namespace    : longhorn-system"
           - "Replicas     : {{ longhorn_config.default_replica_count }}"
-          - "UI           : http://longhorn.{{ cluster_network.apps_domain }}"
+          - "UI interne   : http://longhorn.{{ cluster_network.apps_domain }}"
+          - "UI publique  : https://{{ external_domains.longhorn }}"
+          - "TLS          : cert-manager / letsencrypt-production (ECDSA P-256)"
           - "================================================"
           - "  StorageClasses"
           - "================================================"

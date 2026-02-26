@@ -74,6 +74,12 @@
             isDefaultClass: true
 
           # Ports exposés
+          # NOTE : PAS de redirections.entryPoint sur web !
+          # La redirection HTTP→HTTPS est gérée par le middleware
+          # redirect-to-https appliqué sur chaque Ingress applicatif.
+          # Cela permet à cert-manager HTTP-01 de fonctionner :
+          # le solver crée un Ingress temporaire SANS ce middleware,
+          # donc le challenge ACME reste en HTTP (port 80) sans redirect.
           ports:
             web:
               port: 8000
@@ -81,11 +87,6 @@
                 default: true
               exposedPort: 80
               protocol: TCP
-              redirections:
-                entryPoint:
-                  to: websecure
-                  scheme: https
-                  permanent: true
             websecure:
               port: 8443
               expose:
@@ -158,7 +159,7 @@
               cpu: "300m"
               memory: "150Mi"
 
-          # Middleware HSTS + en-têtes de sécurité
+          # Middlewares : HSTS + redirect HTTP→HTTPS
           extraObjects:
             - apiVersion: traefik.io/v1alpha1
               kind: Middleware
@@ -170,6 +171,17 @@
                   stsIncludeSubdomains: true
                   stsPreload: true
                   forceSTSHeader: true
+            # Redirect HTTP→HTTPS (appliqué par Ingress, pas globalement)
+            # Cela permet à cert-manager HTTP-01 solver de fonctionner
+            # car son Ingress temporaire n'a pas ce middleware.
+            - apiVersion: traefik.io/v1alpha1
+              kind: Middleware
+              metadata:
+                name: redirect-to-https
+              spec:
+                redirectScheme:
+                  scheme: https
+                  permanent: true
       tags: [traefik, traefik-install]
 
     # ==========================================================
@@ -260,7 +272,7 @@
           - "================================================"
           - "IP assignée  : {{ traefik_external_ip.stdout }}"
           - "IP attendue  : {{ cluster_network.traefik_ip }}"
-          - "HTTP         : http://{{ traefik_external_ip.stdout }}"
+          - "HTTP         : http://{{ traefik_external_ip.stdout }} (redirect via middleware)"
           - "HTTPS        : https://{{ traefik_external_ip.stdout }}"
           - "IngressClass : traefik (default)"
           - "Pods         : {{ traefik_pods.stdout_lines }}"
