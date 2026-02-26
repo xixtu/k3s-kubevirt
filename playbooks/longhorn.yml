@@ -83,6 +83,16 @@
             replicas: 1
           ingress:
             enabled: false
+          # Hotfix v1.11.0 : correction regression proxy + CNI validator
+          # Ref: https://longhorn.io/docs/1.11.0/important-notes/
+          {% if longhorn_version == '1.11.0' %}
+          image:
+            longhorn:
+              manager:
+                tag: v1.11.0-hotfix-1
+              instanceManager:
+                tag: v1.11.0-hotfix-1
+          {% endif %}
       tags: [longhorn, longhorn-install]
 
     # ==========================================================
@@ -97,7 +107,7 @@
         --version {{ longhorn_version }}
         --values /tmp/longhorn-values.yml
         --wait
-        --timeout 10m
+        --timeout 15m
       environment:
         KUBECONFIG: /etc/rancher/k3s/k3s.yaml
       changed_when: false

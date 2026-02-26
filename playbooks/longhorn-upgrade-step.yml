@@ -1,0 +1,69 @@
+---
+# =============================================================
+# TASKS : Une étape d'upgrade Longhorn (appelé par longhorn-upgrade.yml)
+# =============================================================
+# Variables attendues :
+#   step_version  → version cible de cette étape (ex: "1.7.3")
+#   step_index    → index de l'étape (0-based)
+#   upgrade_steps → liste complète des étapes
+# =============================================================
+
+- name: "══════ ÉTAPE {{ step_index + 1 }}/{{ upgrade_steps | length }} : Upgrade vers v{{ step_version }} ══════"
+  ansible.builtin.debug:
+    msg: "Lancement de l'upgrade Longhorn vers v{{ step_version }}..."
+
+# --- Helm upgrade ---
+# Pour v1.11.0, on applique les images hotfix-1 (regression proxy + CNI validator)
+
+- name: "Upgrade Helm Longhorn vers v{{ step_version }}"
+  ansible.builtin.command: >
+    helm upgrade longhorn longhorn/longhorn
+    --namespace longhorn-system
+    --version {{ step_version }}
+    --values /tmp/longhorn-upgrade-values.yml
+    {{ '--set image.longhorn.manager.tag=v1.11.0-hotfix-1 --set image.longhorn.instanceManager.tag=v1.11.0-hotfix-1'
+       if step_version == '1.11.0' else '' }}
+    --wait
+    --timeout 15m
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+
+# --- Attente stabilisation ---
+
+- name: "Pause post-upgrade v{{ step_version }} (stabilisation)"
+  ansible.builtin.pause:
+    seconds: 30
+
+- name: "Attendre que tous les pods Longhorn soient Ready (v{{ step_version }})"
+  ansible.builtin.command: >
+    k3s kubectl wait --for=condition=Ready pods
+    --all -n longhorn-system
+    --timeout=300s
+  register: step_pods_ready
+  changed_when: false
+  retries: 5
+  delay: 15
+  until: step_pods_ready.rc == 0
+
+# --- Vérification de la version ---
+
+- name: "Vérifier la version après upgrade v{{ step_version }}"
+  ansible.builtin.shell: >
+    helm list -n longhorn-system -o json
+    | jq -r '.[0].app_version' | tr -d 'v'
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  register: post_step_version
+  changed_when: false
+
+- name: "Confirmer l'upgrade v{{ step_version }}"
+  ansible.builtin.debug:
+    msg: "✓ Étape {{ step_index + 1 }}/{{ upgrade_steps | length }} terminée — Longhorn v{{ post_step_version.stdout | trim }}"
+
+- name: "Échec upgrade v{{ step_version }}"
+  ansible.builtin.fail:
+    msg: >
+      L'upgrade vers v{{ step_version }} a échoué.
+      Version détectée : v{{ post_step_version.stdout | trim }}.
+      Vérifier les logs : kubectl logs -n longhorn-system -l app=longhorn-manager --tail=100
+  when: post_step_version.stdout | trim is version(step_version, '<')

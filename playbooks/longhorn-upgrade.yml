@@ -1,0 +1,287 @@
+---
+# =============================================================
+# PLAYBOOK : Longhorn - Upgrade séquentiel
+# =============================================================
+# Usage : ansible-playbook -i inventory/hosts.yml playbooks/longhorn-upgrade.yml
+# Tags :
+#   longhorn-upgrade-preflight → Vérifications pré-upgrade
+#   longhorn-upgrade-run       → Exécution de l'upgrade séquentiel
+#   longhorn-upgrade-verify    → Vérification post-upgrade
+#
+# ⚠ Longhorn ne supporte PAS les sauts de version mineure.
+#    Ce playbook gère automatiquement le chemin d'upgrade :
+#    v1.6.x → v1.7.3 → v1.8.2 → v1.9.2 → v1.10.2 → v1.11.0
+#
+# Prérequis :
+#   - Longhorn déjà installé (v1.6.x minimum)
+#   - Aucun volume en état Faulted
+#   - Kubernetes v1.25+ (requis à partir de Longhorn v1.8)
+#   - Backup Longhorn recommandé avant l'upgrade
+#
+# Documentation :
+#   - https://longhorn.io/docs/1.11.0/deploy/upgrade/
+#   - https://longhorn.io/docs/1.11.0/important-notes/
+# =============================================================
+
+- name: "Longhorn - Upgrade séquentiel vers v{{ longhorn_version }}"
+  hosts: k3s-node-1
+  become: true
+  gather_facts: false
+  vars_files:
+    - "../group_vars/k3s_cluster.yml"
+
+  vars:
+    # Chemin d'upgrade séquentiel (derniers patchs stables de chaque minor)
+    longhorn_upgrade_path:
+      - "1.7.3"
+      - "1.8.2"
+      - "1.9.2"
+      - "1.10.2"
+      - "1.11.0"
+
+  tasks:
+
+    # ==========================================================
+    # PRÉ-FLIGHT : Vérifications avant upgrade
+    # ==========================================================
+
+    - name: Mettre à jour les repos Helm
+      ansible.builtin.command: helm repo update
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [longhorn-upgrade, longhorn-upgrade-preflight]
+
+    - name: Récupérer la version Longhorn installée
+      ansible.builtin.shell: >
+        helm list -n longhorn-system -o json
+        | jq -r '.[0].app_version' | tr -d 'v'
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: current_version_raw
+      changed_when: false
+      tags: [longhorn-upgrade, longhorn-upgrade-preflight]
+
+    - name: Définir la version actuelle
+      ansible.builtin.set_fact:
+        current_longhorn_version: "{{ current_version_raw.stdout | trim }}"
+      tags: [longhorn-upgrade, longhorn-upgrade-preflight]
+
+    - name: Afficher la version actuelle
+      ansible.builtin.debug:
+        msg: "Version Longhorn actuelle : v{{ current_longhorn_version }}"
+      tags: [longhorn-upgrade, longhorn-upgrade-preflight]
+
+    - name: Calculer les étapes d'upgrade nécessaires
+      ansible.builtin.set_fact:
+        upgrade_steps: >-
+          {{ longhorn_upgrade_path
+             | select('version', current_longhorn_version, '>')
+             | list }}
+      tags: [longhorn-upgrade, longhorn-upgrade-preflight]
+
+    - name: Afficher le plan d'upgrade
+      ansible.builtin.debug:
+        msg:
+          - "================================================"
+          - "  Plan d'upgrade Longhorn"
+          - "================================================"
+          - "Version actuelle : v{{ current_longhorn_version }}"
+          - "Version cible    : v{{ longhorn_version }}"
+          - "Étapes           : {{ upgrade_steps | length }}"
+          - "Chemin           : v{{ current_longhorn_version }} → {{ upgrade_steps | map('regex_replace', '^(.*)$', 'v\\1') | join(' → ') }}"
+          - "================================================"
+      when: upgrade_steps | length > 0
+      tags: [longhorn-upgrade, longhorn-upgrade-preflight]
+
+    - name: Aucun upgrade nécessaire
+      ansible.builtin.debug:
+        msg: "Longhorn est déjà en v{{ current_longhorn_version }}. Aucun upgrade nécessaire."
+      when: upgrade_steps | length == 0
+      tags: [longhorn-upgrade, longhorn-upgrade-preflight]
+
+    - name: Fin si aucun upgrade nécessaire
+      ansible.builtin.meta: end_play
+      when: upgrade_steps | length == 0
+      tags: [longhorn-upgrade, longhorn-upgrade-preflight]
+
+    # --- Vérifications de sécurité ---
+
+    - name: Vérifier la version Kubernetes (v1.25+ requis pour Longhorn >= 1.8)
+      ansible.builtin.shell: >
+        k3s kubectl version -o json | jq -r '.serverVersion.gitVersion'
+      register: k8s_version
+      changed_when: false
+      tags: [longhorn-upgrade, longhorn-upgrade-preflight]
+
+    - name: Afficher la version Kubernetes
+      ansible.builtin.debug:
+        msg: "Kubernetes : {{ k8s_version.stdout }}"
+      tags: [longhorn-upgrade, longhorn-upgrade-preflight]
+
+    - name: Vérifier l'absence de volumes Faulted
+      ansible.builtin.shell: >
+        k3s kubectl get volumes.longhorn.io -n longhorn-system -o json
+        | jq -r '.items[] | select(.status.robustness == "faulted") | .metadata.name'
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: faulted_volumes
+      changed_when: false
+      tags: [longhorn-upgrade, longhorn-upgrade-preflight]
+
+    - name: "ARRÊT - Volumes Faulted détectés"
+      ansible.builtin.fail:
+        msg: >
+          Des volumes sont en état Faulted : {{ faulted_volumes.stdout_lines }}.
+          Réparer ces volumes avant de lancer l'upgrade pour éviter toute perte de données.
+      when: faulted_volumes.stdout | length > 0
+      tags: [longhorn-upgrade, longhorn-upgrade-preflight]
+
+    - name: Vérifier l'absence de BackingImages en erreur
+      ansible.builtin.shell: >
+        k3s kubectl get backingimages.longhorn.io -n longhorn-system -o json
+        | jq -r '.items[] | select(.status.diskFileStatusMap | to_entries[] | .value.state == "failed") | .metadata.name'
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: failed_backingimages
+      changed_when: false
+      failed_when: false
+      tags: [longhorn-upgrade, longhorn-upgrade-preflight]
+
+    - name: "ARRÊT - BackingImages en erreur détectées"
+      ansible.builtin.fail:
+        msg: >
+          Des BackingImages sont en erreur : {{ failed_backingimages.stdout_lines }}.
+          Les supprimer ou réparer avant l'upgrade.
+      when: failed_backingimages.stdout | default('') | length > 0
+      tags: [longhorn-upgrade, longhorn-upgrade-preflight]
+
+    - name: Vérifier que tous les pods Longhorn sont Ready
+      ansible.builtin.command: >
+        k3s kubectl wait --for=condition=Ready pods
+        --all -n longhorn-system --timeout=120s
+      register: pods_ready_check
+      changed_when: false
+      tags: [longhorn-upgrade, longhorn-upgrade-preflight]
+
+    # ==========================================================
+    # VALEURS HELM (identiques à l'installation initiale)
+    # ==========================================================
+
+    - name: Écrire les valeurs Helm pour l'upgrade
+      ansible.builtin.copy:
+        dest: /tmp/longhorn-upgrade-values.yml
+        mode: '0644'
+        content: |
+          persistence:
+            defaultClass: false
+            defaultClassReplicaCount: {{ longhorn_config.default_replica_count }}
+            defaultFsType: ext4
+            defaultDataLocality: best-effort
+            reclaimPolicy: Delete
+          defaultSettings:
+            createDefaultDiskLabeledNodes: true
+            defaultReplicaCount: {{ longhorn_config.default_replica_count }}
+            storageOverProvisioningPercentage: {{ longhorn_config.storage_over_provisioning_percentage }}
+            storageMinimalAvailablePercentage: {{ longhorn_config.storage_minimal_available_percentage }}
+            guaranteedEngineManagerCPU: {{ longhorn_config.guaranteed_engine_manager_cpu }}
+            guaranteedReplicaManagerCPU: {{ longhorn_config.guaranteed_replica_manager_cpu }}
+            replicaSoftAntiAffinity: true
+            replicaAutoBalance: best-effort
+          longhornUI:
+            replicas: 1
+          ingress:
+            enabled: false
+      tags: [longhorn-upgrade, longhorn-upgrade-run]
+
+    # ==========================================================
+    # UPGRADE SÉQUENTIEL
+    # ==========================================================
+
+    - name: "Upgrade séquentiel Longhorn"
+      ansible.builtin.include_tasks: longhorn-upgrade-step.yml
+      loop: "{{ upgrade_steps }}"
+      loop_control:
+        loop_var: step_version
+        index_var: step_index
+      tags: [longhorn-upgrade, longhorn-upgrade-run]
+
+    # ==========================================================
+    # NETTOYAGE
+    # ==========================================================
+
+    - name: Supprimer le fichier de valeurs temporaire
+      ansible.builtin.file:
+        path: /tmp/longhorn-upgrade-values.yml
+        state: absent
+      tags: [longhorn-upgrade, longhorn-upgrade-run]
+
+    # ==========================================================
+    # VÉRIFICATION FINALE
+    # ==========================================================
+
+    - name: Récupérer la version Longhorn finale
+      ansible.builtin.shell: >
+        helm list -n longhorn-system -o json
+        | jq -r '.[0].app_version'
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: final_version
+      changed_when: false
+      tags: [longhorn-upgrade, longhorn-upgrade-verify]
+
+    - name: Vérifier les pods Longhorn
+      ansible.builtin.command: k3s kubectl get pods -n longhorn-system -o wide
+      register: final_pods
+      changed_when: false
+      tags: [longhorn-upgrade, longhorn-upgrade-verify]
+
+    - name: Vérifier les StorageClasses
+      ansible.builtin.command: k3s kubectl get storageclass
+      register: final_sc
+      changed_when: false
+      tags: [longhorn-upgrade, longhorn-upgrade-verify]
+
+    - name: Vérifier les nœuds Longhorn
+      ansible.builtin.command: >
+        k3s kubectl get nodes.longhorn.io -n longhorn-system -o wide
+      register: final_nodes
+      changed_when: false
+      tags: [longhorn-upgrade, longhorn-upgrade-verify]
+
+    - name: Vérifier les volumes Longhorn
+      ansible.builtin.command: >
+        k3s kubectl get volumes.longhorn.io -n longhorn-system
+      register: final_volumes
+      changed_when: false
+      failed_when: false
+      tags: [longhorn-upgrade, longhorn-upgrade-verify]
+
+    - name: Résumé upgrade Longhorn
+      ansible.builtin.debug:
+        msg:
+          - "================================================"
+          - "  Upgrade Longhorn terminé"
+          - "================================================"
+          - "Version avant   : v{{ current_longhorn_version }}"
+          - "Version après   : {{ final_version.stdout }}"
+          - "Étapes réalisées: {{ upgrade_steps | length }}"
+          - "Chemin suivi    : v{{ current_longhorn_version }} → {{ upgrade_steps | map('regex_replace', '^(.*)$', 'v\\1') | join(' → ') }}"
+          - "================================================"
+          - "  Pods"
+          - "================================================"
+          - "{{ final_pods.stdout_lines }}"
+          - "================================================"
+          - "  StorageClasses"
+          - "================================================"
+          - "{{ final_sc.stdout_lines }}"
+          - "================================================"
+          - "  Nœuds Longhorn"
+          - "================================================"
+          - "{{ final_nodes.stdout_lines }}"
+          - "================================================"
+          - "  Volumes"
+          - "================================================"
+          - "{{ final_volumes.stdout_lines | default(['Aucun volume']) }}"
+          - "================================================"
+      tags: [longhorn-upgrade, longhorn-upgrade-verify]

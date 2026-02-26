@@ -5,7 +5,7 @@
 
 # --- Version des composants ---
 k3s_version: "v1.30.0+k3s1"
-longhorn_version: "1.6.0"
+longhorn_version: "1.11.0"
 kubevirt_version: "v1.2.0"
 metallb_version: "v0.13.12"
 cert_manager_version: "v1.13.0"
