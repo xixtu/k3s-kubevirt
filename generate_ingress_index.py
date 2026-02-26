@@ -10,9 +10,7 @@ def get_ingress_data():
             config.load_kube_config(config_file=k3s_config)
         else:
             config.load_kube_config()
-    except Exception as e:
-        print(f"⚠️ Erreur config : {e}")
-        return {}
+    except Exception: return {}
 
     v1_networking = client.NetworkingV1Api()
     try:
@@ -27,13 +25,11 @@ def get_ingress_data():
             for rule in i.spec.rules:
                 if rule.host:
                     proto = "https" if i.spec.tls else "http"
-                    # Logique d'icône simple basée sur le nom
-                    icon = "fa-network-wired"
+                    icon = "fa-link"
                     name_low = name.lower()
-                    if "grafana" in name_low: icon = "fa-chart-line"
+                    if "grafana" in name_low: icon = "fa-chart-area"
                     elif "nextcloud" in name_low: icon = "fa-cloud"
-                    elif "plex" in name_low or "video" in name_low: icon = "fa-play-circle"
-                    elif "home" in name_low: icon = "fa-home"
+                    elif "plex" in name_low: icon = "fa-play"
                     elif "git" in name_low: icon = "fa-code-branch"
                     
                     grouped[ns].append({
@@ -52,91 +48,74 @@ def generate_html(data):
     <html lang="fr">
     <head>
         <meta charset="UTF-8">
-        <title>K3s Nexus Dashboard</title>
+        <title>K3s Compact Index</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-        <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap" rel="stylesheet">
         <style>
-            body {{ 
-                background: radial-gradient(circle at top left, #1e293b, #0f172a);
-                color: #f8fafc; font-family: 'Plus Jakarta Sans', sans-serif;
-                min-height: 100vh;
+            body {{ background-color: #0a0c10; color: #ced4da; font-family: 'Segoe UI', system-ui, sans-serif; }}
+            .row-item {{ 
+                background: #161b22; 
+                border: 1px solid #30363d; 
+                transition: all 0.2s ease;
             }}
-            .glass-card {{
-                background: rgba(255, 255, 255, 0.03);
-                backdrop-filter: blur(12px);
-                border: 1px solid rgba(255, 255, 255, 0.08);
-                transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            .row-item:hover {{ 
+                background: #1c2128; 
+                border-color: #58a6ff;
+                transform: translateX(4px);
             }}
-            .glass-card:hover {{
-                background: rgba(255, 255, 255, 0.07);
-                border-color: #3b82f6;
-                transform: translateY(-8px) scale(1.02);
+            .ns-tag {{ background: #21262d; border: 1px solid #30363d; }}
+            .search-input {{ 
+                background: #0d1117; 
+                border: 1px solid #30363d; 
             }}
-            .glow-blue {{ box-shadow: 0 0 20px rgba(59, 130, 246, 0.15); }}
-            .status-dot {{
-                animation: pulse 2s infinite;
-            }}
-            @keyframes pulse {{
-                0% {{ opacity: 1; transform: scale(1); }}
-                50% {{ opacity: 0.5; transform: scale(1.2); }}
-                100% {{ opacity: 1; transform: scale(1); }}
-            }}
-            .search-bar {{
-                background: rgba(15, 23, 42, 0.6);
-                border: 1px solid rgba(59, 130, 246, 0.3);
-            }}
-            .search-bar:focus {{ border-color: #3b82f6; outline: none; box-shadow: 0 0 15px rgba(59, 130, 246, 0.4); }}
+            .search-input:focus {{ border-color: #58a6ff; outline: none; }}
+            ::-webkit-scrollbar {{ width: 8px; }}
+            ::-webkit-scrollbar-track {{ background: #0a0c10; }}
+            ::-webkit-scrollbar-thumb {{ background: #30363d; border-radius: 4px; }}
         </style>
     </head>
-    <body class="p-6 md:p-12">
-        <div class="max-w-7xl mx-auto">
+    <body class="p-4 md:p-8">
+        <div class="max-w-5xl mx-auto">
             
-            <div class="flex flex-col md:flex-row justify-between items-end mb-16 gap-8">
-                <div>
-                    <div class="flex items-center gap-3 mb-2">
-                        <span class="px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 text-xs font-bold tracking-widest uppercase">Cluster Live</span>
-                        <span class="text-slate-500 text-sm font-mono">{now}</span>
+            <header class="flex flex-wrap items-center justify-between mb-8 pb-4 border-b border-gray-800 gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 bg-blue-600 rounded flex items-center justify-center text-white">
+                        <i class="fas fa-layer-group text-xs"></i>
                     </div>
-                    <h1 class="text-5xl font-extrabold text-white tracking-tight">K3s <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">Nexus</span></h1>
+                    <h1 class="text-xl font-bold text-white uppercase tracking-wider">K3s Services</h1>
                 </div>
                 
-                <div class="w-full md:w-96 relative">
-                    <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i>
-                    <input type="text" id="searchInput" placeholder="Rechercher un service..." 
-                           class="search-bar w-full pl-12 pr-4 py-4 rounded-2xl text-white transition-all">
+                <div class="flex items-center gap-4">
+                    <input type="text" id="searchInput" placeholder="Filtrer..." 
+                           class="search-input px-3 py-1.5 rounded text-sm w-48 md:w-64">
+                    <span class="text-[11px] font-mono text-gray-500 uppercase">{now}</span>
                 </div>
-            </div>
+            </header>
 
             <div id="content">
     """
 
     for ns in sorted(data.keys()):
         html += f"""
-                <div class="namespace-group mb-16">
-                    <div class="flex items-center gap-4 mb-8">
-                        <h2 class="text-2xl font-semibold text-slate-200">{ns}</h2>
-                        <div class="h-px flex-grow bg-gradient-to-r from-slate-800 to-transparent"></div>
+                <div class="namespace-section mb-6">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold ns-tag text-blue-400 uppercase tracking-tighter">Namespace</span>
+                        <h2 class="text-sm font-bold text-gray-400">{ns}</h2>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
         """
         for ing in data[ns]:
             html += f"""
-                        <a href="{ing['url']}" target="_blank" class="service-card glass-card p-6 rounded-3xl group">
-                            <div class="flex justify-between items-start mb-6">
-                                <div class="p-3 rounded-2xl bg-blue-500/10 text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-all duration-500">
-                                    <i class="fas {ing['icon']} fa-xl"></i>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <span class="status-dot w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]"></span>
-                                    <span class="text-[10px] font-bold text-emerald-500 uppercase">Online</span>
-                                </div>
+                        <a href="{ing['url']}" target="_blank" class="row-item flex items-center p-3 rounded-md group">
+                            <div class="w-8 flex-shrink-0 text-gray-500 group-hover:text-blue-400 transition-colors">
+                                <i class="fas {ing['icon']} text-sm"></i>
                             </div>
-                            <h3 class="text-xl font-bold text-white mb-2 group-hover:text-blue-300 transition-colors">{ing['name']}</h3>
-                            <p class="text-sm text-slate-500 font-mono truncate">{ing['host']}</p>
-                            
-                            <div class="mt-6 flex items-center text-xs font-bold text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                                OUVRIR LE SERVICE <i class="fas fa-arrow-right ml-2"></i>
+                            <div class="flex-grow min-w-0">
+                                <div class="text-sm font-semibold text-gray-200 truncate">{ing['name']}</div>
+                                <div class="text-[11px] text-gray-500 font-mono truncate">{ing['host']}</div>
+                            </div>
+                            <div class="flex-shrink-0 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <i class="fas fa-chevron-right text-[10px] text-blue-500"></i>
                             </div>
                         </a>
             """
@@ -145,30 +124,24 @@ def generate_html(data):
     html += """
             </div>
 
-            <footer class="mt-32 pb-12 text-center">
-                <div class="inline-flex items-center gap-6 px-8 py-4 rounded-2xl glass-card text-slate-500 text-sm">
-                    <span><i class="fas fa-microchip mr-2"></i> K3s Cluster</span>
-                    <span class="w-1 h-1 rounded-full bg-slate-700"></span>
-                    <span><i class="fab fa-python mr-2"></i> Automatisé</span>
-                </div>
+            <footer class="mt-12 pt-4 border-t border-gray-900 text-[10px] text-gray-600 font-mono flex justify-between uppercase tracking-widest">
+                <span>Total: """ + str(sum(len(v) for v in data.values())) + """ Ingress</span>
+                <span>K3s Cluster Node-1</span>
             </footer>
         </div>
 
         <script>
             document.getElementById('searchInput').addEventListener('input', function(e) {
                 const term = e.target.value.toLowerCase();
-                document.querySelectorAll('.service-card').forEach(card => {
-                    const name = card.querySelector('h3').textContent.toLowerCase();
-                    const host = card.querySelector('p').textContent.toLowerCase();
-                    const isVisible = name.includes(term) || host.includes(term);
-                    card.style.display = isVisible ? 'block' : 'none';
+                document.querySelectorAll('.row-item').forEach(card => {
+                    const text = card.innerText.toLowerCase();
+                    card.style.display = text.includes(term) ? 'flex' : 'none';
                 });
                 
-                // Cacher les titres de namespace vides
-                document.querySelectorAll('.namespace-group').forEach(group => {
-                    const hasVisibleCards = Array.from(group.querySelectorAll('.service-card'))
-                                                 .some(c => c.style.display !== 'none');
-                    group.style.display = hasVisibleCards ? 'block' : 'none';
+                document.querySelectorAll('.namespace-section').forEach(section => {
+                    const hasVisible = Array.from(section.querySelectorAll('.row-item'))
+                                            .some(c => c.style.display !== 'none');
+                    section.style.display = hasVisible ? 'block' : 'none';
                 });
             });
         </script>
@@ -178,7 +151,7 @@ def generate_html(data):
     
     with open("index.html", "w", encoding="utf-8") as f:
         f.write(html)
-    print("🚀 Dashboard 'Nexus' généré avec succès !")
+    print("✅ Dashboard compact généré.")
 
 if __name__ == "__main__":
     data = get_ingress_data()
