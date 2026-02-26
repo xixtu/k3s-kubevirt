@@ -925,3 +925,1821 @@ Origin: /home/administrator/git/k3s-kubevirt/playbooks/kwaba_deploy_redirect.yml
 2026-02-19 22:25:13,287 p=99997 u=administrator n=ansible INFO| Créer le Service ------------------------------------------------------------------------------------------------------------------------------------------------ 1.57s
 2026-02-19 22:25:13,287 p=99997 u=administrator n=ansible INFO| Créer l'Ingress ------------------------------------------------------------------------------------------------------------------------------------------------- 1.55s
 2026-02-19 22:25:13,287 p=99997 u=administrator n=ansible INFO| Déployer Nginx -------------------------------------------------------------------------------------------------------------------------------------------------- 1.50s
+2026-02-20 15:58:26,062 p=205889 u=administrator n=ansible ERROR| [ERROR]: the playbook: diagnostic_network.yml could not be found
+
+2026-02-20 15:58:48,899 p=205974 u=administrator n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+
+2026-02-20 15:58:48,900 p=205974 u=administrator n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be removed from collection 'community.general' version 12.0.0.
+
+2026-02-20 15:58:48,943 p=205974 u=administrator n=ansible INFO| PLAY [Configuration réseau LACP + IPs statiques] ***********************************************************************************************************************
+2026-02-20 15:58:48,961 p=205974 u=administrator n=ansible INFO| TASK [Gathering Facts] *************************************************************************************************************************************************
+2026-02-20 15:58:48,961 p=205974 u=administrator n=ansible INFO| vendredi 20 février 2026  15:58:48 +0100 (0:00:00.024)       0:00:00.024 ****** 
+2026-02-20 15:58:52,814 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-20 15:58:52,873 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-20 15:58:53,233 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-20 15:58:53,249 p=205974 u=administrator n=ansible INFO| TASK [Afficher la configuration réseau du nœud] ************************************************************************************************************************
+2026-02-20 15:58:53,249 p=205974 u=administrator n=ansible INFO| vendredi 20 février 2026  15:58:53 +0100 (0:00:04.287)       0:00:04.311 ****** 
+2026-02-20 15:58:53,328 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg:
+  - '=== Configuration réseau : k3s-node-1 ==='
+  - 'bond0      : 192.168.0.11/24'
+  - 'Gateway    : 192.168.0.254'
+  - 'DNS        : 192.168.0.21'
+  - 'Bond mode  : 802.3ad (LACP)'
+  - 'Interfaces : enp10s0f0, enp10s0f1, enp11s0f0, enp11s0f1'
+  - 'Management : 192.168.0.11 (DHCP - non modifiée)'
+2026-02-20 15:58:53,344 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-2] => 
+  msg:
+  - '=== Configuration réseau : k3s-node-2 ==='
+  - 'bond0      : 192.168.0.12/24'
+  - 'Gateway    : 192.168.0.254'
+  - 'DNS        : 192.168.0.21'
+  - 'Bond mode  : 802.3ad (LACP)'
+  - 'Interfaces : enp10s0f0, enp10s0f1, enp11s0f0, enp11s0f1'
+  - 'Management : 192.168.0.12 (DHCP - non modifiée)'
+2026-02-20 15:58:53,361 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-3] => 
+  msg:
+  - '=== Configuration réseau : k3s-node-3 ==='
+  - 'bond0      : 192.168.0.13/24'
+  - 'Gateway    : 192.168.0.254'
+  - 'DNS        : 192.168.0.21'
+  - 'Bond mode  : 802.3ad (LACP)'
+  - 'Interfaces : enp10s0f0, enp10s0f1, enp11s0f0, enp11s0f1'
+  - 'Management : 192.168.0.13 (DHCP - non modifiée)'
+2026-02-20 15:58:53,377 p=205974 u=administrator n=ansible INFO| TASK [Installer les packages réseau requis] ****************************************************************************************************************************
+2026-02-20 15:58:53,378 p=205974 u=administrator n=ansible INFO| vendredi 20 février 2026  15:58:53 +0100 (0:00:00.128)       0:00:04.440 ****** 
+2026-02-20 15:59:02,382 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-20 15:59:02,530 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-20 15:59:02,725 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-20 15:59:02,740 p=205974 u=administrator n=ansible INFO| TASK [Vérifier si NetworkManager est installé] *************************************************************************************************************************
+2026-02-20 15:59:02,740 p=205974 u=administrator n=ansible INFO| vendredi 20 février 2026  15:59:02 +0100 (0:00:09.362)       0:00:13.803 ****** 
+2026-02-20 15:59:04,041 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-20 15:59:04,116 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-20 15:59:04,118 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-20 15:59:04,129 p=205974 u=administrator n=ansible INFO| TASK [Arrêter et désactiver NetworkManager] ****************************************************************************************************************************
+2026-02-20 15:59:04,129 p=205974 u=administrator n=ansible INFO| vendredi 20 février 2026  15:59:04 +0100 (0:00:01.388)       0:00:15.192 ****** 
+2026-02-20 15:59:04,176 p=205974 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-02-20 15:59:04,178 p=205974 u=administrator n=ansible INFO| skipping: [k3s-node-2]
+2026-02-20 15:59:04,195 p=205974 u=administrator n=ansible INFO| skipping: [k3s-node-3]
+2026-02-20 15:59:04,205 p=205974 u=administrator n=ansible INFO| TASK [Charger le module kernel bonding] ********************************************************************************************************************************
+2026-02-20 15:59:04,205 p=205974 u=administrator n=ansible INFO| vendredi 20 février 2026  15:59:04 +0100 (0:00:00.075)       0:00:15.267 ****** 
+2026-02-20 15:59:05,013 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-20 15:59:05,043 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-20 15:59:05,044 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-20 15:59:05,058 p=205974 u=administrator n=ansible INFO| TASK [Rendre le module bonding persistant au démarrage] ****************************************************************************************************************
+2026-02-20 15:59:05,059 p=205974 u=administrator n=ansible INFO| vendredi 20 février 2026  15:59:05 +0100 (0:00:00.853)       0:00:16.121 ****** 
+2026-02-20 15:59:06,864 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-20 15:59:06,867 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-20 15:59:06,871 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-20 15:59:06,882 p=205974 u=administrator n=ansible INFO| TASK [Vérifier si /etc/netplan/50-cloud-init.yaml existe] **************************************************************************************************************
+2026-02-20 15:59:06,882 p=205974 u=administrator n=ansible INFO| vendredi 20 février 2026  15:59:06 +0100 (0:00:01.823)       0:00:17.944 ****** 
+2026-02-20 15:59:07,429 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-20 15:59:07,448 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-20 15:59:07,457 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-20 15:59:07,467 p=205974 u=administrator n=ansible INFO| TASK [Sauvegarder la configuration netplan cloud-init] *****************************************************************************************************************
+2026-02-20 15:59:07,467 p=205974 u=administrator n=ansible INFO| vendredi 20 février 2026  15:59:07 +0100 (0:00:00.584)       0:00:18.529 ****** 
+2026-02-20 15:59:07,507 p=205974 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-02-20 15:59:07,510 p=205974 u=administrator n=ansible INFO| skipping: [k3s-node-2]
+2026-02-20 15:59:07,522 p=205974 u=administrator n=ansible INFO| skipping: [k3s-node-3]
+2026-02-20 15:59:07,533 p=205974 u=administrator n=ansible INFO| TASK [Déployer la configuration netplan bond0 (LACP)] ******************************************************************************************************************
+2026-02-20 15:59:07,533 p=205974 u=administrator n=ansible INFO| vendredi 20 février 2026  15:59:07 +0100 (0:00:00.066)       0:00:18.595 ****** 
+2026-02-20 15:59:09,038 p=205974 u=administrator n=ansible INFO| changed: [k3s-node-2]
+2026-02-20 15:59:09,039 p=205974 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-02-20 15:59:09,043 p=205974 u=administrator n=ansible INFO| changed: [k3s-node-3]
+2026-02-20 15:59:09,059 p=205974 u=administrator n=ansible INFO| TASK [Valider la configuration netplan (dry-run)] **********************************************************************************************************************
+2026-02-20 15:59:09,060 p=205974 u=administrator n=ansible INFO| vendredi 20 février 2026  15:59:09 +0100 (0:00:01.526)       0:00:20.122 ****** 
+2026-02-20 15:59:10,972 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-20 15:59:10,980 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-20 15:59:11,028 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-20 15:59:11,040 p=205974 u=administrator n=ansible INFO| TASK [Afficher le résultat de la validation netplan] *******************************************************************************************************************
+2026-02-20 15:59:11,040 p=205974 u=administrator n=ansible INFO| vendredi 20 février 2026  15:59:11 +0100 (0:00:01.980)       0:00:22.102 ****** 
+2026-02-20 15:59:11,094 p=205974 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-02-20 15:59:11,107 p=205974 u=administrator n=ansible INFO| skipping: [k3s-node-2]
+2026-02-20 15:59:11,129 p=205974 u=administrator n=ansible INFO| skipping: [k3s-node-3]
+2026-02-20 15:59:11,138 p=205974 u=administrator n=ansible INFO| TASK [Appliquer la configuration netplan] ******************************************************************************************************************************
+2026-02-20 15:59:11,139 p=205974 u=administrator n=ansible INFO| vendredi 20 février 2026  15:59:11 +0100 (0:00:00.098)       0:00:22.201 ****** 
+2026-02-20 15:59:12,168 p=205974 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-02-20 15:59:12,173 p=205974 u=administrator n=ansible INFO| changed: [k3s-node-2]
+2026-02-20 15:59:12,176 p=205974 u=administrator n=ansible INFO| changed: [k3s-node-3]
+2026-02-20 15:59:12,186 p=205974 u=administrator n=ansible INFO| TASK [Attendre la stabilisation du réseau (LACP negociation)] **********************************************************************************************************
+2026-02-20 15:59:12,187 p=205974 u=administrator n=ansible INFO| vendredi 20 février 2026  15:59:12 +0100 (0:00:01.047)       0:00:23.249 ****** 
+2026-02-20 15:59:33,077 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-1 -> localhost]
+2026-02-20 15:59:33,080 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-2 -> localhost]
+2026-02-20 15:59:33,087 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-3 -> localhost]
+2026-02-20 15:59:33,100 p=205974 u=administrator n=ansible INFO| TASK [Vérifier la reconnexion SSH après reconfiguration] ***************************************************************************************************************
+2026-02-20 15:59:33,100 p=205974 u=administrator n=ansible INFO| vendredi 20 février 2026  15:59:33 +0100 (0:00:20.913)       0:00:44.163 ****** 
+2026-02-20 15:59:39,449 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-20 15:59:39,478 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-20 15:59:39,482 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-20 15:59:39,498 p=205974 u=administrator n=ansible INFO| TASK [Vérifier l'état du bond (/proc/net/bonding/bond0)] ***************************************************************************************************************
+2026-02-20 15:59:39,498 p=205974 u=administrator n=ansible INFO| vendredi 20 février 2026  15:59:39 +0100 (0:00:06.397)       0:00:50.560 ****** 
+2026-02-20 15:59:40,049 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-20 15:59:40,057 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-20 15:59:40,096 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-20 15:59:40,111 p=205974 u=administrator n=ansible INFO| TASK [Afficher l'état du bond] *****************************************************************************************************************************************
+2026-02-20 15:59:40,112 p=205974 u=administrator n=ansible INFO| vendredi 20 février 2026  15:59:40 +0100 (0:00:00.613)       0:00:51.174 ****** 
+2026-02-20 15:59:40,163 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  bond_status.stdout_lines:
+  - 'Ethernet Channel Bonding Driver: v6.17.0-14-generic'
+  - ''
+  - 'Bonding Mode: IEEE 802.3ad Dynamic link aggregation'
+  - 'Transmit Hash Policy: layer3+4 (1)'
+  - 'MII Status: up'
+  - 'MII Polling Interval (ms): 100'
+  - 'Up Delay (ms): 0'
+  - 'Down Delay (ms): 0'
+  - 'Peer Notification Delay (ms): 0'
+  - ''
+  - 802.3ad info
+  - 'LACP active: on'
+  - 'LACP rate: fast'
+  - 'Min links: 0'
+  - 'Aggregator selection policy (ad_select): stable'
+  - 'System priority: 65535'
+  - 'System MAC address: a2:93:63:88:46:fd'
+  - 'Active Aggregator Info:'
+  - "\tAggregator ID: 2"
+  - "\tNumber of ports: 3"
+  - "\tActor Key: 9"
+  - "\tPartner Key: 1"
+  - "\tPartner Mac Address: 14:d6:4d:19:cb:30"
+  - ''
+  - 'Slave Interface: enp10s0f1'
+  - 'MII Status: up'
+  - 'Speed: 1000 Mbps'
+  - 'Duplex: full'
+  - 'Link Failure Count: 3'
+  - 'Permanent HW addr: 00:1b:21:89:7c:48'
+  - 'Slave queue ID: 0'
+  - 'Aggregator ID: 2'
+  - 'Actor Churn State: none'
+  - 'Partner Churn State: none'
+  - 'Actor Churned Count: 0'
+  - 'Partner Churned Count: 0'
+  - 'details actor lacp pdu:'
+  - '    system priority: 65535'
+  - '    system mac address: a2:93:63:88:46:fd'
+  - '    port key: 9'
+  - '    port priority: 255'
+  - '    port number: 1'
+  - '    port state: 63'
+  - 'details partner lacp pdu:'
+  - '    system priority: 32768'
+  - '    system mac address: 14:d6:4d:19:cb:30'
+  - '    oper key: 1'
+  - '    port priority: 128'
+  - '    port number: 3'
+  - '    port state: 63'
+  - ''
+  - 'Slave Interface: enp11s0f1'
+  - 'MII Status: up'
+  - 'Speed: 1000 Mbps'
+  - 'Duplex: full'
+  - 'Link Failure Count: 1'
+  - 'Permanent HW addr: 00:1b:21:89:7c:4a'
+  - 'Slave queue ID: 0'
+  - 'Aggregator ID: 2'
+  - 'Actor Churn State: none'
+  - 'Partner Churn State: none'
+  - 'Actor Churned Count: 0'
+  - 'Partner Churned Count: 0'
+  - 'details actor lacp pdu:'
+  - '    system priority: 65535'
+  - '    system mac address: a2:93:63:88:46:fd'
+  - '    port key: 9'
+  - '    port priority: 255'
+  - '    port number: 2'
+  - '    port state: 63'
+  - 'details partner lacp pdu:'
+  - '    system priority: 32768'
+  - '    system mac address: 14:d6:4d:19:cb:30'
+  - '    oper key: 1'
+  - '    port priority: 128'
+  - '    port number: 2'
+  - '    port state: 63'
+  - ''
+  - 'Slave Interface: enp10s0f0'
+  - 'MII Status: up'
+  - 'Speed: 1000 Mbps'
+  - 'Duplex: full'
+  - 'Link Failure Count: 0'
+  - 'Permanent HW addr: 00:1b:21:89:7c:49'
+  - 'Slave queue ID: 0'
+  - 'Aggregator ID: 2'
+  - 'Actor Churn State: none'
+  - 'Partner Churn State: none'
+  - 'Actor Churned Count: 0'
+  - 'Partner Churned Count: 0'
+  - 'details actor lacp pdu:'
+  - '    system priority: 65535'
+  - '    system mac address: a2:93:63:88:46:fd'
+  - '    port key: 9'
+  - '    port priority: 255'
+  - '    port number: 3'
+  - '    port state: 63'
+  - 'details partner lacp pdu:'
+  - '    system priority: 32768'
+  - '    system mac address: 14:d6:4d:19:cb:30'
+  - '    oper key: 1'
+  - '    port priority: 128'
+  - '    port number: 4'
+  - '    port state: 63'
+  - ''
+  - 'Slave Interface: enp11s0f0'
+  - 'MII Status: down'
+  - 'Speed: Unknown'
+  - 'Duplex: Unknown'
+  - 'Link Failure Count: 0'
+  - 'Permanent HW addr: 00:1b:21:89:7c:4b'
+  - 'Slave queue ID: 0'
+  - 'Aggregator ID: 4'
+  - 'Actor Churn State: churned'
+  - 'Partner Churn State: churned'
+  - 'Actor Churned Count: 1'
+  - 'Partner Churned Count: 1'
+  - 'details actor lacp pdu:'
+  - '    system priority: 65535'
+  - '    system mac address: a2:93:63:88:46:fd'
+  - '    port key: 0'
+  - '    port priority: 255'
+  - '    port number: 4'
+  - '    port state: 71'
+  - 'details partner lacp pdu:'
+  - '    system priority: 65535'
+  - '    system mac address: 00:00:00:00:00:00'
+  - '    oper key: 1'
+  - '    port priority: 255'
+  - '    port number: 1'
+  - '    port state: 0'
+2026-02-20 15:59:40,175 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-2] => 
+  bond_status.stdout_lines:
+  - 'Ethernet Channel Bonding Driver: v6.17.0-14-generic'
+  - ''
+  - 'Bonding Mode: IEEE 802.3ad Dynamic link aggregation'
+  - 'Transmit Hash Policy: layer3+4 (1)'
+  - 'MII Status: up'
+  - 'MII Polling Interval (ms): 100'
+  - 'Up Delay (ms): 0'
+  - 'Down Delay (ms): 0'
+  - 'Peer Notification Delay (ms): 0'
+  - ''
+  - 802.3ad info
+  - 'LACP active: on'
+  - 'LACP rate: fast'
+  - 'Min links: 0'
+  - 'Aggregator selection policy (ad_select): stable'
+  - 'System priority: 65535'
+  - 'System MAC address: d6:40:8a:16:11:70'
+  - 'Active Aggregator Info:'
+  - "\tAggregator ID: 2"
+  - "\tNumber of ports: 4"
+  - "\tActor Key: 9"
+  - "\tPartner Key: 2"
+  - "\tPartner Mac Address: 14:d6:4d:19:cb:30"
+  - ''
+  - 'Slave Interface: enp10s0f1'
+  - 'MII Status: up'
+  - 'Speed: 1000 Mbps'
+  - 'Duplex: full'
+  - 'Link Failure Count: 0'
+  - 'Permanent HW addr: 00:10:18:df:93:4a'
+  - 'Slave queue ID: 0'
+  - 'Aggregator ID: 2'
+  - 'Actor Churn State: none'
+  - 'Partner Churn State: none'
+  - 'Actor Churned Count: 0'
+  - 'Partner Churned Count: 0'
+  - 'details actor lacp pdu:'
+  - '    system priority: 65535'
+  - '    system mac address: d6:40:8a:16:11:70'
+  - '    port key: 9'
+  - '    port priority: 255'
+  - '    port number: 1'
+  - '    port state: 63'
+  - 'details partner lacp pdu:'
+  - '    system priority: 32768'
+  - '    system mac address: 14:d6:4d:19:cb:30'
+  - '    oper key: 2'
+  - '    port priority: 128'
+  - '    port number: 6'
+  - '    port state: 63'
+  - ''
+  - 'Slave Interface: enp11s0f0'
+  - 'MII Status: up'
+  - 'Speed: 1000 Mbps'
+  - 'Duplex: full'
+  - 'Link Failure Count: 0'
+  - 'Permanent HW addr: 00:10:18:df:93:4c'
+  - 'Slave queue ID: 0'
+  - 'Aggregator ID: 2'
+  - 'Actor Churn State: none'
+  - 'Partner Churn State: none'
+  - 'Actor Churned Count: 0'
+  - 'Partner Churned Count: 0'
+  - 'details actor lacp pdu:'
+  - '    system priority: 65535'
+  - '    system mac address: d6:40:8a:16:11:70'
+  - '    port key: 9'
+  - '    port priority: 255'
+  - '    port number: 2'
+  - '    port state: 63'
+  - 'details partner lacp pdu:'
+  - '    system priority: 32768'
+  - '    system mac address: 14:d6:4d:19:cb:30'
+  - '    oper key: 2'
+  - '    port priority: 128'
+  - '    port number: 5'
+  - '    port state: 63'
+  - ''
+  - 'Slave Interface: enp10s0f0'
+  - 'MII Status: up'
+  - 'Speed: 1000 Mbps'
+  - 'Duplex: full'
+  - 'Link Failure Count: 0'
+  - 'Permanent HW addr: 00:10:18:df:93:48'
+  - 'Slave queue ID: 0'
+  - 'Aggregator ID: 2'
+  - 'Actor Churn State: none'
+  - 'Partner Churn State: none'
+  - 'Actor Churned Count: 0'
+  - 'Partner Churned Count: 0'
+  - 'details actor lacp pdu:'
+  - '    system priority: 65535'
+  - '    system mac address: d6:40:8a:16:11:70'
+  - '    port key: 9'
+  - '    port priority: 255'
+  - '    port number: 3'
+  - '    port state: 63'
+  - 'details partner lacp pdu:'
+  - '    system priority: 32768'
+  - '    system mac address: 14:d6:4d:19:cb:30'
+  - '    oper key: 2'
+  - '    port priority: 128'
+  - '    port number: 8'
+  - '    port state: 63'
+  - ''
+  - 'Slave Interface: enp11s0f1'
+  - 'MII Status: up'
+  - 'Speed: 1000 Mbps'
+  - 'Duplex: full'
+  - 'Link Failure Count: 0'
+  - 'Permanent HW addr: 00:10:18:df:93:4e'
+  - 'Slave queue ID: 0'
+  - 'Aggregator ID: 2'
+  - 'Actor Churn State: none'
+  - 'Partner Churn State: none'
+  - 'Actor Churned Count: 0'
+  - 'Partner Churned Count: 0'
+  - 'details actor lacp pdu:'
+  - '    system priority: 65535'
+  - '    system mac address: d6:40:8a:16:11:70'
+  - '    port key: 9'
+  - '    port priority: 255'
+  - '    port number: 4'
+  - '    port state: 63'
+  - 'details partner lacp pdu:'
+  - '    system priority: 32768'
+  - '    system mac address: 14:d6:4d:19:cb:30'
+  - '    oper key: 2'
+  - '    port priority: 128'
+  - '    port number: 7'
+  - '    port state: 63'
+2026-02-20 15:59:40,190 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-3] => 
+  bond_status.stdout_lines:
+  - 'Ethernet Channel Bonding Driver: v6.17.0-14-generic'
+  - ''
+  - 'Bonding Mode: IEEE 802.3ad Dynamic link aggregation'
+  - 'Transmit Hash Policy: layer3+4 (1)'
+  - 'MII Status: up'
+  - 'MII Polling Interval (ms): 100'
+  - 'Up Delay (ms): 0'
+  - 'Down Delay (ms): 0'
+  - 'Peer Notification Delay (ms): 0'
+  - ''
+  - 802.3ad info
+  - 'LACP active: on'
+  - 'LACP rate: fast'
+  - 'Min links: 0'
+  - 'Aggregator selection policy (ad_select): stable'
+  - 'System priority: 65535'
+  - 'System MAC address: b6:22:8f:d0:c6:3c'
+  - 'Active Aggregator Info:'
+  - "\tAggregator ID: 1"
+  - "\tNumber of ports: 4"
+  - "\tActor Key: 9"
+  - "\tPartner Key: 3"
+  - "\tPartner Mac Address: 14:d6:4d:19:cb:30"
+  - ''
+  - 'Slave Interface: enp11s0f1'
+  - 'MII Status: up'
+  - 'Speed: 1000 Mbps'
+  - 'Duplex: full'
+  - 'Link Failure Count: 0'
+  - 'Permanent HW addr: 00:15:17:f9:87:06'
+  - 'Slave queue ID: 0'
+  - 'Aggregator ID: 1'
+  - 'Actor Churn State: none'
+  - 'Partner Churn State: none'
+  - 'Actor Churned Count: 0'
+  - 'Partner Churned Count: 0'
+  - 'details actor lacp pdu:'
+  - '    system priority: 65535'
+  - '    system mac address: b6:22:8f:d0:c6:3c'
+  - '    port key: 9'
+  - '    port priority: 255'
+  - '    port number: 1'
+  - '    port state: 63'
+  - 'details partner lacp pdu:'
+  - '    system priority: 32768'
+  - '    system mac address: 14:d6:4d:19:cb:30'
+  - '    oper key: 3'
+  - '    port priority: 128'
+  - '    port number: 10'
+  - '    port state: 63'
+  - ''
+  - 'Slave Interface: enp10s0f0'
+  - 'MII Status: up'
+  - 'Speed: 1000 Mbps'
+  - 'Duplex: full'
+  - 'Link Failure Count: 2'
+  - 'Permanent HW addr: 00:15:17:f9:87:05'
+  - 'Slave queue ID: 0'
+  - 'Aggregator ID: 1'
+  - 'Actor Churn State: none'
+  - 'Partner Churn State: none'
+  - 'Actor Churned Count: 0'
+  - 'Partner Churned Count: 0'
+  - 'details actor lacp pdu:'
+  - '    system priority: 65535'
+  - '    system mac address: b6:22:8f:d0:c6:3c'
+  - '    port key: 9'
+  - '    port priority: 255'
+  - '    port number: 2'
+  - '    port state: 63'
+  - 'details partner lacp pdu:'
+  - '    system priority: 32768'
+  - '    system mac address: 14:d6:4d:19:cb:30'
+  - '    oper key: 3'
+  - '    port priority: 128'
+  - '    port number: 12'
+  - '    port state: 63'
+  - ''
+  - 'Slave Interface: enp11s0f0'
+  - 'MII Status: up'
+  - 'Speed: 1000 Mbps'
+  - 'Duplex: full'
+  - 'Link Failure Count: 0'
+  - 'Permanent HW addr: 00:15:17:f9:87:07'
+  - 'Slave queue ID: 0'
+  - 'Aggregator ID: 1'
+  - 'Actor Churn State: none'
+  - 'Partner Churn State: none'
+  - 'Actor Churned Count: 0'
+  - 'Partner Churned Count: 0'
+  - 'details actor lacp pdu:'
+  - '    system priority: 65535'
+  - '    system mac address: b6:22:8f:d0:c6:3c'
+  - '    port key: 9'
+  - '    port priority: 255'
+  - '    port number: 3'
+  - '    port state: 63'
+  - 'details partner lacp pdu:'
+  - '    system priority: 32768'
+  - '    system mac address: 14:d6:4d:19:cb:30'
+  - '    oper key: 3'
+  - '    port priority: 128'
+  - '    port number: 9'
+  - '    port state: 63'
+  - ''
+  - 'Slave Interface: enp10s0f1'
+  - 'MII Status: up'
+  - 'Speed: 1000 Mbps'
+  - 'Duplex: full'
+  - 'Link Failure Count: 2'
+  - 'Permanent HW addr: 00:15:17:f9:87:04'
+  - 'Slave queue ID: 0'
+  - 'Aggregator ID: 1'
+  - 'Actor Churn State: none'
+  - 'Partner Churn State: none'
+  - 'Actor Churned Count: 0'
+  - 'Partner Churned Count: 0'
+  - 'details actor lacp pdu:'
+  - '    system priority: 65535'
+  - '    system mac address: b6:22:8f:d0:c6:3c'
+  - '    port key: 9'
+  - '    port priority: 255'
+  - '    port number: 4'
+  - '    port state: 63'
+  - 'details partner lacp pdu:'
+  - '    system priority: 32768'
+  - '    system mac address: 14:d6:4d:19:cb:30'
+  - '    oper key: 3'
+  - '    port priority: 128'
+  - '    port number: 11'
+  - '    port state: 63'
+2026-02-20 15:59:40,199 p=205974 u=administrator n=ansible INFO| TASK [Vérifier les interfaces réseau] **********************************************************************************************************************************
+2026-02-20 15:59:40,200 p=205974 u=administrator n=ansible INFO| vendredi 20 février 2026  15:59:40 +0100 (0:00:00.088)       0:00:51.262 ****** 
+2026-02-20 15:59:40,696 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-20 15:59:40,759 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-20 15:59:40,789 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-20 15:59:40,799 p=205974 u=administrator n=ansible INFO| TASK [Afficher les interfaces] *****************************************************************************************************************************************
+2026-02-20 15:59:40,799 p=205974 u=administrator n=ansible INFO| vendredi 20 février 2026  15:59:40 +0100 (0:00:00.599)       0:00:51.862 ****** 
+2026-02-20 15:59:40,847 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  ip_addr.stdout_lines:
+  - '1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000'
+  - '    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00'
+  - '    inet 127.0.0.1/8 scope host lo'
+  - '       valid_lft forever preferred_lft forever'
+  - '    inet6 ::1/128 scope host proto kernel_lo '
+  - '       valid_lft forever preferred_lft forever'
+  - '2: eno1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000'
+  - '    link/ether 98:90:96:d5:d6:7e brd ff:ff:ff:ff:ff:ff'
+  - '    altname enp0s25'
+  - '    altname enx989096d5d67e'
+  - '    inet 192.168.0.173/24 metric 100 brd 192.168.0.255 scope global dynamic eno1'
+  - '       valid_lft 691175sec preferred_lft 691175sec'
+  - '    inet6 2a01:e0a:285:b790:9a90:96ff:fed5:d67e/64 scope global dynamic mngtmpaddr noprefixroute '
+  - '       valid_lft 86376sec preferred_lft 86376sec'
+  - '    inet6 fe80::9a90:96ff:fed5:d67e/64 scope link proto kernel_ll '
+  - '       valid_lft forever preferred_lft forever'
+  - '3: enp10s0f0: <BROADCAST,MULTICAST,SLAVE,UP,LOWER_UP> mtu 1500 qdisc fq_codel master bond0 state UP group default qlen 1000'
+  - '    link/ether a2:93:63:88:46:fd brd ff:ff:ff:ff:ff:ff permaddr 00:1b:21:89:7c:49'
+  - '    altname enx001b21897c49'
+  - '4: enp10s0f1: <BROADCAST,MULTICAST,SLAVE,UP,LOWER_UP> mtu 1500 qdisc fq_codel master bond0 state UP group default qlen 1000'
+  - '    link/ether a2:93:63:88:46:fd brd ff:ff:ff:ff:ff:ff permaddr 00:1b:21:89:7c:48'
+  - '    altname enx001b21897c48'
+  - '5: enp11s0f0: <NO-CARRIER,BROADCAST,MULTICAST,SLAVE,UP> mtu 1500 qdisc fq_codel master bond0 state DOWN group default qlen 1000'
+  - '    link/ether a2:93:63:88:46:fd brd ff:ff:ff:ff:ff:ff permaddr 00:1b:21:89:7c:4b'
+  - '    altname enx001b21897c4b'
+  - '6: enp11s0f1: <BROADCAST,MULTICAST,SLAVE,UP,LOWER_UP> mtu 1500 qdisc fq_codel master bond0 state UP group default qlen 1000'
+  - '    link/ether a2:93:63:88:46:fd brd ff:ff:ff:ff:ff:ff permaddr 00:1b:21:89:7c:4a'
+  - '    altname enx001b21897c4a'
+  - '7: tunl0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000'
+  - '    link/ipip 0.0.0.0 brd 0.0.0.0'
+  - '8: bond0: <BROADCAST,MULTICAST,MASTER,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default qlen 1000'
+  - '    link/ether a2:93:63:88:46:fd brd ff:ff:ff:ff:ff:ff'
+  - '    inet 192.168.0.11/24 brd 192.168.0.255 scope global bond0'
+  - '       valid_lft forever preferred_lft forever'
+  - '    inet6 2a01:e0a:285:b790:a093:63ff:fe88:46fd/64 scope global dynamic mngtmpaddr noprefixroute '
+  - '       valid_lft 86376sec preferred_lft 86376sec'
+  - '    inet6 fe80::a093:63ff:fe88:46fd/64 scope link proto kernel_ll '
+  - '       valid_lft forever preferred_lft forever'
+  - '9: flannel.1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue state UNKNOWN group default '
+  - '    link/ether 26:f7:7a:50:59:27 brd ff:ff:ff:ff:ff:ff'
+  - '    inet 10.42.0.0/32 scope global flannel.1'
+  - '       valid_lft forever preferred_lft forever'
+  - '    inet6 fe80::24f7:7aff:fe50:5927/64 scope link proto kernel_ll '
+  - '       valid_lft forever preferred_lft forever'
+  - '10: cni0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue state UP group default qlen 1000'
+  - '    link/ether 66:fb:e3:80:6b:3f brd ff:ff:ff:ff:ff:ff'
+  - '    inet 10.42.0.1/24 brd 10.42.0.255 scope global cni0'
+  - '       valid_lft forever preferred_lft forever'
+  - '    inet6 fe80::64fb:e3ff:fe80:6b3f/64 scope link proto kernel_ll '
+  - '       valid_lft forever preferred_lft forever'
+  - '11: veth36045f38@if3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue master cni0 state UP group default '
+  - '    link/ether a2:27:27:d6:92:02 brd ff:ff:ff:ff:ff:ff link-netns cni-3f09aa1a-7ee2-34ae-e0a7-9e133541cea9'
+  - '    inet6 fe80::a027:27ff:fed6:9202/64 scope link proto kernel_ll '
+  - '       valid_lft forever preferred_lft forever'
+  - '12: veth29e2855c@if3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue master cni0 state UP group default '
+  - '    link/ether 36:b3:5d:36:dc:5a brd ff:ff:ff:ff:ff:ff link-netns cni-9c9a5e6b-67d5-fdc6-1e7f-0a206e0b1f1a'
+  - '    inet6 fe80::34b3:5dff:fe36:dc5a/64 scope link proto kernel_ll '
+  - '       valid_lft forever preferred_lft forever'
+  - '13: veth21c9a622@if3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue master cni0 state UP group default '
+  - '    link/ether 3a:81:27:32:e0:eb brd ff:ff:ff:ff:ff:ff link-netns cni-34aa9c77-5598-74a1-396e-7842e43fa78a'
+  - '    inet6 fe80::3881:27ff:fe32:e0eb/64 scope link proto kernel_ll '
+  - '       valid_lft forever preferred_lft forever'
+  - '14: veth537e694d@if3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue master cni0 state UP group default '
+  - '    link/ether 46:34:27:fb:7a:1d brd ff:ff:ff:ff:ff:ff link-netns cni-6de02d39-2c9c-6c6d-3bd2-bfa527c16a1b'
+  - '    inet6 fe80::84de:f9ff:fe81:1713/64 scope link proto kernel_ll '
+  - '       valid_lft forever preferred_lft forever'
+  - '27: vethb34d808c@if3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue master cni0 state UP group default '
+  - '    link/ether 72:dd:fd:9b:94:5e brd ff:ff:ff:ff:ff:ff link-netns cni-ea73a51b-64f3-ccf8-ac1f-4e53f34095d5'
+  - '    inet6 fe80::70dd:fdff:fe9b:945e/64 scope link proto kernel_ll '
+  - '       valid_lft forever preferred_lft forever'
+2026-02-20 15:59:40,859 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-2] => 
+  ip_addr.stdout_lines:
+  - '1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000'
+  - '    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00'
+  - '    inet 127.0.0.1/8 scope host lo'
+  - '       valid_lft forever preferred_lft forever'
+  - '2: enp10s0f0: <BROADCAST,MULTICAST,SLAVE,UP,LOWER_UP> mtu 1500 qdisc mq master bond0 state UP group default qlen 1000'
+  - '    link/ether d6:40:8a:16:11:70 brd ff:ff:ff:ff:ff:ff permaddr 00:10:18:df:93:48'
+  - '    altname enx001018df9348'
+  - '3: enp10s0f1: <BROADCAST,MULTICAST,SLAVE,UP,LOWER_UP> mtu 1500 qdisc mq master bond0 state UP group default qlen 1000'
+  - '    link/ether d6:40:8a:16:11:70 brd ff:ff:ff:ff:ff:ff permaddr 00:10:18:df:93:4a'
+  - '    altname enx001018df934a'
+  - '4: enp11s0f0: <BROADCAST,MULTICAST,SLAVE,UP,LOWER_UP> mtu 1500 qdisc mq master bond0 state UP group default qlen 1000'
+  - '    link/ether d6:40:8a:16:11:70 brd ff:ff:ff:ff:ff:ff permaddr 00:10:18:df:93:4c'
+  - '    altname enx001018df934c'
+  - '5: enp11s0f1: <BROADCAST,MULTICAST,SLAVE,UP,LOWER_UP> mtu 1500 qdisc mq master bond0 state UP group default qlen 1000'
+  - '    link/ether d6:40:8a:16:11:70 brd ff:ff:ff:ff:ff:ff permaddr 00:10:18:df:93:4e'
+  - '    altname enx001018df934e'
+  - '6: eno1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000'
+  - '    link/ether b8:ca:3a:a3:fe:7c brd ff:ff:ff:ff:ff:ff'
+  - '    altname enp0s25'
+  - '    altname enxb8ca3aa3fe7c'
+  - '    inet 192.168.0.160/24 metric 100 brd 192.168.0.255 scope global dynamic eno1'
+  - '       valid_lft 691175sec preferred_lft 691175sec'
+  - '    inet6 2a01:e0a:285:b790:baca:3aff:fea3:fe7c/64 scope global dynamic mngtmpaddr noprefixroute '
+  - '       valid_lft 86376sec preferred_lft 86376sec'
+  - '    inet6 fe80::baca:3aff:fea3:fe7c/64 scope link proto kernel_ll '
+  - '       valid_lft forever preferred_lft forever'
+  - '7: tunl0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000'
+  - '    link/ipip 0.0.0.0 brd 0.0.0.0'
+  - '8: bond0: <BROADCAST,MULTICAST,MASTER,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default qlen 1000'
+  - '    link/ether d6:40:8a:16:11:70 brd ff:ff:ff:ff:ff:ff'
+  - '    inet 192.168.0.12/24 brd 192.168.0.255 scope global bond0'
+  - '       valid_lft forever preferred_lft forever'
+  - '    inet6 2a01:e0a:285:b790:d440:8aff:fe16:1170/64 scope global dynamic mngtmpaddr noprefixroute '
+  - '       valid_lft 86376sec preferred_lft 86376sec'
+  - '    inet6 fe80::d440:8aff:fe16:1170/64 scope link proto kernel_ll '
+  - '       valid_lft forever preferred_lft forever'
+  - '9: flannel.1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue state UNKNOWN group default '
+  - '    link/ether e2:f1:19:d7:96:82 brd ff:ff:ff:ff:ff:ff'
+  - '    inet 10.42.1.0/32 scope global flannel.1'
+  - '       valid_lft forever preferred_lft forever'
+  - '10: cni0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue state UP group default qlen 1000'
+  - '    link/ether 72:16:b8:18:61:e7 brd ff:ff:ff:ff:ff:ff'
+  - '    inet 10.42.1.1/24 brd 10.42.1.255 scope global cni0'
+  - '       valid_lft forever preferred_lft forever'
+  - '11: veth5d4d7f65@if3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue master cni0 state UP group default '
+  - '    link/ether 2a:87:10:de:57:27 brd ff:ff:ff:ff:ff:ff link-netns cni-7429e072-97b2-6bfa-5894-4da125407cc3'
+  - '13: veth1a327c1f@if3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue master cni0 state UP group default '
+  - '    link/ether 7a:1f:bd:e7:66:23 brd ff:ff:ff:ff:ff:ff link-netns cni-48667f78-f19f-d3f6-3c73-12be21ab80f1'
+  - '14: vethc52565c1@if3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue master cni0 state UP group default '
+  - '    link/ether aa:a4:d0:ce:9c:82 brd ff:ff:ff:ff:ff:ff link-netns cni-02debf26-60c9-a9ad-5841-daf58bbb97e2'
+2026-02-20 15:59:40,872 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-3] => 
+  ip_addr.stdout_lines:
+  - '1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000'
+  - '    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00'
+  - '    inet 127.0.0.1/8 scope host lo'
+  - '       valid_lft forever preferred_lft forever'
+  - '2: eno1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000'
+  - '    link/ether f8:b1:56:ad:48:35 brd ff:ff:ff:ff:ff:ff'
+  - '    altname enp0s25'
+  - '    altname enxf8b156ad4835'
+  - '    inet 192.168.0.161/24 metric 100 brd 192.168.0.255 scope global dynamic eno1'
+  - '       valid_lft 691174sec preferred_lft 691174sec'
+  - '    inet6 2a01:e0a:285:b790:fab1:56ff:fead:4835/64 scope global dynamic mngtmpaddr noprefixroute '
+  - '       valid_lft 86375sec preferred_lft 86375sec'
+  - '    inet6 fe80::fab1:56ff:fead:4835/64 scope link proto kernel_ll '
+  - '       valid_lft forever preferred_lft forever'
+  - '3: enp10s0f0: <BROADCAST,MULTICAST,SLAVE,UP,LOWER_UP> mtu 1500 qdisc fq_codel master bond0 state UP group default qlen 1000'
+  - '    link/ether b6:22:8f:d0:c6:3c brd ff:ff:ff:ff:ff:ff permaddr 00:15:17:f9:87:05'
+  - '    altname enx001517f98705'
+  - '4: enp10s0f1: <BROADCAST,MULTICAST,SLAVE,UP,LOWER_UP> mtu 1500 qdisc fq_codel master bond0 state UP group default qlen 1000'
+  - '    link/ether b6:22:8f:d0:c6:3c brd ff:ff:ff:ff:ff:ff permaddr 00:15:17:f9:87:04'
+  - '    altname enx001517f98704'
+  - '5: enp11s0f0: <BROADCAST,MULTICAST,SLAVE,UP,LOWER_UP> mtu 1500 qdisc fq_codel master bond0 state UP group default qlen 1000'
+  - '    link/ether b6:22:8f:d0:c6:3c brd ff:ff:ff:ff:ff:ff permaddr 00:15:17:f9:87:07'
+  - '    altname enx001517f98707'
+  - '6: enp11s0f1: <BROADCAST,MULTICAST,SLAVE,UP,LOWER_UP> mtu 1500 qdisc fq_codel master bond0 state UP group default qlen 1000'
+  - '    link/ether b6:22:8f:d0:c6:3c brd ff:ff:ff:ff:ff:ff permaddr 00:15:17:f9:87:06'
+  - '    altname enx001517f98706'
+  - '7: tunl0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000'
+  - '    link/ipip 0.0.0.0 brd 0.0.0.0'
+  - '8: bond0: <BROADCAST,MULTICAST,MASTER,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default qlen 1000'
+  - '    link/ether b6:22:8f:d0:c6:3c brd ff:ff:ff:ff:ff:ff'
+  - '    inet 192.168.0.13/24 brd 192.168.0.255 scope global bond0'
+  - '       valid_lft forever preferred_lft forever'
+  - '    inet6 2a01:e0a:285:b790:b422:8fff:fed0:c63c/64 scope global dynamic mngtmpaddr noprefixroute '
+  - '       valid_lft 86375sec preferred_lft 86375sec'
+  - '    inet6 fe80::b422:8fff:fed0:c63c/64 scope link proto kernel_ll '
+  - '       valid_lft forever preferred_lft forever'
+  - '9: flannel.1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue state UNKNOWN group default '
+  - '    link/ether ea:17:56:b0:12:f8 brd ff:ff:ff:ff:ff:ff'
+  - '    inet 10.42.2.0/32 scope global flannel.1'
+  - '       valid_lft forever preferred_lft forever'
+  - '10: cni0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue state UP group default qlen 1000'
+  - '    link/ether c6:84:e2:0a:9f:12 brd ff:ff:ff:ff:ff:ff'
+  - '    inet 10.42.2.1/24 brd 10.42.2.255 scope global cni0'
+  - '       valid_lft forever preferred_lft forever'
+  - '12: veth2a3b7ade@if3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue master cni0 state UP group default '
+  - '    link/ether 96:90:ba:87:c0:5b brd ff:ff:ff:ff:ff:ff link-netns cni-8c1de0ec-7522-9854-cbd6-b5a92c7da702'
+  - '13: vethec8b471d@if3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue master cni0 state UP group default '
+  - '    link/ether b6:95:20:54:1f:73 brd ff:ff:ff:ff:ff:ff link-netns cni-a6e81a42-674d-5fce-b214-3e7a7ed91826'
+  - '22: veth9eaad5ff@if3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue master cni0 state UP group default '
+  - '    link/ether 16:7d:f5:08:d3:07 brd ff:ff:ff:ff:ff:ff link-netns cni-d4f368c6-a040-d2b2-3bee-9be9767660d6'
+2026-02-20 15:59:40,881 p=205974 u=administrator n=ansible INFO| TASK [Vérifier la table de routage] ************************************************************************************************************************************
+2026-02-20 15:59:40,881 p=205974 u=administrator n=ansible INFO| vendredi 20 février 2026  15:59:40 +0100 (0:00:00.081)       0:00:51.944 ****** 
+2026-02-20 15:59:41,438 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-20 15:59:41,455 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-20 15:59:41,478 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-20 15:59:41,489 p=205974 u=administrator n=ansible INFO| TASK [Afficher les routes] *********************************************************************************************************************************************
+2026-02-20 15:59:41,489 p=205974 u=administrator n=ansible INFO| vendredi 20 février 2026  15:59:41 +0100 (0:00:00.607)       0:00:52.552 ****** 
+2026-02-20 15:59:41,538 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  ip_route.stdout_lines:
+  - 'default via 192.168.0.254 dev bond0 proto static metric 100 '
+  - 'default via 192.168.0.254 dev eno1 proto dhcp src 192.168.0.173 metric 100 '
+  - '10.42.0.0/24 dev cni0 proto kernel scope link src 10.42.0.1 '
+  - '10.42.1.0/24 via 10.42.1.0 dev flannel.1 onlink '
+  - '10.42.2.0/24 via 10.42.2.0 dev flannel.1 onlink '
+  - '192.168.0.0/24 dev bond0 proto kernel scope link src 192.168.0.11 '
+  - '192.168.0.0/24 dev eno1 proto kernel scope link src 192.168.0.173 metric 100 '
+  - '192.168.0.21 dev eno1 proto dhcp scope link src 192.168.0.173 metric 100 '
+  - '192.168.0.254 dev eno1 proto dhcp scope link src 192.168.0.173 metric 100 '
+2026-02-20 15:59:41,545 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-2] => 
+  ip_route.stdout_lines:
+  - 'default via 192.168.0.254 dev bond0 proto static metric 100 '
+  - 'default via 192.168.0.254 dev eno1 proto dhcp src 192.168.0.160 metric 100 '
+  - '10.42.0.0/24 via 10.42.0.0 dev flannel.1 onlink '
+  - '10.42.1.0/24 dev cni0 proto kernel scope link src 10.42.1.1 '
+  - '10.42.2.0/24 via 10.42.2.0 dev flannel.1 onlink '
+  - '192.168.0.0/24 dev bond0 proto kernel scope link src 192.168.0.12 '
+  - '192.168.0.0/24 dev eno1 proto kernel scope link src 192.168.0.160 metric 100 '
+  - '192.168.0.21 dev eno1 proto dhcp scope link src 192.168.0.160 metric 100 '
+  - '192.168.0.254 dev eno1 proto dhcp scope link src 192.168.0.160 metric 100 '
+2026-02-20 15:59:41,564 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-3] => 
+  ip_route.stdout_lines:
+  - 'default via 192.168.0.254 dev bond0 proto static metric 100 '
+  - 'default via 192.168.0.254 dev eno1 proto dhcp src 192.168.0.161 metric 100 '
+  - '10.42.0.0/24 via 10.42.0.0 dev flannel.1 onlink '
+  - '10.42.1.0/24 via 10.42.1.0 dev flannel.1 onlink '
+  - '10.42.2.0/24 dev cni0 proto kernel scope link src 10.42.2.1 '
+  - '192.168.0.0/24 dev bond0 proto kernel scope link src 192.168.0.13 '
+  - '192.168.0.0/24 dev eno1 proto kernel scope link src 192.168.0.161 metric 100 '
+  - '192.168.0.21 dev eno1 proto dhcp scope link src 192.168.0.161 metric 100 '
+  - '192.168.0.254 dev eno1 proto dhcp scope link src 192.168.0.161 metric 100 '
+2026-02-20 15:59:41,573 p=205974 u=administrator n=ansible INFO| TASK [Tester la joignabilité de la gateway] ****************************************************************************************************************************
+2026-02-20 15:59:41,574 p=205974 u=administrator n=ansible INFO| vendredi 20 février 2026  15:59:41 +0100 (0:00:00.084)       0:00:52.636 ****** 
+2026-02-20 15:59:44,187 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-20 15:59:44,221 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-20 15:59:44,234 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-20 15:59:44,255 p=205974 u=administrator n=ansible INFO| TASK [Tester la joignabilité du DNS] ***********************************************************************************************************************************
+2026-02-20 15:59:44,256 p=205974 u=administrator n=ansible INFO| vendredi 20 février 2026  15:59:44 +0100 (0:00:02.682)       0:00:55.318 ****** 
+2026-02-20 15:59:46,862 p=205974 u=administrator n=ansible ERROR| [ERROR]: non-zero return code
+
+2026-02-20 15:59:46,863 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-20 15:59:46,874 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-20 15:59:48,917 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-20 15:59:48,933 p=205974 u=administrator n=ansible INFO| TASK [Résumé de configuration réseau] **********************************************************************************************************************************
+2026-02-20 15:59:48,934 p=205974 u=administrator n=ansible INFO| vendredi 20 février 2026  15:59:48 +0100 (0:00:04.677)       0:00:59.996 ****** 
+2026-02-20 15:59:49,013 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg:
+  - === Configuration réseau OK sur k3s-node-1 ===
+  - 'bond0      : 192.168.0.11/24'
+  - 'Gateway    : 192.168.0.254 (OK)'
+  - 'DNS        : 192.168.0.21 (ECHEC)'
+  - 'Interfaces : 4 ports LACP'
+2026-02-20 15:59:49,036 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-2] => 
+  msg:
+  - === Configuration réseau OK sur k3s-node-2 ===
+  - 'bond0      : 192.168.0.12/24'
+  - 'Gateway    : 192.168.0.254 (OK)'
+  - 'DNS        : 192.168.0.21 (ECHEC)'
+  - 'Interfaces : 4 ports LACP'
+2026-02-20 15:59:49,051 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-3] => 
+  msg:
+  - === Configuration réseau OK sur k3s-node-3 ===
+  - 'bond0      : 192.168.0.13/24'
+  - 'Gateway    : 192.168.0.254 (OK)'
+  - 'DNS        : 192.168.0.21 (ECHEC)'
+  - 'Interfaces : 4 ports LACP'
+2026-02-20 15:59:49,065 p=205974 u=administrator n=ansible INFO| TASK [Supprimer les anciennes entrées k3s-node incorrectes de /etc/hosts] **********************************************************************************************
+2026-02-20 15:59:49,065 p=205974 u=administrator n=ansible INFO| vendredi 20 février 2026  15:59:49 +0100 (0:00:00.131)       0:01:00.128 ****** 
+2026-02-20 15:59:49,892 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-20 15:59:49,909 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-20 15:59:49,920 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-20 15:59:49,935 p=205974 u=administrator n=ansible INFO| TASK [Mettre à jour /etc/hosts avec les IPs cluster] *******************************************************************************************************************
+2026-02-20 15:59:49,935 p=205974 u=administrator n=ansible INFO| vendredi 20 février 2026  15:59:49 +0100 (0:00:00.869)       0:01:00.997 ****** 
+2026-02-20 15:59:50,783 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-20 15:59:50,789 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-20 15:59:50,789 p=205974 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-20 15:59:50,792 p=205974 u=administrator n=ansible INFO| PLAY RECAP *************************************************************************************************************************************************************
+2026-02-20 15:59:50,792 p=205974 u=administrator n=ansible INFO| k3s-node-1                 : ok=23   changed=2    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0   
+2026-02-20 15:59:50,792 p=205974 u=administrator n=ansible INFO| k3s-node-2                 : ok=23   changed=2    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0   
+2026-02-20 15:59:50,792 p=205974 u=administrator n=ansible INFO| k3s-node-3                 : ok=23   changed=2    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0   
+2026-02-20 15:59:50,793 p=205974 u=administrator n=ansible INFO| PLAYBOOK RECAP *********************************************************************************************************************************************************
+2026-02-20 15:59:50,793 p=205974 u=administrator n=ansible INFO| Playbook run took 0 days, 0 hours, 1 minutes, 1 seconds
+
+2026-02-20 15:59:50,793 p=205974 u=administrator n=ansible INFO| TASKS RECAP ************************************************************************************************************************************************************
+2026-02-20 15:59:50,793 p=205974 u=administrator n=ansible INFO| vendredi 20 février 2026  15:59:50 +0100 (0:00:00.858)       0:01:01.855 ****** 
+2026-02-20 15:59:50,793 p=205974 u=administrator n=ansible INFO| =============================================================================== 
+2026-02-20 15:59:50,794 p=205974 u=administrator n=ansible INFO| Attendre la stabilisation du réseau (LACP negociation) --------------------------------------------------------------------------------------------------------- 20.91s
+2026-02-20 15:59:50,794 p=205974 u=administrator n=ansible INFO| Installer les packages réseau requis ---------------------------------------------------------------------------------------------------------------------------- 9.36s
+2026-02-20 15:59:50,794 p=205974 u=administrator n=ansible INFO| Vérifier la reconnexion SSH après reconfiguration --------------------------------------------------------------------------------------------------------------- 6.40s
+2026-02-20 15:59:50,794 p=205974 u=administrator n=ansible INFO| Tester la joignabilité du DNS ----------------------------------------------------------------------------------------------------------------------------------- 4.68s
+2026-02-20 15:59:50,794 p=205974 u=administrator n=ansible INFO| Gathering Facts ------------------------------------------------------------------------------------------------------------------------------------------------- 4.29s
+2026-02-20 15:59:50,794 p=205974 u=administrator n=ansible INFO| Tester la joignabilité de la gateway ---------------------------------------------------------------------------------------------------------------------------- 2.68s
+2026-02-20 15:59:50,794 p=205974 u=administrator n=ansible INFO| Valider la configuration netplan (dry-run) ---------------------------------------------------------------------------------------------------------------------- 1.98s
+2026-02-20 15:59:50,794 p=205974 u=administrator n=ansible INFO| Rendre le module bonding persistant au démarrage ---------------------------------------------------------------------------------------------------------------- 1.82s
+2026-02-20 15:59:50,795 p=205974 u=administrator n=ansible INFO| Déployer la configuration netplan bond0 (LACP) ------------------------------------------------------------------------------------------------------------------ 1.53s
+2026-02-20 15:59:50,795 p=205974 u=administrator n=ansible INFO| Vérifier si NetworkManager est installé ------------------------------------------------------------------------------------------------------------------------- 1.39s
+2026-02-20 15:59:50,795 p=205974 u=administrator n=ansible INFO| Appliquer la configuration netplan ------------------------------------------------------------------------------------------------------------------------------ 1.05s
+2026-02-20 15:59:50,795 p=205974 u=administrator n=ansible INFO| Supprimer les anciennes entrées k3s-node incorrectes de /etc/hosts ---------------------------------------------------------------------------------------------- 0.87s
+2026-02-20 15:59:50,795 p=205974 u=administrator n=ansible INFO| Mettre à jour /etc/hosts avec les IPs cluster ------------------------------------------------------------------------------------------------------------------- 0.86s
+2026-02-20 15:59:50,795 p=205974 u=administrator n=ansible INFO| Charger le module kernel bonding -------------------------------------------------------------------------------------------------------------------------------- 0.85s
+2026-02-20 15:59:50,795 p=205974 u=administrator n=ansible INFO| Vérifier l'état du bond (/proc/net/bonding/bond0) --------------------------------------------------------------------------------------------------------------- 0.61s
+2026-02-20 15:59:50,796 p=205974 u=administrator n=ansible INFO| Vérifier la table de routage ------------------------------------------------------------------------------------------------------------------------------------ 0.61s
+2026-02-20 15:59:50,796 p=205974 u=administrator n=ansible INFO| Vérifier les interfaces réseau ---------------------------------------------------------------------------------------------------------------------------------- 0.60s
+2026-02-20 15:59:50,796 p=205974 u=administrator n=ansible INFO| Vérifier si /etc/netplan/50-cloud-init.yaml existe -------------------------------------------------------------------------------------------------------------- 0.58s
+2026-02-20 15:59:50,796 p=205974 u=administrator n=ansible INFO| Résumé de configuration réseau ---------------------------------------------------------------------------------------------------------------------------------- 0.13s
+2026-02-20 15:59:50,796 p=205974 u=administrator n=ansible INFO| Afficher la configuration réseau du nœud ------------------------------------------------------------------------------------------------------------------------ 0.13s
+2026-02-20 16:28:17,078 p=209868 u=administrator n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+
+2026-02-20 16:28:17,079 p=209868 u=administrator n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be removed from collection 'community.general' version 12.0.0.
+
+2026-02-20 16:28:17,120 p=209868 u=administrator n=ansible INFO| PLAY [Déploiement de Paheko sur K3s] ***********************************************************************************************************************************
+2026-02-20 16:28:17,133 p=209868 u=administrator n=ansible INFO| TASK [Gathering Facts] *************************************************************************************************************************************************
+2026-02-20 16:28:17,133 p=209868 u=administrator n=ansible INFO| vendredi 20 février 2026  16:28:17 +0100 (0:00:00.018)       0:00:00.018 ****** 
+2026-02-20 16:28:21,231 p=209868 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-20 16:28:21,245 p=209868 u=administrator n=ansible INFO| TASK [Installation du paquet python3-kubernetes] ***********************************************************************************************************************
+2026-02-20 16:28:21,246 p=209868 u=administrator n=ansible INFO| vendredi 20 février 2026  16:28:21 +0100 (0:00:04.112)       0:00:04.131 ****** 
+2026-02-20 16:28:24,251 p=209868 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-20 16:28:24,265 p=209868 u=administrator n=ansible INFO| TASK [Créer le namespace] **********************************************************************************************************************************************
+2026-02-20 16:28:24,265 p=209868 u=administrator n=ansible INFO| vendredi 20 février 2026  16:28:24 +0100 (0:00:03.019)       0:00:07.150 ****** 
+2026-02-20 16:28:26,285 p=209868 u=administrator n=ansible WARNING| [WARNING]: Collection cloud.common does not support Ansible version 2.19.0
+
+2026-02-20 16:28:26,286 p=209868 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-02-20 16:28:26,300 p=209868 u=administrator n=ansible INFO| TASK [Créer le PersistentVolumeClaim (PVC)] ****************************************************************************************************************************
+2026-02-20 16:28:26,301 p=209868 u=administrator n=ansible INFO| vendredi 20 février 2026  16:28:26 +0100 (0:00:02.035)       0:00:09.186 ****** 
+2026-02-20 16:28:27,876 p=209868 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-02-20 16:28:27,891 p=209868 u=administrator n=ansible INFO| TASK [Déployer Paheko] *************************************************************************************************************************************************
+2026-02-20 16:28:27,892 p=209868 u=administrator n=ansible INFO| vendredi 20 février 2026  16:28:27 +0100 (0:00:01.590)       0:00:10.777 ****** 
+2026-02-20 16:28:29,475 p=209868 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-02-20 16:28:29,489 p=209868 u=administrator n=ansible INFO| TASK [Créer le Service] ************************************************************************************************************************************************
+2026-02-20 16:28:29,489 p=209868 u=administrator n=ansible INFO| vendredi 20 février 2026  16:28:29 +0100 (0:00:01.597)       0:00:12.374 ****** 
+2026-02-20 16:28:31,080 p=209868 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-02-20 16:28:31,094 p=209868 u=administrator n=ansible INFO| TASK [Créer l'Ingress (pour Cert-Manager)] *****************************************************************************************************************************
+2026-02-20 16:28:31,095 p=209868 u=administrator n=ansible INFO| vendredi 20 février 2026  16:28:31 +0100 (0:00:01.605)       0:00:13.980 ****** 
+2026-02-20 16:28:32,696 p=209868 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-02-20 16:28:32,710 p=209868 u=administrator n=ansible INFO| TASK [Créer l'IngressRoute HTTPS (Traefik)] ****************************************************************************************************************************
+2026-02-20 16:28:32,711 p=209868 u=administrator n=ansible INFO| vendredi 20 février 2026  16:28:32 +0100 (0:00:01.615)       0:00:15.596 ****** 
+2026-02-20 16:28:34,270 p=209868 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-02-20 16:28:34,273 p=209868 u=administrator n=ansible INFO| PLAY RECAP *************************************************************************************************************************************************************
+2026-02-20 16:28:34,273 p=209868 u=administrator n=ansible INFO| k3s-node-1                 : ok=8    changed=6    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+2026-02-20 16:28:34,273 p=209868 u=administrator n=ansible INFO| PLAYBOOK RECAP *********************************************************************************************************************************************************
+2026-02-20 16:28:34,274 p=209868 u=administrator n=ansible INFO| Playbook run took 0 days, 0 hours, 0 minutes, 17 seconds
+
+2026-02-20 16:28:34,274 p=209868 u=administrator n=ansible INFO| TASKS RECAP ************************************************************************************************************************************************************
+2026-02-20 16:28:34,274 p=209868 u=administrator n=ansible INFO| vendredi 20 février 2026  16:28:34 +0100 (0:00:01.563)       0:00:17.159 ****** 
+2026-02-20 16:28:34,274 p=209868 u=administrator n=ansible INFO| =============================================================================== 
+2026-02-20 16:28:34,274 p=209868 u=administrator n=ansible INFO| Gathering Facts ------------------------------------------------------------------------------------------------------------------------------------------------- 4.11s
+2026-02-20 16:28:34,275 p=209868 u=administrator n=ansible INFO| Installation du paquet python3-kubernetes ----------------------------------------------------------------------------------------------------------------------- 3.02s
+2026-02-20 16:28:34,275 p=209868 u=administrator n=ansible INFO| Créer le namespace ---------------------------------------------------------------------------------------------------------------------------------------------- 2.04s
+2026-02-20 16:28:34,275 p=209868 u=administrator n=ansible INFO| Créer l'Ingress (pour Cert-Manager) ----------------------------------------------------------------------------------------------------------------------------- 1.62s
+2026-02-20 16:28:34,275 p=209868 u=administrator n=ansible INFO| Créer le Service ------------------------------------------------------------------------------------------------------------------------------------------------ 1.61s
+2026-02-20 16:28:34,276 p=209868 u=administrator n=ansible INFO| Déployer Paheko ------------------------------------------------------------------------------------------------------------------------------------------------- 1.60s
+2026-02-20 16:28:34,276 p=209868 u=administrator n=ansible INFO| Créer le PersistentVolumeClaim (PVC) ---------------------------------------------------------------------------------------------------------------------------- 1.59s
+2026-02-20 16:28:34,276 p=209868 u=administrator n=ansible INFO| Créer l'IngressRoute HTTPS (Traefik) ---------------------------------------------------------------------------------------------------------------------------- 1.56s
+2026-02-20 16:47:27,834 p=215510 u=administrator n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+
+2026-02-20 16:47:27,835 p=215510 u=administrator n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be removed from collection 'community.general' version 12.0.0.
+
+2026-02-20 16:47:27,878 p=215510 u=administrator n=ansible INFO| PLAY [Déploiement de Paheko (Structure Kwaba)] *************************************************************************************************************************
+2026-02-20 16:47:27,892 p=215510 u=administrator n=ansible INFO| TASK [Gathering Facts] *************************************************************************************************************************************************
+2026-02-20 16:47:27,892 p=215510 u=administrator n=ansible INFO| vendredi 20 février 2026  16:47:27 +0100 (0:00:00.020)       0:00:00.020 ****** 
+2026-02-20 16:47:31,773 p=215510 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-20 16:47:31,790 p=215510 u=administrator n=ansible INFO| TASK [Créer le namespace] **********************************************************************************************************************************************
+2026-02-20 16:47:31,790 p=215510 u=administrator n=ansible INFO| vendredi 20 février 2026  16:47:31 +0100 (0:00:03.897)       0:00:03.918 ****** 
+2026-02-20 16:47:33,789 p=215510 u=administrator n=ansible WARNING| [WARNING]: Collection cloud.common does not support Ansible version 2.19.0
+
+2026-02-20 16:47:33,790 p=215510 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-02-20 16:47:33,804 p=215510 u=administrator n=ansible INFO| TASK [Créer le PVC pour les données] ***********************************************************************************************************************************
+2026-02-20 16:47:33,805 p=215510 u=administrator n=ansible INFO| vendredi 20 février 2026  16:47:33 +0100 (0:00:02.014)       0:00:05.932 ****** 
+2026-02-20 16:47:35,314 p=215510 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-02-20 16:47:35,324 p=215510 u=administrator n=ansible INFO| TASK [Déployer l'application Paheko] ***********************************************************************************************************************************
+2026-02-20 16:47:35,324 p=215510 u=administrator n=ansible INFO| vendredi 20 février 2026  16:47:35 +0100 (0:00:01.519)       0:00:07.452 ****** 
+2026-02-20 16:47:36,756 p=215510 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-02-20 16:47:36,768 p=215510 u=administrator n=ansible INFO| TASK [Créer le Service] ************************************************************************************************************************************************
+2026-02-20 16:47:36,769 p=215510 u=administrator n=ansible INFO| vendredi 20 février 2026  16:47:36 +0100 (0:00:01.444)       0:00:08.896 ****** 
+2026-02-20 16:47:38,376 p=215510 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-02-20 16:47:38,386 p=215510 u=administrator n=ansible INFO| TASK [Créer l'Ingress (Pour HTTP et Cert-Manager)] *********************************************************************************************************************
+2026-02-20 16:47:38,386 p=215510 u=administrator n=ansible INFO| vendredi 20 février 2026  16:47:38 +0100 (0:00:01.617)       0:00:10.514 ****** 
+2026-02-20 16:47:39,936 p=215510 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-02-20 16:47:39,950 p=215510 u=administrator n=ansible INFO| TASK [Créer l'IngressRoute HTTPS (Traefik CRD)] ************************************************************************************************************************
+2026-02-20 16:47:39,951 p=215510 u=administrator n=ansible INFO| vendredi 20 février 2026  16:47:39 +0100 (0:00:01.564)       0:00:12.078 ****** 
+2026-02-20 16:47:41,506 p=215510 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-02-20 16:47:41,509 p=215510 u=administrator n=ansible INFO| PLAY RECAP *************************************************************************************************************************************************************
+2026-02-20 16:47:41,509 p=215510 u=administrator n=ansible INFO| k3s-node-1                 : ok=7    changed=6    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+2026-02-20 16:47:41,510 p=215510 u=administrator n=ansible INFO| PLAYBOOK RECAP *********************************************************************************************************************************************************
+2026-02-20 16:47:41,510 p=215510 u=administrator n=ansible INFO| Playbook run took 0 days, 0 hours, 0 minutes, 13 seconds
+
+2026-02-20 16:47:41,510 p=215510 u=administrator n=ansible INFO| TASKS RECAP ************************************************************************************************************************************************************
+2026-02-20 16:47:41,510 p=215510 u=administrator n=ansible INFO| vendredi 20 février 2026  16:47:41 +0100 (0:00:01.559)       0:00:13.638 ****** 
+2026-02-20 16:47:41,511 p=215510 u=administrator n=ansible INFO| =============================================================================== 
+2026-02-20 16:47:41,511 p=215510 u=administrator n=ansible INFO| Gathering Facts ------------------------------------------------------------------------------------------------------------------------------------------------- 3.90s
+2026-02-20 16:47:41,511 p=215510 u=administrator n=ansible INFO| Créer le namespace ---------------------------------------------------------------------------------------------------------------------------------------------- 2.01s
+2026-02-20 16:47:41,511 p=215510 u=administrator n=ansible INFO| Créer le Service ------------------------------------------------------------------------------------------------------------------------------------------------ 1.62s
+2026-02-20 16:47:41,511 p=215510 u=administrator n=ansible INFO| Créer l'Ingress (Pour HTTP et Cert-Manager) --------------------------------------------------------------------------------------------------------------------- 1.56s
+2026-02-20 16:47:41,512 p=215510 u=administrator n=ansible INFO| Créer l'IngressRoute HTTPS (Traefik CRD) ------------------------------------------------------------------------------------------------------------------------ 1.56s
+2026-02-20 16:47:41,512 p=215510 u=administrator n=ansible INFO| Créer le PVC pour les données ----------------------------------------------------------------------------------------------------------------------------------- 1.52s
+2026-02-20 16:47:41,512 p=215510 u=administrator n=ansible INFO| Déployer l'application Paheko ----------------------------------------------------------------------------------------------------------------------------------- 1.44s
+2026-02-20 16:50:29,064 p=216781 u=administrator n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+
+2026-02-20 16:50:29,064 p=216781 u=administrator n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be removed from collection 'community.general' version 12.0.0.
+
+2026-02-20 16:50:29,117 p=216781 u=administrator n=ansible INFO| PLAY [Déploiement Paheko] **********************************************************************************************************************************************
+2026-02-20 16:50:29,133 p=216781 u=administrator n=ansible INFO| TASK [Gathering Facts] *************************************************************************************************************************************************
+2026-02-20 16:50:29,134 p=216781 u=administrator n=ansible INFO| vendredi 20 février 2026  16:50:29 +0100 (0:00:00.023)       0:00:00.023 ****** 
+2026-02-20 16:50:33,241 p=216781 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-20 16:50:33,253 p=216781 u=administrator n=ansible INFO| TASK [Installer python3-kubernetes] ************************************************************************************************************************************
+2026-02-20 16:50:33,253 p=216781 u=administrator n=ansible INFO| vendredi 20 février 2026  16:50:33 +0100 (0:00:04.119)       0:00:04.142 ****** 
+2026-02-20 16:50:36,197 p=216781 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-20 16:50:36,211 p=216781 u=administrator n=ansible INFO| TASK [Créer le namespace] **********************************************************************************************************************************************
+2026-02-20 16:50:36,211 p=216781 u=administrator n=ansible INFO| vendredi 20 février 2026  16:50:36 +0100 (0:00:02.958)       0:00:07.100 ****** 
+2026-02-20 16:50:38,239 p=216781 u=administrator n=ansible WARNING| [WARNING]: Collection cloud.common does not support Ansible version 2.19.0
+
+2026-02-20 16:50:38,240 p=216781 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-02-20 16:50:38,255 p=216781 u=administrator n=ansible INFO| TASK [Créer le PersistentVolumeClaim] **********************************************************************************************************************************
+2026-02-20 16:50:38,256 p=216781 u=administrator n=ansible INFO| vendredi 20 février 2026  16:50:38 +0100 (0:00:02.044)       0:00:09.145 ****** 
+2026-02-20 16:50:39,774 p=216781 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-02-20 16:50:39,789 p=216781 u=administrator n=ansible INFO| TASK [Déployer Paheko] *************************************************************************************************************************************************
+2026-02-20 16:50:39,790 p=216781 u=administrator n=ansible INFO| vendredi 20 février 2026  16:50:39 +0100 (0:00:01.533)       0:00:10.679 ****** 
+2026-02-20 16:50:41,259 p=216781 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-02-20 16:50:41,283 p=216781 u=administrator n=ansible INFO| TASK [Créer le Service] ************************************************************************************************************************************************
+2026-02-20 16:50:41,284 p=216781 u=administrator n=ansible INFO| vendredi 20 février 2026  16:50:41 +0100 (0:00:01.493)       0:00:12.173 ****** 
+2026-02-20 16:50:42,776 p=216781 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-02-20 16:50:42,791 p=216781 u=administrator n=ansible INFO| TASK [Créer l'Ingress HTTPS] *******************************************************************************************************************************************
+2026-02-20 16:50:42,791 p=216781 u=administrator n=ansible INFO| vendredi 20 février 2026  16:50:42 +0100 (0:00:01.507)       0:00:13.680 ****** 
+2026-02-20 16:50:44,376 p=216781 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-02-20 16:50:44,393 p=216781 u=administrator n=ansible INFO| TASK [Vérifier le type de clé du certificat] ***************************************************************************************************************************
+2026-02-20 16:50:44,393 p=216781 u=administrator n=ansible INFO| vendredi 20 février 2026  16:50:44 +0100 (0:00:01.602)       0:00:15.282 ****** 
+2026-02-20 16:50:45,456 p=216781 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-20 16:50:45,472 p=216781 u=administrator n=ansible INFO| TASK [Supprimer ancien certificat RSA si nécessaire] *******************************************************************************************************************
+2026-02-20 16:50:45,472 p=216781 u=administrator n=ansible INFO| vendredi 20 février 2026  16:50:45 +0100 (0:00:01.078)       0:00:16.361 ****** 
+2026-02-20 16:50:46,261 p=216781 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-02-20 16:50:46,275 p=216781 u=administrator n=ansible INFO| TASK [Supprimer ancien secret TLS RSA] *********************************************************************************************************************************
+2026-02-20 16:50:46,276 p=216781 u=administrator n=ansible INFO| vendredi 20 février 2026  16:50:46 +0100 (0:00:00.803)       0:00:17.165 ****** 
+2026-02-20 16:50:47,060 p=216781 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-02-20 16:50:47,062 p=216781 u=administrator n=ansible INFO| PLAY RECAP *************************************************************************************************************************************************************
+2026-02-20 16:50:47,063 p=216781 u=administrator n=ansible INFO| k3s-node-1                 : ok=10   changed=7    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+2026-02-20 16:50:47,063 p=216781 u=administrator n=ansible INFO| PLAYBOOK RECAP *********************************************************************************************************************************************************
+2026-02-20 16:50:47,063 p=216781 u=administrator n=ansible INFO| Playbook run took 0 days, 0 hours, 0 minutes, 17 seconds
+
+2026-02-20 16:50:47,064 p=216781 u=administrator n=ansible INFO| TASKS RECAP ************************************************************************************************************************************************************
+2026-02-20 16:50:47,064 p=216781 u=administrator n=ansible INFO| vendredi 20 février 2026  16:50:47 +0100 (0:00:00.788)       0:00:17.953 ****** 
+2026-02-20 16:50:47,064 p=216781 u=administrator n=ansible INFO| =============================================================================== 
+2026-02-20 16:50:47,064 p=216781 u=administrator n=ansible INFO| Gathering Facts ------------------------------------------------------------------------------------------------------------------------------------------------- 4.12s
+2026-02-20 16:50:47,065 p=216781 u=administrator n=ansible INFO| Installer python3-kubernetes ------------------------------------------------------------------------------------------------------------------------------------ 2.96s
+2026-02-20 16:50:47,065 p=216781 u=administrator n=ansible INFO| Créer le namespace ---------------------------------------------------------------------------------------------------------------------------------------------- 2.04s
+2026-02-20 16:50:47,065 p=216781 u=administrator n=ansible INFO| Créer l'Ingress HTTPS ------------------------------------------------------------------------------------------------------------------------------------------- 1.60s
+2026-02-20 16:50:47,065 p=216781 u=administrator n=ansible INFO| Créer le PersistentVolumeClaim ---------------------------------------------------------------------------------------------------------------------------------- 1.53s
+2026-02-20 16:50:47,065 p=216781 u=administrator n=ansible INFO| Créer le Service ------------------------------------------------------------------------------------------------------------------------------------------------ 1.51s
+2026-02-20 16:50:47,066 p=216781 u=administrator n=ansible INFO| Déployer Paheko ------------------------------------------------------------------------------------------------------------------------------------------------- 1.49s
+2026-02-20 16:50:47,066 p=216781 u=administrator n=ansible INFO| Vérifier le type de clé du certificat --------------------------------------------------------------------------------------------------------------------------- 1.08s
+2026-02-20 16:50:47,066 p=216781 u=administrator n=ansible INFO| Supprimer ancien certificat RSA si nécessaire ------------------------------------------------------------------------------------------------------------------- 0.80s
+2026-02-20 16:50:47,066 p=216781 u=administrator n=ansible INFO| Supprimer ancien secret TLS RSA --------------------------------------------------------------------------------------------------------------------------------- 0.79s
+2026-02-20 16:54:26,608 p=219197 u=administrator n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+
+2026-02-20 16:54:26,609 p=219197 u=administrator n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be removed from collection 'community.general' version 12.0.0.
+
+2026-02-20 16:54:26,665 p=219197 u=administrator n=ansible INFO| PLAY [Déploiement Paheko] **********************************************************************************************************************************************
+2026-02-20 16:54:26,682 p=219197 u=administrator n=ansible INFO| TASK [Gathering Facts] *************************************************************************************************************************************************
+2026-02-20 16:54:26,682 p=219197 u=administrator n=ansible INFO| vendredi 20 février 2026  16:54:26 +0100 (0:00:00.026)       0:00:00.026 ****** 
+2026-02-20 16:54:30,868 p=219197 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-20 16:54:30,884 p=219197 u=administrator n=ansible INFO| TASK [Installer python3-kubernetes] ************************************************************************************************************************************
+2026-02-20 16:54:30,884 p=219197 u=administrator n=ansible INFO| vendredi 20 février 2026  16:54:30 +0100 (0:00:04.201)       0:00:04.227 ****** 
+2026-02-20 16:54:33,603 p=219197 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-20 16:54:33,620 p=219197 u=administrator n=ansible INFO| TASK [Créer le namespace] **********************************************************************************************************************************************
+2026-02-20 16:54:33,621 p=219197 u=administrator n=ansible INFO| vendredi 20 février 2026  16:54:33 +0100 (0:00:02.736)       0:00:06.964 ****** 
+2026-02-20 16:54:35,586 p=219197 u=administrator n=ansible WARNING| [WARNING]: Collection cloud.common does not support Ansible version 2.19.0
+
+2026-02-20 16:54:35,586 p=219197 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-20 16:54:35,595 p=219197 u=administrator n=ansible INFO| TASK [Créer le PersistentVolumeClaim] **********************************************************************************************************************************
+2026-02-20 16:54:35,596 p=219197 u=administrator n=ansible INFO| vendredi 20 février 2026  16:54:35 +0100 (0:00:01.974)       0:00:08.939 ****** 
+2026-02-20 16:54:37,179 p=219197 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-20 16:54:37,189 p=219197 u=administrator n=ansible INFO| TASK [Déployer Paheko] *************************************************************************************************************************************************
+2026-02-20 16:54:37,190 p=219197 u=administrator n=ansible INFO| vendredi 20 février 2026  16:54:37 +0100 (0:00:01.594)       0:00:10.533 ****** 
+2026-02-20 16:54:38,741 p=219197 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-20 16:54:38,756 p=219197 u=administrator n=ansible INFO| TASK [Créer le Service] ************************************************************************************************************************************************
+2026-02-20 16:54:38,756 p=219197 u=administrator n=ansible INFO| vendredi 20 février 2026  16:54:38 +0100 (0:00:01.566)       0:00:12.100 ****** 
+2026-02-20 16:54:40,197 p=219197 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-20 16:54:40,207 p=219197 u=administrator n=ansible INFO| TASK [Créer l'Ingress HTTPS] *******************************************************************************************************************************************
+2026-02-20 16:54:40,207 p=219197 u=administrator n=ansible INFO| vendredi 20 février 2026  16:54:40 +0100 (0:00:01.450)       0:00:13.551 ****** 
+2026-02-20 16:54:41,668 p=219197 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-02-20 16:54:41,683 p=219197 u=administrator n=ansible INFO| TASK [Vérifier le type de clé du certificat] ***************************************************************************************************************************
+2026-02-20 16:54:41,684 p=219197 u=administrator n=ansible INFO| vendredi 20 février 2026  16:54:41 +0100 (0:00:01.476)       0:00:15.027 ****** 
+2026-02-20 16:54:42,751 p=219197 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-20 16:54:42,767 p=219197 u=administrator n=ansible INFO| TASK [Supprimer ancien certificat RSA si nécessaire] *******************************************************************************************************************
+2026-02-20 16:54:42,768 p=219197 u=administrator n=ansible INFO| vendredi 20 février 2026  16:54:42 +0100 (0:00:01.083)       0:00:16.111 ****** 
+2026-02-20 16:54:43,551 p=219197 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-02-20 16:54:43,561 p=219197 u=administrator n=ansible INFO| TASK [Supprimer ancien secret TLS RSA] *********************************************************************************************************************************
+2026-02-20 16:54:43,561 p=219197 u=administrator n=ansible INFO| vendredi 20 février 2026  16:54:43 +0100 (0:00:00.793)       0:00:16.905 ****** 
+2026-02-20 16:54:44,355 p=219197 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-02-20 16:54:44,357 p=219197 u=administrator n=ansible INFO| PLAY RECAP *************************************************************************************************************************************************************
+2026-02-20 16:54:44,357 p=219197 u=administrator n=ansible INFO| k3s-node-1                 : ok=10   changed=3    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+2026-02-20 16:54:44,358 p=219197 u=administrator n=ansible INFO| PLAYBOOK RECAP *********************************************************************************************************************************************************
+2026-02-20 16:54:44,358 p=219197 u=administrator n=ansible INFO| Playbook run took 0 days, 0 hours, 0 minutes, 17 seconds
+
+2026-02-20 16:54:44,358 p=219197 u=administrator n=ansible INFO| TASKS RECAP ************************************************************************************************************************************************************
+2026-02-20 16:54:44,358 p=219197 u=administrator n=ansible INFO| vendredi 20 février 2026  16:54:44 +0100 (0:00:00.797)       0:00:17.702 ****** 
+2026-02-20 16:54:44,359 p=219197 u=administrator n=ansible INFO| =============================================================================== 
+2026-02-20 16:54:44,359 p=219197 u=administrator n=ansible INFO| Gathering Facts ------------------------------------------------------------------------------------------------------------------------------------------------- 4.20s
+2026-02-20 16:54:44,359 p=219197 u=administrator n=ansible INFO| Installer python3-kubernetes ------------------------------------------------------------------------------------------------------------------------------------ 2.74s
+2026-02-20 16:54:44,359 p=219197 u=administrator n=ansible INFO| Créer le namespace ---------------------------------------------------------------------------------------------------------------------------------------------- 1.97s
+2026-02-20 16:54:44,359 p=219197 u=administrator n=ansible INFO| Créer le PersistentVolumeClaim ---------------------------------------------------------------------------------------------------------------------------------- 1.59s
+2026-02-20 16:54:44,359 p=219197 u=administrator n=ansible INFO| Déployer Paheko ------------------------------------------------------------------------------------------------------------------------------------------------- 1.57s
+2026-02-20 16:54:44,360 p=219197 u=administrator n=ansible INFO| Créer l'Ingress HTTPS ------------------------------------------------------------------------------------------------------------------------------------------- 1.48s
+2026-02-20 16:54:44,360 p=219197 u=administrator n=ansible INFO| Créer le Service ------------------------------------------------------------------------------------------------------------------------------------------------ 1.45s
+2026-02-20 16:54:44,360 p=219197 u=administrator n=ansible INFO| Vérifier le type de clé du certificat --------------------------------------------------------------------------------------------------------------------------- 1.08s
+2026-02-20 16:54:44,360 p=219197 u=administrator n=ansible INFO| Supprimer ancien secret TLS RSA --------------------------------------------------------------------------------------------------------------------------------- 0.80s
+2026-02-20 16:54:44,360 p=219197 u=administrator n=ansible INFO| Supprimer ancien certificat RSA si nécessaire ------------------------------------------------------------------------------------------------------------------- 0.79s
+2026-02-21 00:52:45,827 p=269238 u=administrator n=ansible ERROR| [ERROR]: the playbook: diagnostic_network.yml could not be found
+
+2026-02-21 00:53:06,662 p=269323 u=administrator n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+
+2026-02-21 00:53:06,662 p=269323 u=administrator n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be removed from collection 'community.general' version 12.0.0.
+
+2026-02-21 00:53:06,706 p=269323 u=administrator n=ansible INFO| PLAY [Configuration réseau LACP + IPs statiques] *********************************************************************
+2026-02-21 00:53:06,722 p=269323 u=administrator n=ansible INFO| TASK [Gathering Facts] ***********************************************************************************************
+2026-02-21 00:53:06,722 p=269323 u=administrator n=ansible INFO| samedi 21 février 2026  00:53:06 +0100 (0:00:00.022)       0:00:00.022 ******** 
+2026-02-21 00:53:10,597 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-21 00:53:10,709 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-21 00:53:10,732 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-21 00:53:10,744 p=269323 u=administrator n=ansible INFO| TASK [Afficher la configuration réseau du nœud] **********************************************************************
+2026-02-21 00:53:10,744 p=269323 u=administrator n=ansible INFO| samedi 21 février 2026  00:53:10 +0100 (0:00:04.021)       0:00:04.044 ******** 
+2026-02-21 00:53:10,823 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg:
+  - '=== Configuration réseau : k3s-node-1 ==='
+  - 'bond0      : 192.168.0.11/24'
+  - 'Gateway    : 192.168.0.254'
+  - 'DNS        : 8.8.8.8'
+  - 'Bond mode  : 802.3ad (LACP)'
+  - 'Interfaces : enp10s0f0, enp10s0f1, enp11s0f0, enp11s0f1'
+  - 'Management : 192.168.0.11 (DHCP - non modifiée)'
+2026-02-21 00:53:10,834 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-2] => 
+  msg:
+  - '=== Configuration réseau : k3s-node-2 ==='
+  - 'bond0      : 192.168.0.12/24'
+  - 'Gateway    : 192.168.0.254'
+  - 'DNS        : 8.8.8.8'
+  - 'Bond mode  : 802.3ad (LACP)'
+  - 'Interfaces : enp10s0f0, enp10s0f1, enp11s0f0, enp11s0f1'
+  - 'Management : 192.168.0.12 (DHCP - non modifiée)'
+2026-02-21 00:53:10,852 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-3] => 
+  msg:
+  - '=== Configuration réseau : k3s-node-3 ==='
+  - 'bond0      : 192.168.0.13/24'
+  - 'Gateway    : 192.168.0.254'
+  - 'DNS        : 8.8.8.8'
+  - 'Bond mode  : 802.3ad (LACP)'
+  - 'Interfaces : enp10s0f0, enp10s0f1, enp11s0f0, enp11s0f1'
+  - 'Management : 192.168.0.13 (DHCP - non modifiée)'
+2026-02-21 00:53:10,867 p=269323 u=administrator n=ansible INFO| TASK [Installer les packages réseau requis] **************************************************************************
+2026-02-21 00:53:10,868 p=269323 u=administrator n=ansible INFO| samedi 21 février 2026  00:53:10 +0100 (0:00:00.123)       0:00:04.167 ******** 
+2026-02-21 00:53:19,093 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-21 00:53:19,666 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-21 00:53:20,187 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-21 00:53:20,204 p=269323 u=administrator n=ansible INFO| TASK [Vérifier si NetworkManager est installé] ***********************************************************************
+2026-02-21 00:53:20,205 p=269323 u=administrator n=ansible INFO| samedi 21 février 2026  00:53:20 +0100 (0:00:09.337)       0:00:13.504 ******** 
+2026-02-21 00:53:21,506 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-21 00:53:21,522 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-21 00:53:21,568 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-21 00:53:21,582 p=269323 u=administrator n=ansible INFO| TASK [Arrêter et désactiver NetworkManager] **************************************************************************
+2026-02-21 00:53:21,583 p=269323 u=administrator n=ansible INFO| samedi 21 février 2026  00:53:21 +0100 (0:00:01.377)       0:00:14.882 ******** 
+2026-02-21 00:53:21,629 p=269323 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-02-21 00:53:21,637 p=269323 u=administrator n=ansible INFO| skipping: [k3s-node-2]
+2026-02-21 00:53:21,652 p=269323 u=administrator n=ansible INFO| skipping: [k3s-node-3]
+2026-02-21 00:53:21,661 p=269323 u=administrator n=ansible INFO| TASK [Charger le module kernel bonding] ******************************************************************************
+2026-02-21 00:53:21,662 p=269323 u=administrator n=ansible INFO| samedi 21 février 2026  00:53:21 +0100 (0:00:00.078)       0:00:14.961 ******** 
+2026-02-21 00:53:22,466 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-21 00:53:22,514 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-21 00:53:22,515 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-21 00:53:22,531 p=269323 u=administrator n=ansible INFO| TASK [Rendre le module bonding persistant au démarrage] **************************************************************
+2026-02-21 00:53:22,532 p=269323 u=administrator n=ansible INFO| samedi 21 février 2026  00:53:22 +0100 (0:00:00.869)       0:00:15.831 ******** 
+2026-02-21 00:53:24,269 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-21 00:53:24,271 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-21 00:53:24,306 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-21 00:53:24,320 p=269323 u=administrator n=ansible INFO| TASK [Vérifier si /etc/netplan/50-cloud-init.yaml existe] ************************************************************
+2026-02-21 00:53:24,320 p=269323 u=administrator n=ansible INFO| samedi 21 février 2026  00:53:24 +0100 (0:00:01.788)       0:00:17.620 ******** 
+2026-02-21 00:53:24,799 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-21 00:53:24,859 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-21 00:53:24,904 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-21 00:53:24,919 p=269323 u=administrator n=ansible INFO| TASK [Sauvegarder la configuration netplan cloud-init] ***************************************************************
+2026-02-21 00:53:24,919 p=269323 u=administrator n=ansible INFO| samedi 21 février 2026  00:53:24 +0100 (0:00:00.598)       0:00:18.219 ******** 
+2026-02-21 00:53:24,975 p=269323 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-02-21 00:53:24,979 p=269323 u=administrator n=ansible INFO| skipping: [k3s-node-2]
+2026-02-21 00:53:24,992 p=269323 u=administrator n=ansible INFO| skipping: [k3s-node-3]
+2026-02-21 00:53:25,004 p=269323 u=administrator n=ansible INFO| TASK [Déployer la configuration netplan bond0 (LACP)] ****************************************************************
+2026-02-21 00:53:25,005 p=269323 u=administrator n=ansible INFO| samedi 21 février 2026  00:53:25 +0100 (0:00:00.085)       0:00:18.304 ******** 
+2026-02-21 00:53:26,559 p=269323 u=administrator n=ansible INFO| changed: [k3s-node-3]
+2026-02-21 00:53:26,580 p=269323 u=administrator n=ansible INFO| changed: [k3s-node-2]
+2026-02-21 00:53:26,584 p=269323 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-02-21 00:53:26,599 p=269323 u=administrator n=ansible INFO| TASK [Valider la configuration netplan (dry-run)] ********************************************************************
+2026-02-21 00:53:26,600 p=269323 u=administrator n=ansible INFO| samedi 21 février 2026  00:53:26 +0100 (0:00:01.594)       0:00:19.899 ******** 
+2026-02-21 00:53:28,526 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-21 00:53:28,562 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-21 00:53:28,584 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-21 00:53:28,593 p=269323 u=administrator n=ansible INFO| TASK [Afficher le résultat de la validation netplan] *****************************************************************
+2026-02-21 00:53:28,594 p=269323 u=administrator n=ansible INFO| samedi 21 février 2026  00:53:28 +0100 (0:00:01.993)       0:00:21.893 ******** 
+2026-02-21 00:53:28,647 p=269323 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-02-21 00:53:28,658 p=269323 u=administrator n=ansible INFO| skipping: [k3s-node-2]
+2026-02-21 00:53:28,678 p=269323 u=administrator n=ansible INFO| skipping: [k3s-node-3]
+2026-02-21 00:53:28,687 p=269323 u=administrator n=ansible INFO| TASK [Appliquer la configuration netplan] ****************************************************************************
+2026-02-21 00:53:28,687 p=269323 u=administrator n=ansible INFO| samedi 21 février 2026  00:53:28 +0100 (0:00:00.093)       0:00:21.987 ******** 
+2026-02-21 00:53:29,716 p=269323 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-02-21 00:53:29,718 p=269323 u=administrator n=ansible INFO| changed: [k3s-node-2]
+2026-02-21 00:53:29,735 p=269323 u=administrator n=ansible INFO| changed: [k3s-node-3]
+2026-02-21 00:53:29,750 p=269323 u=administrator n=ansible INFO| TASK [Attendre la stabilisation du réseau (LACP negociation)] ********************************************************
+2026-02-21 00:53:29,751 p=269323 u=administrator n=ansible INFO| samedi 21 février 2026  00:53:29 +0100 (0:00:01.063)       0:00:23.050 ******** 
+2026-02-21 00:53:50,655 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-1 -> localhost]
+2026-02-21 00:53:50,658 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-3 -> localhost]
+2026-02-21 00:53:50,670 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-2 -> localhost]
+2026-02-21 00:53:50,681 p=269323 u=administrator n=ansible INFO| TASK [Vérifier la reconnexion SSH après reconfiguration] *************************************************************
+2026-02-21 00:53:50,681 p=269323 u=administrator n=ansible INFO| samedi 21 février 2026  00:53:50 +0100 (0:00:20.930)       0:00:43.981 ******** 
+2026-02-21 00:53:57,040 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-21 00:53:57,042 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-21 00:53:57,042 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-21 00:53:57,056 p=269323 u=administrator n=ansible INFO| TASK [Vérifier l'état du bond (/proc/net/bonding/bond0)] *************************************************************
+2026-02-21 00:53:57,056 p=269323 u=administrator n=ansible INFO| samedi 21 février 2026  00:53:57 +0100 (0:00:06.375)       0:00:50.356 ******** 
+2026-02-21 00:53:57,607 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-21 00:53:57,612 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-21 00:53:57,658 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-21 00:53:57,673 p=269323 u=administrator n=ansible INFO| TASK [Afficher l'état du bond] ***************************************************************************************
+2026-02-21 00:53:57,673 p=269323 u=administrator n=ansible INFO| samedi 21 février 2026  00:53:57 +0100 (0:00:00.616)       0:00:50.973 ******** 
+2026-02-21 00:53:57,733 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  bond_status.stdout_lines:
+  - 'Ethernet Channel Bonding Driver: v6.17.0-14-generic'
+  - ''
+  - 'Bonding Mode: IEEE 802.3ad Dynamic link aggregation'
+  - 'Transmit Hash Policy: layer3+4 (1)'
+  - 'MII Status: up'
+  - 'MII Polling Interval (ms): 100'
+  - 'Up Delay (ms): 0'
+  - 'Down Delay (ms): 0'
+  - 'Peer Notification Delay (ms): 0'
+  - ''
+  - 802.3ad info
+  - 'LACP active: on'
+  - 'LACP rate: fast'
+  - 'Min links: 0'
+  - 'Aggregator selection policy (ad_select): stable'
+  - 'System priority: 65535'
+  - 'System MAC address: a2:93:63:88:46:fd'
+  - 'Active Aggregator Info:'
+  - "\tAggregator ID: 2"
+  - "\tNumber of ports: 3"
+  - "\tActor Key: 9"
+  - "\tPartner Key: 1"
+  - "\tPartner Mac Address: 14:d6:4d:19:cb:30"
+  - ''
+  - 'Slave Interface: enp10s0f1'
+  - 'MII Status: up'
+  - 'Speed: 1000 Mbps'
+  - 'Duplex: full'
+  - 'Link Failure Count: 3'
+  - 'Permanent HW addr: 00:1b:21:89:7c:48'
+  - 'Slave queue ID: 0'
+  - 'Aggregator ID: 2'
+  - 'Actor Churn State: none'
+  - 'Partner Churn State: none'
+  - 'Actor Churned Count: 0'
+  - 'Partner Churned Count: 0'
+  - 'details actor lacp pdu:'
+  - '    system priority: 65535'
+  - '    system mac address: a2:93:63:88:46:fd'
+  - '    port key: 9'
+  - '    port priority: 255'
+  - '    port number: 1'
+  - '    port state: 63'
+  - 'details partner lacp pdu:'
+  - '    system priority: 32768'
+  - '    system mac address: 14:d6:4d:19:cb:30'
+  - '    oper key: 1'
+  - '    port priority: 128'
+  - '    port number: 3'
+  - '    port state: 63'
+  - ''
+  - 'Slave Interface: enp11s0f1'
+  - 'MII Status: up'
+  - 'Speed: 1000 Mbps'
+  - 'Duplex: full'
+  - 'Link Failure Count: 1'
+  - 'Permanent HW addr: 00:1b:21:89:7c:4a'
+  - 'Slave queue ID: 0'
+  - 'Aggregator ID: 2'
+  - 'Actor Churn State: none'
+  - 'Partner Churn State: none'
+  - 'Actor Churned Count: 0'
+  - 'Partner Churned Count: 0'
+  - 'details actor lacp pdu:'
+  - '    system priority: 65535'
+  - '    system mac address: a2:93:63:88:46:fd'
+  - '    port key: 9'
+  - '    port priority: 255'
+  - '    port number: 2'
+  - '    port state: 63'
+  - 'details partner lacp pdu:'
+  - '    system priority: 32768'
+  - '    system mac address: 14:d6:4d:19:cb:30'
+  - '    oper key: 1'
+  - '    port priority: 128'
+  - '    port number: 2'
+  - '    port state: 63'
+  - ''
+  - 'Slave Interface: enp10s0f0'
+  - 'MII Status: up'
+  - 'Speed: 1000 Mbps'
+  - 'Duplex: full'
+  - 'Link Failure Count: 0'
+  - 'Permanent HW addr: 00:1b:21:89:7c:49'
+  - 'Slave queue ID: 0'
+  - 'Aggregator ID: 2'
+  - 'Actor Churn State: none'
+  - 'Partner Churn State: none'
+  - 'Actor Churned Count: 0'
+  - 'Partner Churned Count: 0'
+  - 'details actor lacp pdu:'
+  - '    system priority: 65535'
+  - '    system mac address: a2:93:63:88:46:fd'
+  - '    port key: 9'
+  - '    port priority: 255'
+  - '    port number: 3'
+  - '    port state: 63'
+  - 'details partner lacp pdu:'
+  - '    system priority: 32768'
+  - '    system mac address: 14:d6:4d:19:cb:30'
+  - '    oper key: 1'
+  - '    port priority: 128'
+  - '    port number: 4'
+  - '    port state: 63'
+  - ''
+  - 'Slave Interface: enp11s0f0'
+  - 'MII Status: down'
+  - 'Speed: Unknown'
+  - 'Duplex: Unknown'
+  - 'Link Failure Count: 0'
+  - 'Permanent HW addr: 00:1b:21:89:7c:4b'
+  - 'Slave queue ID: 0'
+  - 'Aggregator ID: 4'
+  - 'Actor Churn State: churned'
+  - 'Partner Churn State: churned'
+  - 'Actor Churned Count: 1'
+  - 'Partner Churned Count: 1'
+  - 'details actor lacp pdu:'
+  - '    system priority: 65535'
+  - '    system mac address: a2:93:63:88:46:fd'
+  - '    port key: 0'
+  - '    port priority: 255'
+  - '    port number: 4'
+  - '    port state: 71'
+  - 'details partner lacp pdu:'
+  - '    system priority: 65535'
+  - '    system mac address: 00:00:00:00:00:00'
+  - '    oper key: 1'
+  - '    port priority: 255'
+  - '    port number: 1'
+  - '    port state: 0'
+2026-02-21 00:53:57,743 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-2] => 
+  bond_status.stdout_lines:
+  - 'Ethernet Channel Bonding Driver: v6.17.0-14-generic'
+  - ''
+  - 'Bonding Mode: IEEE 802.3ad Dynamic link aggregation'
+  - 'Transmit Hash Policy: layer3+4 (1)'
+  - 'MII Status: up'
+  - 'MII Polling Interval (ms): 100'
+  - 'Up Delay (ms): 0'
+  - 'Down Delay (ms): 0'
+  - 'Peer Notification Delay (ms): 0'
+  - ''
+  - 802.3ad info
+  - 'LACP active: on'
+  - 'LACP rate: fast'
+  - 'Min links: 0'
+  - 'Aggregator selection policy (ad_select): stable'
+  - 'System priority: 65535'
+  - 'System MAC address: d6:40:8a:16:11:70'
+  - 'Active Aggregator Info:'
+  - "\tAggregator ID: 2"
+  - "\tNumber of ports: 4"
+  - "\tActor Key: 9"
+  - "\tPartner Key: 2"
+  - "\tPartner Mac Address: 14:d6:4d:19:cb:30"
+  - ''
+  - 'Slave Interface: enp10s0f1'
+  - 'MII Status: up'
+  - 'Speed: 1000 Mbps'
+  - 'Duplex: full'
+  - 'Link Failure Count: 0'
+  - 'Permanent HW addr: 00:10:18:df:93:4a'
+  - 'Slave queue ID: 0'
+  - 'Aggregator ID: 2'
+  - 'Actor Churn State: none'
+  - 'Partner Churn State: none'
+  - 'Actor Churned Count: 0'
+  - 'Partner Churned Count: 0'
+  - 'details actor lacp pdu:'
+  - '    system priority: 65535'
+  - '    system mac address: d6:40:8a:16:11:70'
+  - '    port key: 9'
+  - '    port priority: 255'
+  - '    port number: 1'
+  - '    port state: 63'
+  - 'details partner lacp pdu:'
+  - '    system priority: 32768'
+  - '    system mac address: 14:d6:4d:19:cb:30'
+  - '    oper key: 2'
+  - '    port priority: 128'
+  - '    port number: 6'
+  - '    port state: 63'
+  - ''
+  - 'Slave Interface: enp11s0f0'
+  - 'MII Status: up'
+  - 'Speed: 1000 Mbps'
+  - 'Duplex: full'
+  - 'Link Failure Count: 0'
+  - 'Permanent HW addr: 00:10:18:df:93:4c'
+  - 'Slave queue ID: 0'
+  - 'Aggregator ID: 2'
+  - 'Actor Churn State: none'
+  - 'Partner Churn State: none'
+  - 'Actor Churned Count: 0'
+  - 'Partner Churned Count: 0'
+  - 'details actor lacp pdu:'
+  - '    system priority: 65535'
+  - '    system mac address: d6:40:8a:16:11:70'
+  - '    port key: 9'
+  - '    port priority: 255'
+  - '    port number: 2'
+  - '    port state: 63'
+  - 'details partner lacp pdu:'
+  - '    system priority: 32768'
+  - '    system mac address: 14:d6:4d:19:cb:30'
+  - '    oper key: 2'
+  - '    port priority: 128'
+  - '    port number: 5'
+  - '    port state: 63'
+  - ''
+  - 'Slave Interface: enp10s0f0'
+  - 'MII Status: up'
+  - 'Speed: 1000 Mbps'
+  - 'Duplex: full'
+  - 'Link Failure Count: 0'
+  - 'Permanent HW addr: 00:10:18:df:93:48'
+  - 'Slave queue ID: 0'
+  - 'Aggregator ID: 2'
+  - 'Actor Churn State: none'
+  - 'Partner Churn State: none'
+  - 'Actor Churned Count: 0'
+  - 'Partner Churned Count: 0'
+  - 'details actor lacp pdu:'
+  - '    system priority: 65535'
+  - '    system mac address: d6:40:8a:16:11:70'
+  - '    port key: 9'
+  - '    port priority: 255'
+  - '    port number: 3'
+  - '    port state: 63'
+  - 'details partner lacp pdu:'
+  - '    system priority: 32768'
+  - '    system mac address: 14:d6:4d:19:cb:30'
+  - '    oper key: 2'
+  - '    port priority: 128'
+  - '    port number: 8'
+  - '    port state: 63'
+  - ''
+  - 'Slave Interface: enp11s0f1'
+  - 'MII Status: up'
+  - 'Speed: 1000 Mbps'
+  - 'Duplex: full'
+  - 'Link Failure Count: 0'
+  - 'Permanent HW addr: 00:10:18:df:93:4e'
+  - 'Slave queue ID: 0'
+  - 'Aggregator ID: 2'
+  - 'Actor Churn State: none'
+  - 'Partner Churn State: none'
+  - 'Actor Churned Count: 0'
+  - 'Partner Churned Count: 0'
+  - 'details actor lacp pdu:'
+  - '    system priority: 65535'
+  - '    system mac address: d6:40:8a:16:11:70'
+  - '    port key: 9'
+  - '    port priority: 255'
+  - '    port number: 4'
+  - '    port state: 63'
+  - 'details partner lacp pdu:'
+  - '    system priority: 32768'
+  - '    system mac address: 14:d6:4d:19:cb:30'
+  - '    oper key: 2'
+  - '    port priority: 128'
+  - '    port number: 7'
+  - '    port state: 63'
+2026-02-21 00:53:57,765 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-3] => 
+  bond_status.stdout_lines:
+  - 'Ethernet Channel Bonding Driver: v6.17.0-14-generic'
+  - ''
+  - 'Bonding Mode: IEEE 802.3ad Dynamic link aggregation'
+  - 'Transmit Hash Policy: layer3+4 (1)'
+  - 'MII Status: up'
+  - 'MII Polling Interval (ms): 100'
+  - 'Up Delay (ms): 0'
+  - 'Down Delay (ms): 0'
+  - 'Peer Notification Delay (ms): 0'
+  - ''
+  - 802.3ad info
+  - 'LACP active: on'
+  - 'LACP rate: fast'
+  - 'Min links: 0'
+  - 'Aggregator selection policy (ad_select): stable'
+  - 'System priority: 65535'
+  - 'System MAC address: b6:22:8f:d0:c6:3c'
+  - 'Active Aggregator Info:'
+  - "\tAggregator ID: 1"
+  - "\tNumber of ports: 4"
+  - "\tActor Key: 9"
+  - "\tPartner Key: 3"
+  - "\tPartner Mac Address: 14:d6:4d:19:cb:30"
+  - ''
+  - 'Slave Interface: enp11s0f1'
+  - 'MII Status: up'
+  - 'Speed: 1000 Mbps'
+  - 'Duplex: full'
+  - 'Link Failure Count: 0'
+  - 'Permanent HW addr: 00:15:17:f9:87:06'
+  - 'Slave queue ID: 0'
+  - 'Aggregator ID: 1'
+  - 'Actor Churn State: none'
+  - 'Partner Churn State: none'
+  - 'Actor Churned Count: 0'
+  - 'Partner Churned Count: 0'
+  - 'details actor lacp pdu:'
+  - '    system priority: 65535'
+  - '    system mac address: b6:22:8f:d0:c6:3c'
+  - '    port key: 9'
+  - '    port priority: 255'
+  - '    port number: 1'
+  - '    port state: 63'
+  - 'details partner lacp pdu:'
+  - '    system priority: 32768'
+  - '    system mac address: 14:d6:4d:19:cb:30'
+  - '    oper key: 3'
+  - '    port priority: 128'
+  - '    port number: 10'
+  - '    port state: 63'
+  - ''
+  - 'Slave Interface: enp10s0f0'
+  - 'MII Status: up'
+  - 'Speed: 1000 Mbps'
+  - 'Duplex: full'
+  - 'Link Failure Count: 2'
+  - 'Permanent HW addr: 00:15:17:f9:87:05'
+  - 'Slave queue ID: 0'
+  - 'Aggregator ID: 1'
+  - 'Actor Churn State: none'
+  - 'Partner Churn State: none'
+  - 'Actor Churned Count: 0'
+  - 'Partner Churned Count: 0'
+  - 'details actor lacp pdu:'
+  - '    system priority: 65535'
+  - '    system mac address: b6:22:8f:d0:c6:3c'
+  - '    port key: 9'
+  - '    port priority: 255'
+  - '    port number: 2'
+  - '    port state: 63'
+  - 'details partner lacp pdu:'
+  - '    system priority: 32768'
+  - '    system mac address: 14:d6:4d:19:cb:30'
+  - '    oper key: 3'
+  - '    port priority: 128'
+  - '    port number: 12'
+  - '    port state: 63'
+  - ''
+  - 'Slave Interface: enp11s0f0'
+  - 'MII Status: up'
+  - 'Speed: 1000 Mbps'
+  - 'Duplex: full'
+  - 'Link Failure Count: 0'
+  - 'Permanent HW addr: 00:15:17:f9:87:07'
+  - 'Slave queue ID: 0'
+  - 'Aggregator ID: 1'
+  - 'Actor Churn State: none'
+  - 'Partner Churn State: none'
+  - 'Actor Churned Count: 0'
+  - 'Partner Churned Count: 0'
+  - 'details actor lacp pdu:'
+  - '    system priority: 65535'
+  - '    system mac address: b6:22:8f:d0:c6:3c'
+  - '    port key: 9'
+  - '    port priority: 255'
+  - '    port number: 3'
+  - '    port state: 63'
+  - 'details partner lacp pdu:'
+  - '    system priority: 32768'
+  - '    system mac address: 14:d6:4d:19:cb:30'
+  - '    oper key: 3'
+  - '    port priority: 128'
+  - '    port number: 9'
+  - '    port state: 63'
+  - ''
+  - 'Slave Interface: enp10s0f1'
+  - 'MII Status: up'
+  - 'Speed: 1000 Mbps'
+  - 'Duplex: full'
+  - 'Link Failure Count: 2'
+  - 'Permanent HW addr: 00:15:17:f9:87:04'
+  - 'Slave queue ID: 0'
+  - 'Aggregator ID: 1'
+  - 'Actor Churn State: none'
+  - 'Partner Churn State: none'
+  - 'Actor Churned Count: 0'
+  - 'Partner Churned Count: 0'
+  - 'details actor lacp pdu:'
+  - '    system priority: 65535'
+  - '    system mac address: b6:22:8f:d0:c6:3c'
+  - '    port key: 9'
+  - '    port priority: 255'
+  - '    port number: 4'
+  - '    port state: 63'
+  - 'details partner lacp pdu:'
+  - '    system priority: 32768'
+  - '    system mac address: 14:d6:4d:19:cb:30'
+  - '    oper key: 3'
+  - '    port priority: 128'
+  - '    port number: 11'
+  - '    port state: 63'
+2026-02-21 00:53:57,779 p=269323 u=administrator n=ansible INFO| TASK [Vérifier les interfaces réseau] ********************************************************************************
+2026-02-21 00:53:57,780 p=269323 u=administrator n=ansible INFO| samedi 21 février 2026  00:53:57 +0100 (0:00:00.106)       0:00:51.079 ******** 
+2026-02-21 00:53:58,340 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-21 00:53:58,350 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-21 00:53:58,373 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-21 00:53:58,383 p=269323 u=administrator n=ansible INFO| TASK [Afficher les interfaces] ***************************************************************************************
+2026-02-21 00:53:58,383 p=269323 u=administrator n=ansible INFO| samedi 21 février 2026  00:53:58 +0100 (0:00:00.603)       0:00:51.683 ******** 
+2026-02-21 00:53:58,430 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  ip_addr.stdout_lines:
+  - '1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000'
+  - '    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00'
+  - '    inet 127.0.0.1/8 scope host lo'
+  - '       valid_lft forever preferred_lft forever'
+  - '    inet6 ::1/128 scope host proto kernel_lo '
+  - '       valid_lft forever preferred_lft forever'
+  - '2: eno1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000'
+  - '    link/ether 98:90:96:d5:d6:7e brd ff:ff:ff:ff:ff:ff'
+  - '    altname enp0s25'
+  - '    altname enx989096d5d67e'
+  - '    inet 192.168.0.173/24 metric 100 brd 192.168.0.255 scope global dynamic eno1'
+  - '       valid_lft 691175sec preferred_lft 691175sec'
+  - '    inet6 2a01:e0a:285:b790:9a90:96ff:fed5:d67e/64 scope global dynamic mngtmpaddr noprefixroute '
+  - '       valid_lft 86375sec preferred_lft 86375sec'
+  - '    inet6 fe80::9a90:96ff:fed5:d67e/64 scope link proto kernel_ll '
+  - '       valid_lft forever preferred_lft forever'
+  - '3: enp10s0f0: <BROADCAST,MULTICAST,SLAVE,UP,LOWER_UP> mtu 1500 qdisc fq_codel master bond0 state UP group default qlen 1000'
+  - '    link/ether a2:93:63:88:46:fd brd ff:ff:ff:ff:ff:ff permaddr 00:1b:21:89:7c:49'
+  - '    altname enx001b21897c49'
+  - '4: enp10s0f1: <BROADCAST,MULTICAST,SLAVE,UP,LOWER_UP> mtu 1500 qdisc fq_codel master bond0 state UP group default qlen 1000'
+  - '    link/ether a2:93:63:88:46:fd brd ff:ff:ff:ff:ff:ff permaddr 00:1b:21:89:7c:48'
+  - '    altname enx001b21897c48'
+  - '5: enp11s0f0: <NO-CARRIER,BROADCAST,MULTICAST,SLAVE,UP> mtu 1500 qdisc fq_codel master bond0 state DOWN group default qlen 1000'
+  - '    link/ether a2:93:63:88:46:fd brd ff:ff:ff:ff:ff:ff permaddr 00:1b:21:89:7c:4b'
+  - '    altname enx001b21897c4b'
+  - '6: enp11s0f1: <BROADCAST,MULTICAST,SLAVE,UP,LOWER_UP> mtu 1500 qdisc fq_codel master bond0 state UP group default qlen 1000'
+  - '    link/ether a2:93:63:88:46:fd brd ff:ff:ff:ff:ff:ff permaddr 00:1b:21:89:7c:4a'
+  - '    altname enx001b21897c4a'
+  - '7: tunl0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000'
+  - '    link/ipip 0.0.0.0 brd 0.0.0.0'
+  - '8: bond0: <BROADCAST,MULTICAST,MASTER,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default qlen 1000'
+  - '    link/ether a2:93:63:88:46:fd brd ff:ff:ff:ff:ff:ff'
+  - '    inet 192.168.0.11/24 brd 192.168.0.255 scope global bond0'
+  - '       valid_lft forever preferred_lft forever'
+  - '    inet6 2a01:e0a:285:b790:a093:63ff:fe88:46fd/64 scope global dynamic mngtmpaddr noprefixroute '
+  - '       valid_lft 86375sec preferred_lft 86375sec'
+  - '    inet6 fe80::a093:63ff:fe88:46fd/64 scope link proto kernel_ll '
+  - '       valid_lft forever preferred_lft forever'
+  - '9: flannel.1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue state UNKNOWN group default '
+  - '    link/ether 26:f7:7a:50:59:27 brd ff:ff:ff:ff:ff:ff'
+  - '    inet 10.42.0.0/32 scope global flannel.1'
+  - '       valid_lft forever preferred_lft forever'
+  - '    inet6 fe80::24f7:7aff:fe50:5927/64 scope link proto kernel_ll '
+  - '       valid_lft forever preferred_lft forever'
+  - '10: cni0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue state UP group default qlen 1000'
+  - '    link/ether 66:fb:e3:80:6b:3f brd ff:ff:ff:ff:ff:ff'
+  - '    inet 10.42.0.1/24 brd 10.42.0.255 scope global cni0'
+  - '       valid_lft forever preferred_lft forever'
+  - '    inet6 fe80::64fb:e3ff:fe80:6b3f/64 scope link proto kernel_ll '
+  - '       valid_lft forever preferred_lft forever'
+  - '11: veth36045f38@if3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue master cni0 state UP group default '
+  - '    link/ether a2:27:27:d6:92:02 brd ff:ff:ff:ff:ff:ff link-netns cni-3f09aa1a-7ee2-34ae-e0a7-9e133541cea9'
+  - '    inet6 fe80::a027:27ff:fed6:9202/64 scope link proto kernel_ll '
+  - '       valid_lft forever preferred_lft forever'
+  - '12: veth29e2855c@if3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue master cni0 state UP group default '
+  - '    link/ether 36:b3:5d:36:dc:5a brd ff:ff:ff:ff:ff:ff link-netns cni-9c9a5e6b-67d5-fdc6-1e7f-0a206e0b1f1a'
+  - '    inet6 fe80::34b3:5dff:fe36:dc5a/64 scope link proto kernel_ll '
+  - '       valid_lft forever preferred_lft forever'
+  - '13: veth21c9a622@if3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue master cni0 state UP group default '
+  - '    link/ether 3a:81:27:32:e0:eb brd ff:ff:ff:ff:ff:ff link-netns cni-34aa9c77-5598-74a1-396e-7842e43fa78a'
+  - '    inet6 fe80::3881:27ff:fe32:e0eb/64 scope link proto kernel_ll '
+  - '       valid_lft forever preferred_lft forever'
+  - '14: veth537e694d@if3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue master cni0 state UP group default '
+  - '    link/ether 46:34:27:fb:7a:1d brd ff:ff:ff:ff:ff:ff link-netns cni-6de02d39-2c9c-6c6d-3bd2-bfa527c16a1b'
+  - '    inet6 fe80::84de:f9ff:fe81:1713/64 scope link proto kernel_ll '
+  - '       valid_lft forever preferred_lft forever'
+2026-02-21 00:53:58,438 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-2] => 
+  ip_addr.stdout_lines:
+  - '1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000'
+  - '    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00'
+  - '    inet 127.0.0.1/8 scope host lo'
+  - '       valid_lft forever preferred_lft forever'
+  - '2: enp10s0f0: <BROADCAST,MULTICAST,SLAVE,UP,LOWER_UP> mtu 1500 qdisc mq master bond0 state UP group default qlen 1000'
+  - '    link/ether d6:40:8a:16:11:70 brd ff:ff:ff:ff:ff:ff permaddr 00:10:18:df:93:48'
+  - '    altname enx001018df9348'
+  - '3: enp10s0f1: <BROADCAST,MULTICAST,SLAVE,UP,LOWER_UP> mtu 1500 qdisc mq master bond0 state UP group default qlen 1000'
+  - '    link/ether d6:40:8a:16:11:70 brd ff:ff:ff:ff:ff:ff permaddr 00:10:18:df:93:4a'
+  - '    altname enx001018df934a'
+  - '4: enp11s0f0: <BROADCAST,MULTICAST,SLAVE,UP,LOWER_UP> mtu 1500 qdisc mq master bond0 state UP group default qlen 1000'
+  - '    link/ether d6:40:8a:16:11:70 brd ff:ff:ff:ff:ff:ff permaddr 00:10:18:df:93:4c'
+  - '    altname enx001018df934c'
+  - '5: enp11s0f1: <BROADCAST,MULTICAST,SLAVE,UP,LOWER_UP> mtu 1500 qdisc mq master bond0 state UP group default qlen 1000'
+  - '    link/ether d6:40:8a:16:11:70 brd ff:ff:ff:ff:ff:ff permaddr 00:10:18:df:93:4e'
+  - '    altname enx001018df934e'
+  - '6: eno1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000'
+  - '    link/ether b8:ca:3a:a3:fe:7c brd ff:ff:ff:ff:ff:ff'
+  - '    altname enp0s25'
+  - '    altname enxb8ca3aa3fe7c'
+  - '    inet 192.168.0.160/24 metric 100 brd 192.168.0.255 scope global dynamic eno1'
+  - '       valid_lft 691175sec preferred_lft 691175sec'
+  - '    inet6 2a01:e0a:285:b790:baca:3aff:fea3:fe7c/64 scope global dynamic mngtmpaddr noprefixroute '
+  - '       valid_lft 86376sec preferred_lft 86376sec'
+  - '    inet6 fe80::baca:3aff:fea3:fe7c/64 scope link proto kernel_ll '
+  - '       valid_lft forever preferred_lft forever'
+  - '7: tunl0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000'
+  - '    link/ipip 0.0.0.0 brd 0.0.0.0'
+  - '8: bond0: <BROADCAST,MULTICAST,MASTER,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default qlen 1000'
+  - '    link/ether d6:40:8a:16:11:70 brd ff:ff:ff:ff:ff:ff'
+  - '    inet 192.168.0.12/24 brd 192.168.0.255 scope global bond0'
+  - '       valid_lft forever preferred_lft forever'
+  - '    inet6 2a01:e0a:285:b790:d440:8aff:fe16:1170/64 scope global dynamic mngtmpaddr noprefixroute '
+  - '       valid_lft 86376sec preferred_lft 86376sec'
+  - '    inet6 fe80::d440:8aff:fe16:1170/64 scope link proto kernel_ll '
+  - '       valid_lft forever preferred_lft forever'
+  - '9: flannel.1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue state UNKNOWN group default '
+  - '    link/ether e2:f1:19:d7:96:82 brd ff:ff:ff:ff:ff:ff'
+  - '    inet 10.42.1.0/32 scope global flannel.1'
+  - '       valid_lft forever preferred_lft forever'
+  - '10: cni0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue state UP group default qlen 1000'
+  - '    link/ether 72:16:b8:18:61:e7 brd ff:ff:ff:ff:ff:ff'
+  - '    inet 10.42.1.1/24 brd 10.42.1.255 scope global cni0'
+  - '       valid_lft forever preferred_lft forever'
+  - '11: veth5d4d7f65@if3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue master cni0 state UP group default '
+  - '    link/ether 2a:87:10:de:57:27 brd ff:ff:ff:ff:ff:ff link-netns cni-7429e072-97b2-6bfa-5894-4da125407cc3'
+  - '13: veth1a327c1f@if3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue master cni0 state UP group default '
+  - '    link/ether 7a:1f:bd:e7:66:23 brd ff:ff:ff:ff:ff:ff link-netns cni-48667f78-f19f-d3f6-3c73-12be21ab80f1'
+  - '14: vethc52565c1@if3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue master cni0 state UP group default '
+  - '    link/ether aa:a4:d0:ce:9c:82 brd ff:ff:ff:ff:ff:ff link-netns cni-02debf26-60c9-a9ad-5841-daf58bbb97e2'
+  - '33: vethd50e2f13@if3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue master cni0 state UP group default '
+  - '    link/ether 0e:d6:37:6e:7f:88 brd ff:ff:ff:ff:ff:ff link-netns cni-758941db-05b9-e3df-b183-e0bce4fc2345'
+  - '34: vethab347104@if3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue master cni0 state UP group default '
+  - '    link/ether 1e:2d:a1:a4:81:fe brd ff:ff:ff:ff:ff:ff link-netns cni-b0789b32-d1ab-613f-5abc-de68b4706cde'
+2026-02-21 00:53:58,454 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-3] => 
+  ip_addr.stdout_lines:
+  - '1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000'
+  - '    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00'
+  - '    inet 127.0.0.1/8 scope host lo'
+  - '       valid_lft forever preferred_lft forever'
+  - '2: eno1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000'
+  - '    link/ether f8:b1:56:ad:48:35 brd ff:ff:ff:ff:ff:ff'
+  - '    altname enp0s25'
+  - '    altname enxf8b156ad4835'
+  - '    inet 192.168.0.161/24 metric 100 brd 192.168.0.255 scope global dynamic eno1'
+  - '       valid_lft 691175sec preferred_lft 691175sec'
+  - '    inet6 2a01:e0a:285:b790:fab1:56ff:fead:4835/64 scope global dynamic mngtmpaddr noprefixroute '
+  - '       valid_lft 86376sec preferred_lft 86376sec'
+  - '    inet6 fe80::fab1:56ff:fead:4835/64 scope link proto kernel_ll '
+  - '       valid_lft forever preferred_lft forever'
+  - '3: enp10s0f0: <BROADCAST,MULTICAST,SLAVE,UP,LOWER_UP> mtu 1500 qdisc fq_codel master bond0 state UP group default qlen 1000'
+  - '    link/ether b6:22:8f:d0:c6:3c brd ff:ff:ff:ff:ff:ff permaddr 00:15:17:f9:87:05'
+  - '    altname enx001517f98705'
+  - '4: enp10s0f1: <BROADCAST,MULTICAST,SLAVE,UP,LOWER_UP> mtu 1500 qdisc fq_codel master bond0 state UP group default qlen 1000'
+  - '    link/ether b6:22:8f:d0:c6:3c brd ff:ff:ff:ff:ff:ff permaddr 00:15:17:f9:87:04'
+  - '    altname enx001517f98704'
+  - '5: enp11s0f0: <BROADCAST,MULTICAST,SLAVE,UP,LOWER_UP> mtu 1500 qdisc fq_codel master bond0 state UP group default qlen 1000'
+  - '    link/ether b6:22:8f:d0:c6:3c brd ff:ff:ff:ff:ff:ff permaddr 00:15:17:f9:87:07'
+  - '    altname enx001517f98707'
+  - '6: enp11s0f1: <BROADCAST,MULTICAST,SLAVE,UP,LOWER_UP> mtu 1500 qdisc fq_codel master bond0 state UP group default qlen 1000'
+  - '    link/ether b6:22:8f:d0:c6:3c brd ff:ff:ff:ff:ff:ff permaddr 00:15:17:f9:87:06'
+  - '    altname enx001517f98706'
+  - '7: tunl0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000'
+  - '    link/ipip 0.0.0.0 brd 0.0.0.0'
+  - '8: bond0: <BROADCAST,MULTICAST,MASTER,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default qlen 1000'
+  - '    link/ether b6:22:8f:d0:c6:3c brd ff:ff:ff:ff:ff:ff'
+  - '    inet 192.168.0.13/24 brd 192.168.0.255 scope global bond0'
+  - '       valid_lft forever preferred_lft forever'
+  - '    inet6 2a01:e0a:285:b790:b422:8fff:fed0:c63c/64 scope global dynamic mngtmpaddr noprefixroute '
+  - '       valid_lft 86376sec preferred_lft 86376sec'
+  - '    inet6 fe80::b422:8fff:fed0:c63c/64 scope link proto kernel_ll '
+  - '       valid_lft forever preferred_lft forever'
+  - '9: flannel.1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue state UNKNOWN group default '
+  - '    link/ether ea:17:56:b0:12:f8 brd ff:ff:ff:ff:ff:ff'
+  - '    inet 10.42.2.0/32 scope global flannel.1'
+  - '       valid_lft forever preferred_lft forever'
+  - '10: cni0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue state UP group default qlen 1000'
+  - '    link/ether c6:84:e2:0a:9f:12 brd ff:ff:ff:ff:ff:ff'
+  - '    inet 10.42.2.1/24 brd 10.42.2.255 scope global cni0'
+  - '       valid_lft forever preferred_lft forever'
+  - '12: veth2a3b7ade@if3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue master cni0 state UP group default '
+  - '    link/ether 96:90:ba:87:c0:5b brd ff:ff:ff:ff:ff:ff link-netns cni-8c1de0ec-7522-9854-cbd6-b5a92c7da702'
+  - '13: vethec8b471d@if3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue master cni0 state UP group default '
+  - '    link/ether b6:95:20:54:1f:73 brd ff:ff:ff:ff:ff:ff link-netns cni-a6e81a42-674d-5fce-b214-3e7a7ed91826'
+  - '22: veth9eaad5ff@if3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1450 qdisc noqueue master cni0 state UP group default '
+  - '    link/ether 16:7d:f5:08:d3:07 brd ff:ff:ff:ff:ff:ff link-netns cni-d4f368c6-a040-d2b2-3bee-9be9767660d6'
+2026-02-21 00:53:58,463 p=269323 u=administrator n=ansible INFO| TASK [Vérifier la table de routage] **********************************************************************************
+2026-02-21 00:53:58,463 p=269323 u=administrator n=ansible INFO| samedi 21 février 2026  00:53:58 +0100 (0:00:00.080)       0:00:51.763 ******** 
+2026-02-21 00:53:58,999 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-21 00:53:59,013 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-21 00:53:59,048 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-21 00:53:59,063 p=269323 u=administrator n=ansible INFO| TASK [Afficher les routes] *******************************************************************************************
+2026-02-21 00:53:59,063 p=269323 u=administrator n=ansible INFO| samedi 21 février 2026  00:53:59 +0100 (0:00:00.599)       0:00:52.363 ******** 
+2026-02-21 00:53:59,110 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  ip_route.stdout_lines:
+  - 'default via 192.168.0.254 dev bond0 proto static metric 100 '
+  - 'default via 192.168.0.254 dev eno1 proto dhcp src 192.168.0.173 metric 100 '
+  - '10.42.0.0/24 dev cni0 proto kernel scope link src 10.42.0.1 '
+  - '10.42.1.0/24 via 10.42.1.0 dev flannel.1 onlink '
+  - '10.42.2.0/24 via 10.42.2.0 dev flannel.1 onlink '
+  - '192.168.0.0/24 dev bond0 proto kernel scope link src 192.168.0.11 '
+  - '192.168.0.0/24 dev eno1 proto kernel scope link src 192.168.0.173 metric 100 '
+  - '192.168.0.21 dev eno1 proto dhcp scope link src 192.168.0.173 metric 100 '
+  - '192.168.0.254 dev eno1 proto dhcp scope link src 192.168.0.173 metric 100 '
+2026-02-21 00:53:59,124 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-2] => 
+  ip_route.stdout_lines:
+  - 'default via 192.168.0.254 dev bond0 proto static metric 100 '
+  - 'default via 192.168.0.254 dev eno1 proto dhcp src 192.168.0.160 metric 100 '
+  - '10.42.0.0/24 via 10.42.0.0 dev flannel.1 onlink '
+  - '10.42.1.0/24 dev cni0 proto kernel scope link src 10.42.1.1 '
+  - '10.42.2.0/24 via 10.42.2.0 dev flannel.1 onlink '
+  - '192.168.0.0/24 dev bond0 proto kernel scope link src 192.168.0.12 '
+  - '192.168.0.0/24 dev eno1 proto kernel scope link src 192.168.0.160 metric 100 '
+  - '192.168.0.21 dev eno1 proto dhcp scope link src 192.168.0.160 metric 100 '
+  - '192.168.0.254 dev eno1 proto dhcp scope link src 192.168.0.160 metric 100 '
+2026-02-21 00:53:59,139 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-3] => 
+  ip_route.stdout_lines:
+  - 'default via 192.168.0.254 dev bond0 proto static metric 100 '
+  - 'default via 192.168.0.254 dev eno1 proto dhcp src 192.168.0.161 metric 100 '
+  - '10.42.0.0/24 via 10.42.0.0 dev flannel.1 onlink '
+  - '10.42.1.0/24 via 10.42.1.0 dev flannel.1 onlink '
+  - '10.42.2.0/24 dev cni0 proto kernel scope link src 10.42.2.1 '
+  - '192.168.0.0/24 dev bond0 proto kernel scope link src 192.168.0.13 '
+  - '192.168.0.0/24 dev eno1 proto kernel scope link src 192.168.0.161 metric 100 '
+  - '192.168.0.21 dev eno1 proto dhcp scope link src 192.168.0.161 metric 100 '
+  - '192.168.0.254 dev eno1 proto dhcp scope link src 192.168.0.161 metric 100 '
+2026-02-21 00:53:59,149 p=269323 u=administrator n=ansible INFO| TASK [Tester la joignabilité de la gateway] **************************************************************************
+2026-02-21 00:53:59,149 p=269323 u=administrator n=ansible INFO| samedi 21 février 2026  00:53:59 +0100 (0:00:00.085)       0:00:52.449 ******** 
+2026-02-21 00:54:01,769 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-21 00:54:01,778 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-21 00:54:01,816 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-21 00:54:01,830 p=269323 u=administrator n=ansible INFO| TASK [Tester la joignabilité du DNS] *********************************************************************************
+2026-02-21 00:54:01,830 p=269323 u=administrator n=ansible INFO| samedi 21 février 2026  00:54:01 +0100 (0:00:02.681)       0:00:55.130 ******** 
+2026-02-21 00:54:04,430 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-21 00:54:04,455 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-21 00:54:04,457 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-21 00:54:04,468 p=269323 u=administrator n=ansible INFO| TASK [Résumé de configuration réseau] ********************************************************************************
+2026-02-21 00:54:04,468 p=269323 u=administrator n=ansible INFO| samedi 21 février 2026  00:54:04 +0100 (0:00:02.637)       0:00:57.768 ******** 
+2026-02-21 00:54:04,542 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg:
+  - === Configuration réseau OK sur k3s-node-1 ===
+  - 'bond0      : 192.168.0.11/24'
+  - 'Gateway    : 192.168.0.254 (OK)'
+  - 'DNS        : 8.8.8.8 (OK)'
+  - 'Interfaces : 4 ports LACP'
+2026-02-21 00:54:04,554 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-2] => 
+  msg:
+  - === Configuration réseau OK sur k3s-node-2 ===
+  - 'bond0      : 192.168.0.12/24'
+  - 'Gateway    : 192.168.0.254 (OK)'
+  - 'DNS        : 8.8.8.8 (OK)'
+  - 'Interfaces : 4 ports LACP'
+2026-02-21 00:54:04,574 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-3] => 
+  msg:
+  - === Configuration réseau OK sur k3s-node-3 ===
+  - 'bond0      : 192.168.0.13/24'
+  - 'Gateway    : 192.168.0.254 (OK)'
+  - 'DNS        : 8.8.8.8 (OK)'
+  - 'Interfaces : 4 ports LACP'
+2026-02-21 00:54:04,589 p=269323 u=administrator n=ansible INFO| TASK [Supprimer les anciennes entrées k3s-node incorrectes de /etc/hosts] ********************************************
+2026-02-21 00:54:04,589 p=269323 u=administrator n=ansible INFO| samedi 21 février 2026  00:54:04 +0100 (0:00:00.120)       0:00:57.889 ******** 
+2026-02-21 00:54:05,451 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-21 00:54:05,454 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-21 00:54:05,455 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-21 00:54:05,468 p=269323 u=administrator n=ansible INFO| TASK [Mettre à jour /etc/hosts avec les IPs cluster] *****************************************************************
+2026-02-21 00:54:05,468 p=269323 u=administrator n=ansible INFO| samedi 21 février 2026  00:54:05 +0100 (0:00:00.879)       0:00:58.768 ******** 
+2026-02-21 00:54:06,329 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-2]
+2026-02-21 00:54:06,330 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-3]
+2026-02-21 00:54:06,345 p=269323 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-02-21 00:54:06,347 p=269323 u=administrator n=ansible INFO| PLAY RECAP ***********************************************************************************************************
+2026-02-21 00:54:06,347 p=269323 u=administrator n=ansible INFO| k3s-node-1                 : ok=23   changed=2    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0   
+2026-02-21 00:54:06,348 p=269323 u=administrator n=ansible INFO| k3s-node-2                 : ok=23   changed=2    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0   
+2026-02-21 00:54:06,348 p=269323 u=administrator n=ansible INFO| k3s-node-3                 : ok=23   changed=2    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0   
+2026-02-21 00:54:06,348 p=269323 u=administrator n=ansible INFO| PLAYBOOK RECAP *******************************************************************************************************
+2026-02-21 00:54:06,348 p=269323 u=administrator n=ansible INFO| Playbook run took 0 days, 0 hours, 0 minutes, 59 seconds
+
+2026-02-21 00:54:06,349 p=269323 u=administrator n=ansible INFO| TASKS RECAP **********************************************************************************************************
+2026-02-21 00:54:06,349 p=269323 u=administrator n=ansible INFO| samedi 21 février 2026  00:54:06 +0100 (0:00:00.880)       0:00:59.648 ******** 
+2026-02-21 00:54:06,349 p=269323 u=administrator n=ansible INFO| =============================================================================== 
+2026-02-21 00:54:06,349 p=269323 u=administrator n=ansible INFO| Attendre la stabilisation du réseau (LACP negociation) ------------------------------------------------------- 20.93s
+2026-02-21 00:54:06,349 p=269323 u=administrator n=ansible INFO| Installer les packages réseau requis -------------------------------------------------------------------------- 9.34s
+2026-02-21 00:54:06,349 p=269323 u=administrator n=ansible INFO| Vérifier la reconnexion SSH après reconfiguration ------------------------------------------------------------- 6.38s
+2026-02-21 00:54:06,350 p=269323 u=administrator n=ansible INFO| Gathering Facts ----------------------------------------------------------------------------------------------- 4.02s
+2026-02-21 00:54:06,350 p=269323 u=administrator n=ansible INFO| Tester la joignabilité de la gateway -------------------------------------------------------------------------- 2.68s
+2026-02-21 00:54:06,350 p=269323 u=administrator n=ansible INFO| Tester la joignabilité du DNS --------------------------------------------------------------------------------- 2.64s
+2026-02-21 00:54:06,350 p=269323 u=administrator n=ansible INFO| Valider la configuration netplan (dry-run) -------------------------------------------------------------------- 1.99s
+2026-02-21 00:54:06,350 p=269323 u=administrator n=ansible INFO| Rendre le module bonding persistant au démarrage -------------------------------------------------------------- 1.79s
+2026-02-21 00:54:06,350 p=269323 u=administrator n=ansible INFO| Déployer la configuration netplan bond0 (LACP) ---------------------------------------------------------------- 1.60s
+2026-02-21 00:54:06,351 p=269323 u=administrator n=ansible INFO| Vérifier si NetworkManager est installé ----------------------------------------------------------------------- 1.38s
+2026-02-21 00:54:06,351 p=269323 u=administrator n=ansible INFO| Appliquer la configuration netplan ---------------------------------------------------------------------------- 1.06s
+2026-02-21 00:54:06,351 p=269323 u=administrator n=ansible INFO| Mettre à jour /etc/hosts avec les IPs cluster ----------------------------------------------------------------- 0.88s
+2026-02-21 00:54:06,351 p=269323 u=administrator n=ansible INFO| Supprimer les anciennes entrées k3s-node incorrectes de /etc/hosts -------------------------------------------- 0.88s
+2026-02-21 00:54:06,351 p=269323 u=administrator n=ansible INFO| Charger le module kernel bonding ------------------------------------------------------------------------------ 0.87s
+2026-02-21 00:54:06,351 p=269323 u=administrator n=ansible INFO| Vérifier l'état du bond (/proc/net/bonding/bond0) ------------------------------------------------------------- 0.62s
+2026-02-21 00:54:06,352 p=269323 u=administrator n=ansible INFO| Vérifier les interfaces réseau -------------------------------------------------------------------------------- 0.60s
+2026-02-21 00:54:06,352 p=269323 u=administrator n=ansible INFO| Vérifier la table de routage ---------------------------------------------------------------------------------- 0.60s
+2026-02-21 00:54:06,352 p=269323 u=administrator n=ansible INFO| Vérifier si /etc/netplan/50-cloud-init.yaml existe ------------------------------------------------------------ 0.60s
+2026-02-21 00:54:06,352 p=269323 u=administrator n=ansible INFO| Afficher la configuration réseau du nœud ---------------------------------------------------------------------- 0.12s
+2026-02-21 00:54:06,352 p=269323 u=administrator n=ansible INFO| Résumé de configuration réseau -------------------------------------------------------------------------------- 0.12s

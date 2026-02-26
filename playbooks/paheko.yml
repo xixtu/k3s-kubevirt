@@ -1,0 +1,182 @@
+---
+- name: Déploiement Paheko
+  hosts: k3s-node-1
+  become: true
+
+  vars:
+    target_namespace: "paheko"
+    app_name: "paheko"
+    fqdn: "paheko.app.xixtu.eu"
+    k3s_config: "/etc/rancher/k3s/k3s.yaml"
+    storage_size: "5Gi"
+
+  tasks:
+
+    - name: Installer python3-kubernetes
+      ansible.builtin.apt:
+        name: python3-kubernetes
+        state: present
+        update_cache: yes
+
+    - name: Créer le namespace
+      kubernetes.core.k8s:
+        kubeconfig: "{{ k3s_config }}"
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: "{{ target_namespace }}"
+
+    # ------------------------
+    # PVC
+    # ------------------------
+
+    - name: Créer le PersistentVolumeClaim
+      kubernetes.core.k8s:
+        kubeconfig: "{{ k3s_config }}"
+        state: present
+        definition:
+          apiVersion: v1
+          kind: PersistentVolumeClaim
+          metadata:
+            name: "{{ app_name }}-data"
+            namespace: "{{ target_namespace }}"
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: "{{ storage_size }}"
+
+    # ------------------------
+    # Deployment
+    # ------------------------
+
+    - name: Déployer Paheko
+      kubernetes.core.k8s:
+        kubeconfig: "{{ k3s_config }}"
+        state: present
+        definition:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: "{{ app_name }}"
+            namespace: "{{ target_namespace }}"
+            labels:
+              app: "{{ app_name }}"
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                app: "{{ app_name }}"
+            template:
+              metadata:
+                labels:
+                  app: "{{ app_name }}"
+              spec:
+                containers:
+                  - name: paheko
+                    image: paheko/paheko:latest
+                    ports:
+                      - containerPort: 80
+                    volumeMounts:
+                      - name: data-volume
+                        mountPath: /var/www/html/data
+                volumes:
+                  - name: data-volume
+                    persistentVolumeClaim:
+                      claimName: "{{ app_name }}-data"
+
+    # ------------------------
+    # Service
+    # ------------------------
+
+    - name: Créer le Service
+      kubernetes.core.k8s:
+        kubeconfig: "{{ k3s_config }}"
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: "{{ app_name }}-service"
+            namespace: "{{ target_namespace }}"
+          spec:
+            selector:
+              app: "{{ app_name }}"
+            ports:
+              - protocol: TCP
+                port: 80
+                targetPort: 80
+            type: ClusterIP
+
+    # ------------------------
+    # Ingress
+    # ------------------------
+
+    - name: Créer l'Ingress HTTPS
+      kubernetes.core.k8s:
+        kubeconfig: "{{ k3s_config }}"
+        state: present
+        definition:
+          apiVersion: networking.k8s.io/v1
+          kind: Ingress
+          metadata:
+            name: "{{ app_name }}-ingress"
+            namespace: "{{ target_namespace }}"
+            annotations:
+              cert-manager.io/cluster-issuer: "letsencrypt-production"
+              cert-manager.io/private-key-algorithm: "ECDSA"
+              cert-manager.io/private-key-size: "256"
+              traefik.ingress.kubernetes.io/router.entrypoints: "web"
+          spec:
+            ingressClassName: traefik
+            tls:
+              - hosts:
+                  - "{{ fqdn }}"
+                secretName: "{{ app_name }}-tls"
+            rules:
+              - host: "{{ fqdn }}"
+                http:
+                  paths:
+                    - path: /
+                      pathType: Prefix
+                      backend:
+                        service:
+                          name: "{{ app_name }}-service"
+                          port:
+                            number: 80
+
+    # ------------------------
+    # Vérification clé ECDSA
+    # ------------------------
+
+    - name: Vérifier le type de clé du certificat
+      ansible.builtin.shell: >
+        k3s kubectl get secret {{ app_name }}-tls -n {{ target_namespace }}
+        -o jsonpath='{.data.tls\.key}' | base64 -d
+        | openssl ec -noout 2>/dev/null && echo "ECDSA" || echo "RSA"
+      environment:
+        KUBECONFIG: "{{ k3s_config }}"
+      register: paheko_cert_key_type
+      changed_when: false
+      failed_when: false
+
+    - name: Supprimer ancien certificat RSA si nécessaire
+      ansible.builtin.command: >
+        k3s kubectl delete certificate {{ app_name }}-tls
+        -n {{ target_namespace }} --ignore-not-found
+      environment:
+        KUBECONFIG: "{{ k3s_config }}"
+      when: paheko_cert_key_type.stdout is defined and 'ECDSA' not in paheko_cert_key_type.stdout
+      changed_when: true
+
+    - name: Supprimer ancien secret TLS RSA
+      ansible.builtin.command: >
+        k3s kubectl delete secret {{ app_name }}-tls
+        -n {{ target_namespace }} --ignore-not-found
+      environment:
+        KUBECONFIG: "{{ k3s_config }}"
+      when: paheko_cert_key_type.stdout is defined and 'ECDSA' not in paheko_cert_key_type.stdout
+      changed_when: true
