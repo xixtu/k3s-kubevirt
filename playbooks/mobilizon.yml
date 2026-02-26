@@ -33,7 +33,7 @@
     db_user: "mobilizon"
     db_password: "mobilizon-s3cret-ch4nge-me"
     # Mobilizon
-    mobilizon_instance_name: "Mobilizon Xixtu"
+    mobilizon_instance_name: "Aumonerie Saudrune"
     mobilizon_admin_email: "{{ letsencrypt_email }}"
 
   tasks:
