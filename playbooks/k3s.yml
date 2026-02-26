@@ -41,6 +41,7 @@
         content: |
           # Config K3s - Nœud primaire
           cluster-init: true
+          data-dir: "{{ k3s_config.data_dir }}"
           node-ip: "{{ bond_ip }}"
           advertise-address: "{{ bond_ip }}"
           flannel-backend: "{{ k3s_config.flannel_backend }}"
@@ -178,6 +179,7 @@
           # Config K3s - Nœud secondaire (join)
           server: "https://{{ cluster_network.api_server_ip }}:6443"
           token: "{{ k3s_node_token }}"
+          data-dir: "{{ k3s_config.data_dir }}"
           node-ip: "{{ bond_ip }}"
           advertise-address: "{{ bond_ip }}"
           flannel-backend: "{{ k3s_config.flannel_backend }}"

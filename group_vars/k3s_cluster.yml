@@ -31,6 +31,7 @@ cluster_network:
 
 # --- Configuration K3s ---
 k3s_config:
+  data_dir: "/data_fast/k3s"              # Runtime K3s hors du SSD OS (containerd, etcd, images)
   disable:
     - traefik
     - servicelb
@@ -49,6 +50,11 @@ longhorn_config:
   guaranteed_engine_manager_cpu: 5
   guaranteed_replica_manager_cpu: 5
   backup_target: ""                # À configurer si backup S3
+  # Répertoires Longhorn par tier (créés par k3s_storage_setup.yml)
+  disk_paths:
+    ultra: "/data_ultra/longhorn"
+    fast: "/data_fast/longhorn"
+    slow: "/data_slow/longhorn"
 
 # --- Longhorn Storage Classes ---
 longhorn_storage_classes:

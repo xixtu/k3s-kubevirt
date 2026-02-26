@@ -8,6 +8,7 @@
 #   prereq    → Prérequis système + Git
 #   lvm       → Configuration stockage LVM
 #   k3s       → Installation K3s
+#   storage   → Migration data-dir K3s + préparation Longhorn
 #   longhorn  → Installation Longhorn
 #   metallb   → Installation MetalLB
 #   traefik   → Installation Traefik
@@ -36,6 +37,11 @@
 - name: "PHASE 3 - K3s Cluster"
   import_playbook: k3s.yml
   tags: [k3s]
+
+# PHASE 3b : Migration data-dir K3s → /data_fast + préparation Longhorn
+- name: "PHASE 3b - Storage Setup (K3s data-dir + Longhorn dirs)"
+  import_playbook: k3s_storage_setup.yml
+  tags: [storage]
 
 # PHASE 4 : Longhorn (en attente - vérification disques nodes 2-3)
 # - name: "PHASE 4 - Longhorn Storage"

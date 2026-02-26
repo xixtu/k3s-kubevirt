@@ -1,0 +1,311 @@
+---
+# =============================================================
+# PLAYBOOK : Migration K3s data-dir + Préparation stockage Longhorn
+# =============================================================
+# Ce playbook fait 3 choses :
+#   1. Prépare les répertoires Longhorn sur les 3 tiers (ultra/fast/slow)
+#   2. Migre le data-dir K3s de /var/lib/rancher/k3s → /data_fast/k3s
+#   3. Crée un bind mount pour compatibilité ascendante
+#
+# IMPORTANT : Migration rolling (1 nœud à la fois) pour maintenir le quorum etcd.
+#
+# Usage :
+#   ansible-playbook -i inventory/hosts.yml playbooks/k3s_storage_setup.yml
+#
+# Tags :
+#   storage-longhorn  → Créer les répertoires Longhorn uniquement
+#   storage-migrate   → Migrer le data-dir K3s
+#   storage-verify    → Vérification finale
+# =============================================================
+
+# =============================================================
+# PLAY 1 : Préparer les répertoires Longhorn (tous les nœuds en parallèle)
+# =============================================================
+- name: "Storage - Préparer les répertoires Longhorn (3 tiers)"
+  hosts: k3s_cluster
+  become: true
+  gather_facts: true
+
+  tasks:
+
+    - name: Vérifier que les points de montage LVM existent
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: mount_checks
+      loop:
+        - "{{ disk_tier_ultra.mountpoint }}"
+        - "{{ disk_tier_fast.mountpoint }}"
+        - "{{ disk_tier_slow.mountpoint }}"
+      tags: [storage-longhorn]
+
+    - name: Échec si un point de montage manque
+      ansible.builtin.fail:
+        msg: "Point de montage manquant : {{ item.item }} — Exécuter lvm.yml d'abord"
+      when: not item.stat.exists
+      loop: "{{ mount_checks.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+      tags: [storage-longhorn]
+
+    - name: Vérifier que les volumes sont bien montés
+      ansible.builtin.command: mountpoint -q {{ item }}
+      loop:
+        - "{{ disk_tier_ultra.mountpoint }}"
+        - "{{ disk_tier_fast.mountpoint }}"
+        - "{{ disk_tier_slow.mountpoint }}"
+      changed_when: false
+      tags: [storage-longhorn]
+
+    - name: Créer les répertoires Longhorn sur chaque tier
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: directory
+        mode: '0700'
+        owner: root
+        group: root
+      loop:
+        - { path: "{{ longhorn_config.disk_paths.ultra }}", tier: ultra }
+        - { path: "{{ longhorn_config.disk_paths.fast }}", tier: fast }
+        - { path: "{{ longhorn_config.disk_paths.slow }}", tier: slow }
+      loop_control:
+        label: "{{ item.tier }} → {{ item.path }}"
+      tags: [storage-longhorn]
+
+    - name: Résumé répertoires Longhorn
+      ansible.builtin.debug:
+        msg:
+          - "=== Longhorn prêt sur {{ inventory_hostname }} ==="
+          - "Ultra : {{ longhorn_config.disk_paths.ultra }}"
+          - "Fast  : {{ longhorn_config.disk_paths.fast }}"
+          - "Slow  : {{ longhorn_config.disk_paths.slow }}"
+      tags: [storage-longhorn]
+
+# =============================================================
+# PLAY 2 : Migrer le data-dir K3s (rolling, 1 nœud à la fois)
+# =============================================================
+- name: "Storage - Migration K3s data-dir vers /data_fast"
+  hosts: k3s_cluster
+  become: true
+  gather_facts: true
+  serial: 1
+
+  vars:
+    k3s_default_dir: "/var/lib/rancher/k3s"
+    k3s_target_dir: "{{ k3s_config.data_dir }}"
+
+  tasks:
+
+    # ---------------------------------------------------------
+    # PRE-CHECK : Détection de l'état actuel
+    # ---------------------------------------------------------
+
+    - name: Vérifier si le data-dir cible existe déjà
+      ansible.builtin.stat:
+        path: "{{ k3s_target_dir }}"
+      register: target_dir
+      tags: [storage-migrate]
+
+    - name: Vérifier si /var/lib/rancher/k3s est un bind mount
+      ansible.builtin.command: mountpoint -q {{ k3s_default_dir }}
+      register: is_bind_mount
+      failed_when: false
+      changed_when: false
+      tags: [storage-migrate]
+
+    - name: Vérifier si la migration est déjà faite
+      ansible.builtin.set_fact:
+        migration_done: "{{ is_bind_mount.rc == 0 }}"
+      tags: [storage-migrate]
+
+    - name: Migration déjà effectuée, skip
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }} : data-dir déjà migré vers {{ k3s_target_dir }}"
+      when: migration_done
+      tags: [storage-migrate]
+
+    # ---------------------------------------------------------
+    # MIGRATION (uniquement si pas encore fait)
+    # ---------------------------------------------------------
+
+    - name: "Arrêter K3s sur {{ inventory_hostname }}"
+      ansible.builtin.systemd:
+        name: k3s
+        state: stopped
+      when: not migration_done
+      tags: [storage-migrate]
+
+    - name: Attendre l'arrêt complet de K3s
+      ansible.builtin.pause:
+        seconds: 10
+      when: not migration_done
+      tags: [storage-migrate]
+
+    - name: Créer le répertoire cible
+      ansible.builtin.file:
+        path: "{{ k3s_target_dir }}"
+        state: directory
+        mode: '0755'
+        owner: root
+        group: root
+      when: not migration_done
+      tags: [storage-migrate]
+
+    - name: "Copier les données K3s vers {{ k3s_target_dir }}"
+      ansible.builtin.command: >
+        rsync -aHAXx --info=progress2
+        {{ k3s_default_dir }}/
+        {{ k3s_target_dir }}/
+      when: not migration_done and not target_dir.stat.exists
+      tags: [storage-migrate]
+
+    - name: Renommer l'ancien répertoire en backup
+      ansible.builtin.command: >
+        mv {{ k3s_default_dir }} {{ k3s_default_dir }}.bak
+      when: not migration_done
+      tags: [storage-migrate]
+
+    - name: Créer le point de montage vide
+      ansible.builtin.file:
+        path: "{{ k3s_default_dir }}"
+        state: directory
+        mode: '0755'
+        owner: root
+        group: root
+      when: not migration_done
+      tags: [storage-migrate]
+
+    - name: Configurer le bind mount dans fstab
+      ansible.posix.mount:
+        path: "{{ k3s_default_dir }}"
+        src: "{{ k3s_target_dir }}"
+        fstype: none
+        opts: bind
+        state: mounted
+      when: not migration_done
+      tags: [storage-migrate]
+
+    # ---------------------------------------------------------
+    # MISE À JOUR CONFIG K3s
+    # ---------------------------------------------------------
+
+    - name: Ajouter data-dir dans la config K3s
+      ansible.builtin.lineinfile:
+        path: /etc/rancher/k3s/config.yaml
+        regexp: '^data-dir:'
+        line: 'data-dir: "{{ k3s_target_dir }}"'
+        insertafter: '^#.*Config K3s'
+      when: not migration_done
+      tags: [storage-migrate]
+
+    # ---------------------------------------------------------
+    # REDÉMARRAGE ET VÉRIFICATION
+    # ---------------------------------------------------------
+
+    - name: "Démarrer K3s sur {{ inventory_hostname }}"
+      ansible.builtin.systemd:
+        name: k3s
+        state: started
+        enabled: true
+      when: not migration_done
+      tags: [storage-migrate]
+
+    - name: Attendre que l'API K3s réponde (port 6443)
+      ansible.builtin.wait_for:
+        host: "{{ bond_ip }}"
+        port: 6443
+        timeout: 180
+      tags: [storage-migrate]
+
+    - name: Attendre que le nœud soit Ready
+      ansible.builtin.command: >
+        k3s kubectl wait --for=condition=Ready node/{{ node_name }}
+        --timeout=180s
+      register: node_ready
+      changed_when: false
+      retries: 6
+      delay: 10
+      until: node_ready.rc == 0
+      tags: [storage-migrate]
+
+    - name: Pause de stabilisation etcd
+      ansible.builtin.pause:
+        seconds: 30
+      tags: [storage-migrate]
+
+    - name: "Nœud {{ inventory_hostname }} migré et Ready"
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }} : migration OK → {{ k3s_target_dir }}"
+      tags: [storage-migrate]
+
+# =============================================================
+# PLAY 3 : Vérification finale
+# =============================================================
+- name: "Storage - Vérification finale"
+  hosts: k3s-node-1
+  become: true
+  gather_facts: false
+
+  tasks:
+
+    - name: Vérifier que tous les nœuds sont Ready
+      ansible.builtin.command: >
+        k3s kubectl get nodes -o wide
+      register: final_nodes
+      changed_when: false
+      tags: [storage-verify]
+
+    - name: Vérifier les pods système
+      ansible.builtin.command: >
+        k3s kubectl get pods -n kube-system -o wide
+      register: system_pods
+      changed_when: false
+      tags: [storage-verify]
+
+    - name: Afficher les nœuds
+      ansible.builtin.debug:
+        var: final_nodes.stdout_lines
+      tags: [storage-verify]
+
+    - name: Afficher les pods système
+      ansible.builtin.debug:
+        var: system_pods.stdout_lines
+      tags: [storage-verify]
+
+- name: "Storage - Vérification des montages sur tous les nœuds"
+  hosts: k3s_cluster
+  become: true
+  gather_facts: false
+
+  tasks:
+
+    - name: Vérifier le bind mount K3s
+      ansible.builtin.command: mountpoint -q /var/lib/rancher/k3s
+      changed_when: false
+      tags: [storage-verify]
+
+    - name: Vérifier l'espace disque sur /data_fast
+      ansible.builtin.command: df -h {{ k3s_config.data_dir }}
+      register: df_fast
+      changed_when: false
+      tags: [storage-verify]
+
+    - name: Vérifier les répertoires Longhorn
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: longhorn_dirs
+      loop:
+        - "{{ longhorn_config.disk_paths.ultra }}"
+        - "{{ longhorn_config.disk_paths.fast }}"
+        - "{{ longhorn_config.disk_paths.slow }}"
+      tags: [storage-verify]
+
+    - name: Résumé final
+      ansible.builtin.debug:
+        msg:
+          - "=== {{ inventory_hostname }} - Storage configuré ==="
+          - "K3s data-dir : {{ k3s_config.data_dir }} (bind mount OK)"
+          - "Espace /data_fast : {{ df_fast.stdout_lines[-1] }}"
+          - "Longhorn ultra : {{ longhorn_config.disk_paths.ultra }} ✓"
+          - "Longhorn fast  : {{ longhorn_config.disk_paths.fast }} ✓"
+          - "Longhorn slow  : {{ longhorn_config.disk_paths.slow }} ✓"
+      tags: [storage-verify]
