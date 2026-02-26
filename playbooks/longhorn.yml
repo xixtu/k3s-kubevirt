@@ -252,11 +252,22 @@
     # STORAGECLASSES
     # ==========================================================
 
-    - name: Supprimer la StorageClass longhorn par défaut si elle existe
+    - name: Retirer le flag default de local-path
       ansible.builtin.command: >
-        k3s kubectl delete storageclass longhorn --ignore-not-found
-      register: sc_delete
-      changed_when: "'deleted' in sc_delete.stdout"
+        k3s kubectl patch storageclass local-path
+        -p '{"metadata":{"annotations":{"storageclass.kubernetes.io/is-default-class":"false"}}}'
+      register: patch_localpath
+      changed_when: "'patched' in patch_localpath.stdout"
+      failed_when: false
+      tags: [longhorn, longhorn-storage]
+
+    - name: Retirer le flag default de la StorageClass longhorn du chart
+      ansible.builtin.command: >
+        k3s kubectl patch storageclass longhorn
+        -p '{"metadata":{"annotations":{"storageclass.kubernetes.io/is-default-class":"false"}}}'
+      register: patch_longhorn
+      changed_when: "'patched' in patch_longhorn.stdout"
+      failed_when: false
       tags: [longhorn, longhorn-storage]
 
     - name: Ecrire le manifeste des StorageClasses Longhorn
