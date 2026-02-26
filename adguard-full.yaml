@@ -28,8 +28,8 @@ metadata:
   namespace: adguardhome
 type: Opaque
 stringData:
-  username: "admin"
-  password: "admin"
+  username: "administrator"
+  password: "P@ssw0rd"
 ---
 # 4. Le Déploiement AdGuard + Exporter Prometheus (sidecar)
 apiVersion: apps/v1
