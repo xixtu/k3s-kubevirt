@@ -92,6 +92,7 @@ letsencrypt_email: "admin@xixtu.eu"    # ⚠ Mettre l'email réel du compte Let'
 # Domaines publics exposés via Traefik + cert-manager
 external_domains:
   headlamp: "headlamp.app.xixtu.eu"
+  longhorn: "longhorn.app.xixtu.eu"
   kwaba: "kwaba-kinesiologie.xixtu.eu"
 
 # --- Monitoring ---
