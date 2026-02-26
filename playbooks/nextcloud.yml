@@ -1,0 +1,651 @@
+---
+# =============================================================
+# PLAYBOOK : Déploiement Nextcloud - Cloud personnel
+# =============================================================
+# Usage : ansible-playbook -i inventory/hosts.yml playbooks/nextcloud.yml
+# Tags :
+#   nextcloud-install → Namespace, Secrets, ConfigMap, PVC, PostgreSQL, Nextcloud, Service
+#   nextcloud-ingress → Ingress TLS + IngressRoute HTTPS
+#   letsencrypt-tls   → Ingress TLS + migration ECDSA + IngressRoute HTTPS
+#   nextcloud-verify  → Vérification pods, service, ingress, cert
+# Prérequis :
+#   - K3s + MetalLB + Traefik installés
+#   - Longhorn StorageClasses (longhorn-fast)
+#   - cert-manager + ClusterIssuer letsencrypt-production
+#   - NAS déployé (playbooks/nas.yml) pour le plugin External Storage SMB
+#   - DNS : nextcloud.app.xixtu.eu → A → <IP publique>
+# URL publique : https://nextcloud.app.xixtu.eu
+# =============================================================
+# Connexion au NAS (post-déploiement, via interface admin Nextcloud) :
+#   1. Activer l'app "External storage support" dans Nextcloud
+#   2. Administration > Stockages externes > Ajouter :
+#      - Type : SMB/CIFS
+#      - Host : samba-service.nas.svc.cluster.local
+#      - Share : media / documents / shared
+#      - User/Pass : nasuser / <samba_password>
+#   L'indexation est automatique via le plugin (pas de occ files:scan)
+# =============================================================
+
+- name: "Nextcloud - Cloud personnel avec External Storage SMB"
+  hosts: k3s-node-1
+  become: true
+  gather_facts: false
+  vars_files:
+    - "../group_vars/k3s_cluster.yml"
+  vars:
+    target_namespace: "nextcloud"
+    app_name: "nextcloud"
+    storage_class: "{{ nextcloud_config.storage_class }}"
+    db_storage_size: "{{ nextcloud_config.db_storage_size }}"
+    data_storage_size: "{{ nextcloud_config.data_storage_size }}"
+    # PostgreSQL
+    db_name: "{{ nextcloud_config.db_name }}"
+    db_user: "{{ nextcloud_config.db_user }}"
+    db_password: "{{ nextcloud_config.db_password }}"
+    # Nextcloud
+    nextcloud_image: "nextcloud:29-apache"
+
+  tasks:
+
+    # ==========================================================
+    # NAMESPACE
+    # ==========================================================
+
+    - name: Créer le namespace nextcloud
+      ansible.builtin.command: k3s kubectl create namespace {{ target_namespace }}
+      register: ns_create
+      failed_when: ns_create.rc != 0 and 'already exists' not in ns_create.stderr
+      changed_when: ns_create.rc == 0
+      tags: [nextcloud, nextcloud-install]
+
+    # ==========================================================
+    # SECRETS (PostgreSQL + Nextcloud admin)
+    # ==========================================================
+
+    - name: Créer le Secret PostgreSQL
+      ansible.builtin.shell: |
+        k3s kubectl create secret generic {{ app_name }}-db-secret \
+          --namespace {{ target_namespace }} \
+          --from-literal=POSTGRES_PASSWORD={{ db_password }} \
+          --from-literal=POSTGRES_USER={{ db_user }} \
+          --from-literal=POSTGRES_DB={{ db_name }} \
+          --dry-run=client -o yaml | k3s kubectl apply -f -
+      changed_when: true
+      tags: [nextcloud, nextcloud-install]
+
+    - name: Créer le Secret Nextcloud admin
+      ansible.builtin.shell: |
+        k3s kubectl create secret generic {{ app_name }}-admin-secret \
+          --namespace {{ target_namespace }} \
+          --from-literal=NEXTCLOUD_ADMIN_USER={{ nextcloud_config.admin_user }} \
+          --from-literal=NEXTCLOUD_ADMIN_PASSWORD={{ nextcloud_config.admin_password }} \
+          --dry-run=client -o yaml | k3s kubectl apply -f -
+      changed_when: true
+      tags: [nextcloud, nextcloud-install]
+
+    # ==========================================================
+    # CONFIGMAP - Script hook pour installer smbclient
+    # ==========================================================
+    # Le hook s'exécute à chaque démarrage du conteneur via
+    # /docker-entrypoint-hooks.d/before-starting/
+    # Installe le binaire smbclient requis par le plugin
+    # "External Storage: SMB/CIFS" de Nextcloud.
+    # ==========================================================
+
+    - name: Créer le ConfigMap SMB hook
+      ansible.builtin.copy:
+        dest: /tmp/nextcloud-smb-hook.yml
+        mode: '0644'
+        content: |
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: {{ app_name }}-smb-hook
+            namespace: {{ target_namespace }}
+          data:
+            install-smb.sh: |
+              #!/bin/bash
+              set -e
+              if ! command -v smbclient &>/dev/null; then
+                echo "[hook] Installation de smbclient pour External Storage SMB..."
+                apt-get update -qq
+                apt-get install -y -qq --no-install-recommends smbclient
+                echo "[hook] smbclient installé avec succès"
+              else
+                echo "[hook] smbclient déjà présent"
+              fi
+      tags: [nextcloud, nextcloud-install]
+
+    - name: Appliquer le ConfigMap SMB hook
+      ansible.builtin.command: k3s kubectl apply -f /tmp/nextcloud-smb-hook.yml
+      register: cm_apply
+      changed_when: "'configured' in cm_apply.stdout or 'created' in cm_apply.stdout"
+      tags: [nextcloud, nextcloud-install]
+
+    - name: Supprimer le fichier ConfigMap temporaire
+      ansible.builtin.file:
+        path: /tmp/nextcloud-smb-hook.yml
+        state: absent
+      tags: [nextcloud, nextcloud-install]
+
+    # ==========================================================
+    # PVC (PostgreSQL + Nextcloud data)
+    # ==========================================================
+
+    - name: Écrire les PVC Nextcloud
+      ansible.builtin.copy:
+        dest: /tmp/nextcloud-pvc.yml
+        mode: '0644'
+        content: |
+          ---
+          apiVersion: v1
+          kind: PersistentVolumeClaim
+          metadata:
+            name: {{ app_name }}-db-data
+            namespace: {{ target_namespace }}
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            storageClassName: {{ storage_class }}
+            resources:
+              requests:
+                storage: {{ db_storage_size }}
+          ---
+          apiVersion: v1
+          kind: PersistentVolumeClaim
+          metadata:
+            name: {{ app_name }}-data
+            namespace: {{ target_namespace }}
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            storageClassName: {{ storage_class }}
+            resources:
+              requests:
+                storage: {{ data_storage_size }}
+      tags: [nextcloud, nextcloud-install]
+
+    - name: Appliquer les PVC Nextcloud
+      ansible.builtin.command: k3s kubectl apply -f /tmp/nextcloud-pvc.yml
+      register: pvc_apply
+      changed_when: "'configured' in pvc_apply.stdout or 'created' in pvc_apply.stdout"
+      tags: [nextcloud, nextcloud-install]
+
+    - name: Supprimer le fichier PVC temporaire
+      ansible.builtin.file:
+        path: /tmp/nextcloud-pvc.yml
+        state: absent
+      tags: [nextcloud, nextcloud-install]
+
+    # ==========================================================
+    # POSTGRESQL 16
+    # ==========================================================
+
+    - name: Écrire le Deployment PostgreSQL
+      ansible.builtin.copy:
+        dest: /tmp/nextcloud-postgres.yml
+        mode: '0644'
+        content: |
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: {{ app_name }}-postgres
+            namespace: {{ target_namespace }}
+            labels:
+              app: {{ app_name }}-postgres
+          spec:
+            replicas: 1
+            strategy:
+              type: Recreate
+            selector:
+              matchLabels:
+                app: {{ app_name }}-postgres
+            template:
+              metadata:
+                labels:
+                  app: {{ app_name }}-postgres
+              spec:
+                containers:
+                  - name: postgres
+                    image: postgres:16-bookworm
+                    ports:
+                      - containerPort: 5432
+                    envFrom:
+                      - secretRef:
+                          name: {{ app_name }}-db-secret
+                    volumeMounts:
+                      - name: db-data
+                        mountPath: /var/lib/postgresql/data
+                        subPath: pgdata
+                    resources:
+                      requests:
+                        cpu: 100m
+                        memory: 256Mi
+                      limits:
+                        memory: 512Mi
+                volumes:
+                  - name: db-data
+                    persistentVolumeClaim:
+                      claimName: {{ app_name }}-db-data
+          ---
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: {{ app_name }}-postgres
+            namespace: {{ target_namespace }}
+          spec:
+            selector:
+              app: {{ app_name }}-postgres
+            ports:
+              - protocol: TCP
+                port: 5432
+                targetPort: 5432
+            type: ClusterIP
+      tags: [nextcloud, nextcloud-install]
+
+    - name: Appliquer le Deployment PostgreSQL
+      ansible.builtin.command: k3s kubectl apply -f /tmp/nextcloud-postgres.yml
+      register: pg_apply
+      changed_when: "'configured' in pg_apply.stdout or 'created' in pg_apply.stdout"
+      tags: [nextcloud, nextcloud-install]
+
+    - name: Supprimer le fichier PostgreSQL temporaire
+      ansible.builtin.file:
+        path: /tmp/nextcloud-postgres.yml
+        state: absent
+      tags: [nextcloud, nextcloud-install]
+
+    - name: Attendre que PostgreSQL soit Ready
+      ansible.builtin.command: >
+        k3s kubectl wait --for=condition=Ready pods
+        -l app={{ app_name }}-postgres
+        -n {{ target_namespace }}
+        --timeout=120s
+      changed_when: false
+      tags: [nextcloud, nextcloud-install]
+
+    # ==========================================================
+    # NEXTCLOUD (Application)
+    # ==========================================================
+    # Image : nextcloud:29-apache
+    # - smbclient installé via hook before-starting
+    # - Derrière Traefik reverse proxy (OVERWRITEPROTOCOL=https)
+    # - Trusted proxies = pod CIDR (Flannel)
+    # ==========================================================
+
+    - name: Écrire le Deployment Nextcloud
+      ansible.builtin.copy:
+        dest: /tmp/nextcloud-app.yml
+        mode: '0644'
+        content: |
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: {{ app_name }}
+            namespace: {{ target_namespace }}
+            labels:
+              app: {{ app_name }}
+          spec:
+            replicas: 1
+            strategy:
+              type: Recreate
+            selector:
+              matchLabels:
+                app: {{ app_name }}
+            template:
+              metadata:
+                labels:
+                  app: {{ app_name }}
+              spec:
+                containers:
+                  - name: nextcloud
+                    image: {{ nextcloud_image }}
+                    ports:
+                      - containerPort: 80
+                    envFrom:
+                      - secretRef:
+                          name: {{ app_name }}-admin-secret
+                    env:
+                      # --- PostgreSQL ---
+                      - name: POSTGRES_HOST
+                        value: "{{ app_name }}-postgres"
+                      - name: POSTGRES_DB
+                        value: "{{ db_name }}"
+                      - name: POSTGRES_USER
+                        value: "{{ db_user }}"
+                      - name: POSTGRES_PASSWORD
+                        valueFrom:
+                          secretKeyRef:
+                            name: {{ app_name }}-db-secret
+                            key: POSTGRES_PASSWORD
+                      # --- Reverse proxy (Traefik) ---
+                      - name: OVERWRITEPROTOCOL
+                        value: "https"
+                      - name: OVERWRITEHOST
+                        value: "{{ external_domains.nextcloud }}"
+                      - name: TRUSTED_PROXIES
+                        value: "{{ cluster_network.pod_cidr }}"
+                      - name: NEXTCLOUD_TRUSTED_DOMAINS
+                        value: "{{ external_domains.nextcloud }}"
+                      # --- PHP tuning ---
+                      - name: PHP_MEMORY_LIMIT
+                        value: "512M"
+                      - name: PHP_UPLOAD_LIMIT
+                        value: "10G"
+                    volumeMounts:
+                      - name: nextcloud-data
+                        mountPath: /var/www/html
+                      # Hook : installe smbclient au démarrage
+                      - name: smb-hook
+                        mountPath: /docker-entrypoint-hooks.d/before-starting/install-smb.sh
+                        subPath: install-smb.sh
+                    resources:
+                      requests:
+                        cpu: 200m
+                        memory: 256Mi
+                      limits:
+                        memory: 2Gi
+                    livenessProbe:
+                      httpGet:
+                        path: /status.php
+                        port: 80
+                        httpHeaders:
+                          - name: Host
+                            value: "{{ external_domains.nextcloud }}"
+                      initialDelaySeconds: 60
+                      periodSeconds: 30
+                      timeoutSeconds: 10
+                    readinessProbe:
+                      httpGet:
+                        path: /status.php
+                        port: 80
+                        httpHeaders:
+                          - name: Host
+                            value: "{{ external_domains.nextcloud }}"
+                      initialDelaySeconds: 30
+                      periodSeconds: 10
+                      timeoutSeconds: 5
+                volumes:
+                  - name: nextcloud-data
+                    persistentVolumeClaim:
+                      claimName: {{ app_name }}-data
+                  - name: smb-hook
+                    configMap:
+                      name: {{ app_name }}-smb-hook
+                      defaultMode: 0755
+          ---
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: {{ app_name }}-service
+            namespace: {{ target_namespace }}
+          spec:
+            selector:
+              app: {{ app_name }}
+            ports:
+              - protocol: TCP
+                port: 80
+                targetPort: 80
+            type: ClusterIP
+      tags: [nextcloud, nextcloud-install]
+
+    - name: Appliquer le Deployment Nextcloud
+      ansible.builtin.command: k3s kubectl apply -f /tmp/nextcloud-app.yml
+      register: app_apply
+      changed_when: "'configured' in app_apply.stdout or 'created' in app_apply.stdout"
+      tags: [nextcloud, nextcloud-install]
+
+    - name: Supprimer le fichier Nextcloud temporaire
+      ansible.builtin.file:
+        path: /tmp/nextcloud-app.yml
+        state: absent
+      tags: [nextcloud, nextcloud-install]
+
+    # ==========================================================
+    # TLS - CERTIFICAT LET'S ENCRYPT (nextcloud.app.xixtu.eu)
+    # ==========================================================
+    # Pattern : Ingress K8s (déclenche cert-manager) + IngressRoute HTTPS
+    # ==========================================================
+
+    - name: Écrire l'Ingress TLS Nextcloud
+      ansible.builtin.copy:
+        dest: /tmp/nextcloud-ingress.yml
+        mode: '0644'
+        content: |
+          apiVersion: networking.k8s.io/v1
+          kind: Ingress
+          metadata:
+            name: {{ app_name }}-ingress
+            namespace: {{ target_namespace }}
+            annotations:
+              cert-manager.io/cluster-issuer: "letsencrypt-production"
+              cert-manager.io/private-key-algorithm: "ECDSA"
+              cert-manager.io/private-key-size: "256"
+              traefik.ingress.kubernetes.io/router.entrypoints: "web"
+              traefik.ingress.kubernetes.io/router.middlewares: "traefik-redirect-to-https@kubernetescrd"
+          spec:
+            ingressClassName: traefik
+            tls:
+              - hosts:
+                  - "{{ external_domains.nextcloud }}"
+                secretName: {{ app_name }}-tls
+            rules:
+              - host: "{{ external_domains.nextcloud }}"
+                http:
+                  paths:
+                    - path: /
+                      pathType: Prefix
+                      backend:
+                        service:
+                          name: {{ app_name }}-service
+                          port:
+                            number: 80
+      tags: [nextcloud, nextcloud-ingress, letsencrypt-tls]
+
+    - name: Appliquer l'Ingress TLS Nextcloud
+      ansible.builtin.command: k3s kubectl apply -f /tmp/nextcloud-ingress.yml
+      register: ingress_apply
+      changed_when: "'configured' in ingress_apply.stdout or 'created' in ingress_apply.stdout"
+      tags: [nextcloud, nextcloud-ingress, letsencrypt-tls]
+
+    - name: Supprimer le fichier Ingress temporaire
+      ansible.builtin.file:
+        path: /tmp/nextcloud-ingress.yml
+        state: absent
+      tags: [nextcloud, nextcloud-ingress, letsencrypt-tls]
+
+    # ==========================================================
+    # MIGRATION ECDSA (si ancien certificat RSA)
+    # ==========================================================
+
+    - name: Vérifier le type de clé du certificat actuel
+      ansible.builtin.shell: >
+        k3s kubectl get secret {{ app_name }}-tls -n {{ target_namespace }}
+        -o jsonpath='{.data.tls\.key}' | base64 -d
+        | openssl ec -noout 2>/dev/null && echo "ECDSA" || echo "RSA"
+      register: nextcloud_cert_key_type
+      changed_when: false
+      failed_when: false
+      tags: [nextcloud, nextcloud-ingress, letsencrypt-tls]
+
+    - name: Supprimer l'ancien certificat RSA pour renouvellement ECDSA
+      ansible.builtin.command: >
+        k3s kubectl delete certificate {{ app_name }}-tls
+        -n {{ target_namespace }} --ignore-not-found
+      when: nextcloud_cert_key_type.stdout is defined and 'ECDSA' not in nextcloud_cert_key_type.stdout
+      changed_when: true
+      tags: [nextcloud, nextcloud-ingress, letsencrypt-tls]
+
+    - name: Supprimer l'ancien secret TLS RSA
+      ansible.builtin.command: >
+        k3s kubectl delete secret {{ app_name }}-tls
+        -n {{ target_namespace }} --ignore-not-found
+      when: nextcloud_cert_key_type.stdout is defined and 'ECDSA' not in nextcloud_cert_key_type.stdout
+      changed_when: true
+      tags: [nextcloud, nextcloud-ingress, letsencrypt-tls]
+
+    # ==========================================================
+    # INGRESSROUTE HTTPS (Traefik CRD - router websecure)
+    # ==========================================================
+
+    - name: Écrire l'IngressRoute HTTPS Nextcloud
+      ansible.builtin.copy:
+        dest: /tmp/nextcloud-ingressroute-https.yml
+        mode: '0644'
+        content: |
+          apiVersion: traefik.io/v1alpha1
+          kind: Middleware
+          metadata:
+            name: {{ app_name }}-headers
+            namespace: {{ target_namespace }}
+          spec:
+            headers:
+              customRequestHeaders:
+                X-Forwarded-Proto: "https"
+              stsSeconds: 15552000
+              stsIncludeSubdomains: true
+              stsPreload: true
+          ---
+          apiVersion: traefik.io/v1alpha1
+          kind: Middleware
+          metadata:
+            name: {{ app_name }}-redirectregex
+            namespace: {{ target_namespace }}
+          spec:
+            redirectRegex:
+              permanent: true
+              regex: "https://(.*)/.well-known/(?:card|cal)dav"
+              replacement: "https://${1}/remote.php/dav"
+          ---
+          apiVersion: traefik.io/v1alpha1
+          kind: IngressRoute
+          metadata:
+            name: {{ app_name }}-https
+            namespace: {{ target_namespace }}
+          spec:
+            entryPoints:
+              - websecure
+            routes:
+              - match: "Host(`{{ external_domains.nextcloud }}`)"
+                kind: Rule
+                middlewares:
+                  - name: {{ app_name }}-headers
+                  - name: {{ app_name }}-redirectregex
+                services:
+                  - name: {{ app_name }}-service
+                    port: 80
+            tls:
+              secretName: {{ app_name }}-tls
+      tags: [nextcloud, nextcloud-ingress, letsencrypt-tls]
+
+    - name: Appliquer l'IngressRoute HTTPS Nextcloud
+      ansible.builtin.command: k3s kubectl apply -f /tmp/nextcloud-ingressroute-https.yml
+      register: ingressroute_apply
+      changed_when: "'configured' in ingressroute_apply.stdout or 'created' in ingressroute_apply.stdout"
+      tags: [nextcloud, nextcloud-ingress, letsencrypt-tls]
+
+    - name: Supprimer le fichier IngressRoute temporaire
+      ansible.builtin.file:
+        path: /tmp/nextcloud-ingressroute-https.yml
+        state: absent
+      tags: [nextcloud, nextcloud-ingress, letsencrypt-tls]
+
+    # ==========================================================
+    # VÉRIFICATION
+    # ==========================================================
+
+    - name: Attendre que tous les pods Nextcloud soient Ready
+      ansible.builtin.command: >
+        k3s kubectl wait --for=condition=Ready pods
+        --all -n {{ target_namespace }}
+        --timeout=300s
+      register: nextcloud_pods_ready
+      changed_when: false
+      tags: [nextcloud, nextcloud-verify]
+
+    - name: Vérifier les pods Nextcloud
+      ansible.builtin.command: k3s kubectl get pods -n {{ target_namespace }} -o wide
+      register: nextcloud_pods
+      changed_when: false
+      tags: [nextcloud, nextcloud-verify]
+
+    - name: Vérifier les services Nextcloud
+      ansible.builtin.command: k3s kubectl get svc -n {{ target_namespace }}
+      register: nextcloud_svc
+      changed_when: false
+      tags: [nextcloud, nextcloud-verify]
+
+    - name: Vérifier les PVC Nextcloud
+      ansible.builtin.command: k3s kubectl get pvc -n {{ target_namespace }}
+      register: nextcloud_pvc
+      changed_when: false
+      tags: [nextcloud, nextcloud-verify]
+
+    - name: Vérifier l'Ingress Nextcloud
+      ansible.builtin.command: k3s kubectl get ingress -n {{ target_namespace }}
+      register: nextcloud_ingress
+      changed_when: false
+      tags: [nextcloud, nextcloud-verify]
+
+    - name: Vérifier le certificat Nextcloud
+      ansible.builtin.command: k3s kubectl get certificate -n {{ target_namespace }}
+      register: nextcloud_cert
+      changed_when: false
+      failed_when: false
+      tags: [nextcloud, nextcloud-verify]
+
+    # ==========================================================
+    # RÉSUMÉ
+    # ==========================================================
+
+    - name: Résumé Nextcloud
+      ansible.builtin.debug:
+        msg:
+          - "================================================================"
+          - "  Nextcloud déployé"
+          - "================================================================"
+          - "Namespace    : {{ target_namespace }}"
+          - "URL publique : https://{{ external_domains.nextcloud }}"
+          - "TLS          : cert-manager / letsencrypt-production (ECDSA P-256)"
+          - "PostgreSQL   : postgres:16-bookworm ({{ db_storage_size }})"
+          - "Data         : {{ data_storage_size }} ({{ storage_class }})"
+          - "Upload max   : 10 Go"
+          - "================================================================"
+          - "  Pods"
+          - "================================================================"
+          - "{{ nextcloud_pods.stdout_lines }}"
+          - "================================================================"
+          - "  Services"
+          - "================================================================"
+          - "{{ nextcloud_svc.stdout_lines }}"
+          - "================================================================"
+          - "  PVC"
+          - "================================================================"
+          - "{{ nextcloud_pvc.stdout_lines }}"
+          - "================================================================"
+          - "  Ingress"
+          - "================================================================"
+          - "{{ nextcloud_ingress.stdout_lines }}"
+          - "================================================================"
+          - "  Certificat"
+          - "================================================================"
+          - "{{ nextcloud_cert.stdout_lines | default(['En attente...']) }}"
+          - "================================================================"
+          - ""
+          - "  CONNEXION AU NAS (post-déploiement) :"
+          - "  ────────────────────────────────────────"
+          - "  1. Se connecter à https://{{ external_domains.nextcloud }}"
+          - "     Admin : {{ nextcloud_config.admin_user }} / <admin_password>"
+          - "  2. Applications > Activer 'External storage support'"
+          - "  3. Administration > Stockages externes > Ajouter :"
+          - "     Type  : SMB/CIFS"
+          - "     Host  : samba-service.nas.svc.cluster.local"
+          - "     Share : media (ou documents / shared)"
+          - "     User  : {{ nas_config.samba_user }}"
+          - "     Pass  : <samba_password>"
+          - "  L'indexation est automatique (pas de occ files:scan)"
+          - ""
+          - "  IMPORTANT : Changer admin_password et db_password !"
+          - ""
+          - "================================================================"
+      tags: [nextcloud, nextcloud-verify]

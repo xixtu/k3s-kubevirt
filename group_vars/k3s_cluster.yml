@@ -116,6 +116,19 @@ nas_config:
       path: /nas/shared
       comment: "Partage commun"
 
+# --- Nextcloud Configuration ---
+# Se connecte au NAS via plugin "External Storage: SMB/CIFS"
+# Host SMB interne : samba-service.nas.svc.cluster.local
+nextcloud_config:
+  admin_user: "admin"
+  admin_password: "ch4nge-me-nextcloud"   # ⚠ Changer en production (ou ansible-vault)
+  db_name: "nextcloud"
+  db_user: "nextcloud"
+  db_password: "nextcloud-db-s3cret"      # ⚠ Changer en production (ou ansible-vault)
+  storage_class: "longhorn-fast"
+  db_storage_size: "5Gi"
+  data_storage_size: "50Gi"               # Données app, cache, thumbnails (fichiers sur NAS via SMB)
+
 # --- Domaines et certificats ---
 cluster_domain: "cluster.local"
 letsencrypt_email: "admin@xixtu.eu"    # ⚠ Mettre l'email réel du compte Let's Encrypt
@@ -130,6 +143,7 @@ external_domains:
   grafana: "grafana.app.xixtu.eu"
   prometheus: "prometheus.app.xixtu.eu"
   alertmanager: "alertmanager.app.xixtu.eu"
+  nextcloud: "nextcloud.app.xixtu.eu"
 
 # --- Monitoring ---
 monitoring_config:
