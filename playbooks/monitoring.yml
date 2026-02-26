@@ -136,6 +136,19 @@
 
           # --- Alertmanager ---
           alertmanager:
+            config:
+              route:
+                receiver: 'default'
+                routes:
+                  - match:
+                      alertname: Watchdog
+                    receiver: 'null'
+                  - match:
+                      alertname: InfoInhibitor
+                    receiver: 'null'
+              receivers:
+                - name: 'default'
+                - name: 'null'
             alertmanagerSpec:
               externalUrl: "https://{{ external_domains.alertmanager }}"
               storage:
