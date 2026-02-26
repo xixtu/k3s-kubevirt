@@ -58,43 +58,28 @@
     # FICHIER DE VALEURS HELM
     # ==========================================================
 
-    - name: Écrire le fichier de valeurs Longhorn
+    - name: Ecrire le fichier de valeurs Longhorn
       ansible.builtin.copy:
         dest: /tmp/longhorn-values.yml
         mode: '0644'
         content: |
-          # Longhorn Helm values - cluster k3s
-          # Namespace : longhorn-system (créé par Helm)
-
-          # Désactiver la StorageClass par défaut (on crée les nôtres)
           persistence:
             defaultClass: false
             defaultClassReplicaCount: {{ longhorn_config.default_replica_count }}
             defaultFsType: ext4
             defaultDataLocality: best-effort
             reclaimPolicy: Delete
-
-          # Settings globaux Longhorn
           defaultSettings:
-            # Ne PAS créer de disque par défaut sur tous les nœuds
-            # On configure les 3 disques manuellement via kubectl patch
             createDefaultDiskLabeledNodes: true
             defaultReplicaCount: {{ longhorn_config.default_replica_count }}
             storageOverProvisioningPercentage: {{ longhorn_config.storage_over_provisioning_percentage }}
             storageMinimalAvailablePercentage: {{ longhorn_config.storage_minimal_available_percentage }}
             guaranteedEngineManagerCPU: {{ longhorn_config.guaranteed_engine_manager_cpu }}
             guaranteedReplicaManagerCPU: {{ longhorn_config.guaranteed_replica_manager_cpu }}
-            {% if longhorn_config.backup_target %}
-            backupTarget: "{{ longhorn_config.backup_target }}"
-            {% endif %}
             replicaSoftAntiAffinity: true
             replicaAutoBalance: best-effort
-
-          # UI Longhorn (service ClusterIP, exposé via Traefik IngressRoute)
           longhornUI:
             replicas: 1
-
-          # Désactiver l'ingress intégré (on utilise IngressRoute Traefik)
           ingress:
             enabled: false
       tags: [longhorn, longhorn-install]
