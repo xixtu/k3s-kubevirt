@@ -95,6 +95,7 @@ external_domains:
   longhorn: "longhorn.app.xixtu.eu"
   paheko: "paheko.app.xixtu.eu"
   kwaba: "kwaba-kinesiologie.xixtu.eu"
+  mobilizon: "mobilizon.app.xixtu.eu"
 
 # --- Monitoring ---
 monitoring_config:

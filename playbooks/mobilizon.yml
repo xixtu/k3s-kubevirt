@@ -1,0 +1,506 @@
+---
+# =============================================================
+# PLAYBOOK : Déploiement Mobilizon - Événements fédérés
+# =============================================================
+# Usage : ansible-playbook -i inventory/hosts.yml playbooks/mobilizon.yml
+# Tags :
+#   mobilizon-install → Namespace, Secrets, PVC, PostgreSQL, Mobilizon, Service
+#   mobilizon-ingress → Ingress TLS + IngressRoute HTTPS
+#   letsencrypt-tls   → Ingress TLS + migration ECDSA + IngressRoute HTTPS
+#   mobilizon-verify  → Vérification pods, service, ingress, cert
+# Prérequis :
+#   - K3s + MetalLB + Traefik installés
+#   - Longhorn StorageClasses (longhorn-fast)
+#   - cert-manager + ClusterIssuer letsencrypt-production
+#   - DNS : mobilizon.app.xixtu.eu → A → <IP publique>
+# URL publique : https://mobilizon.app.xixtu.eu
+# =============================================================
+
+- name: "Mobilizon - Événements fédérés (ActivityPub)"
+  hosts: k3s-node-1
+  become: true
+  gather_facts: false
+  vars_files:
+    - "../group_vars/k3s_cluster.yml"
+  vars:
+    target_namespace: "mobilizon"
+    app_name: "mobilizon"
+    storage_class: "longhorn-fast"
+    db_storage_size: "5Gi"
+    uploads_storage_size: "10Gi"
+    # PostgreSQL
+    db_name: "mobilizon"
+    db_user: "mobilizon"
+    db_password: "mobilizon-s3cret-ch4nge-me"
+    # Mobilizon
+    mobilizon_instance_name: "Mobilizon Xixtu"
+    mobilizon_admin_email: "{{ letsencrypt_email }}"
+
+  tasks:
+
+    # ==========================================================
+    # NAMESPACE
+    # ==========================================================
+
+    - name: Créer le namespace mobilizon
+      ansible.builtin.command: k3s kubectl create namespace {{ target_namespace }}
+      register: ns_create
+      failed_when: ns_create.rc != 0 and 'already exists' not in ns_create.stderr
+      changed_when: ns_create.rc == 0
+      tags: [mobilizon, mobilizon-install]
+
+    # ==========================================================
+    # SECRET (mot de passe PostgreSQL)
+    # ==========================================================
+
+    - name: Créer le Secret PostgreSQL
+      ansible.builtin.shell: |
+        k3s kubectl create secret generic {{ app_name }}-db-secret \
+          --namespace {{ target_namespace }} \
+          --from-literal=POSTGRES_PASSWORD={{ db_password }} \
+          --from-literal=POSTGRES_USER={{ db_user }} \
+          --from-literal=POSTGRES_DB={{ db_name }} \
+          --dry-run=client -o yaml | k3s kubectl apply -f -
+      changed_when: true
+      tags: [mobilizon, mobilizon-install]
+
+    # ==========================================================
+    # PVC (PostgreSQL + Mobilizon uploads)
+    # ==========================================================
+
+    - name: Écrire les PVC Mobilizon
+      ansible.builtin.copy:
+        dest: /tmp/mobilizon-pvc.yml
+        mode: '0644'
+        content: |
+          ---
+          apiVersion: v1
+          kind: PersistentVolumeClaim
+          metadata:
+            name: {{ app_name }}-db-data
+            namespace: {{ target_namespace }}
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            storageClassName: {{ storage_class }}
+            resources:
+              requests:
+                storage: {{ db_storage_size }}
+          ---
+          apiVersion: v1
+          kind: PersistentVolumeClaim
+          metadata:
+            name: {{ app_name }}-uploads
+            namespace: {{ target_namespace }}
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            storageClassName: {{ storage_class }}
+            resources:
+              requests:
+                storage: {{ uploads_storage_size }}
+      tags: [mobilizon, mobilizon-install]
+
+    - name: Appliquer les PVC Mobilizon
+      ansible.builtin.command: k3s kubectl apply -f /tmp/mobilizon-pvc.yml
+      register: pvc_apply
+      changed_when: "'configured' in pvc_apply.stdout or 'created' in pvc_apply.stdout"
+      tags: [mobilizon, mobilizon-install]
+
+    - name: Supprimer le fichier PVC temporaire
+      ansible.builtin.file:
+        path: /tmp/mobilizon-pvc.yml
+        state: absent
+      tags: [mobilizon, mobilizon-install]
+
+    # ==========================================================
+    # POSTGRESQL + POSTGIS
+    # ==========================================================
+
+    - name: Écrire le Deployment PostgreSQL
+      ansible.builtin.copy:
+        dest: /tmp/mobilizon-postgres.yml
+        mode: '0644'
+        content: |
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: {{ app_name }}-postgres
+            namespace: {{ target_namespace }}
+            labels:
+              app: {{ app_name }}-postgres
+          spec:
+            replicas: 1
+            strategy:
+              type: Recreate
+            selector:
+              matchLabels:
+                app: {{ app_name }}-postgres
+            template:
+              metadata:
+                labels:
+                  app: {{ app_name }}-postgres
+              spec:
+                containers:
+                  - name: postgres
+                    image: postgis/postgis:16-3.4
+                    ports:
+                      - containerPort: 5432
+                    envFrom:
+                      - secretRef:
+                          name: {{ app_name }}-db-secret
+                    volumeMounts:
+                      - name: db-data
+                        mountPath: /var/lib/postgresql/data
+                        subPath: pgdata
+                    resources:
+                      requests:
+                        cpu: 100m
+                        memory: 256Mi
+                      limits:
+                        memory: 512Mi
+                volumes:
+                  - name: db-data
+                    persistentVolumeClaim:
+                      claimName: {{ app_name }}-db-data
+          ---
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: {{ app_name }}-postgres
+            namespace: {{ target_namespace }}
+          spec:
+            selector:
+              app: {{ app_name }}-postgres
+            ports:
+              - protocol: TCP
+                port: 5432
+                targetPort: 5432
+            type: ClusterIP
+      tags: [mobilizon, mobilizon-install]
+
+    - name: Appliquer le Deployment PostgreSQL
+      ansible.builtin.command: k3s kubectl apply -f /tmp/mobilizon-postgres.yml
+      register: pg_apply
+      changed_when: "'configured' in pg_apply.stdout or 'created' in pg_apply.stdout"
+      tags: [mobilizon, mobilizon-install]
+
+    - name: Supprimer le fichier PostgreSQL temporaire
+      ansible.builtin.file:
+        path: /tmp/mobilizon-postgres.yml
+        state: absent
+      tags: [mobilizon, mobilizon-install]
+
+    - name: Attendre que PostgreSQL soit Ready
+      ansible.builtin.command: >
+        k3s kubectl wait --for=condition=Ready pods
+        -l app={{ app_name }}-postgres
+        -n {{ target_namespace }}
+        --timeout=120s
+      changed_when: false
+      tags: [mobilizon, mobilizon-install]
+
+    # ==========================================================
+    # MOBILIZON (Application)
+    # ==========================================================
+
+    - name: Écrire le Deployment Mobilizon
+      ansible.builtin.copy:
+        dest: /tmp/mobilizon-app.yml
+        mode: '0644'
+        content: |
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: {{ app_name }}
+            namespace: {{ target_namespace }}
+            labels:
+              app: {{ app_name }}
+          spec:
+            replicas: 1
+            strategy:
+              type: Recreate
+            selector:
+              matchLabels:
+                app: {{ app_name }}
+            template:
+              metadata:
+                labels:
+                  app: {{ app_name }}
+              spec:
+                containers:
+                  - name: mobilizon
+                    image: framasoft/mobilizon:latest
+                    ports:
+                      - containerPort: 4000
+                    env:
+                      - name: MOBILIZON_INSTANCE_HOST
+                        value: "{{ external_domains.mobilizon }}"
+                      - name: MOBILIZON_INSTANCE_PORT
+                        value: "443"
+                      - name: MOBILIZON_INSTANCE_NAME
+                        value: "{{ mobilizon_instance_name }}"
+                      - name: MOBILIZON_INSTANCE_EMAIL
+                        value: "{{ mobilizon_admin_email }}"
+                      - name: MOBILIZON_INSTANCE_REGISTRATIONS_OPEN
+                        value: "true"
+                      - name: MOBILIZON_DATABASE_HOST
+                        value: "{{ app_name }}-postgres"
+                      - name: MOBILIZON_DATABASE_PORT
+                        value: "5432"
+                      - name: MOBILIZON_DATABASE_DBNAME
+                        value: "{{ db_name }}"
+                      - name: MOBILIZON_DATABASE_USERNAME
+                        value: "{{ db_user }}"
+                      - name: MOBILIZON_DATABASE_PASSWORD
+                        value: "{{ db_password }}"
+                      - name: MOBILIZON_INSTANCE_LISTEN_IP
+                        value: "0.0.0.0"
+                    volumeMounts:
+                      - name: uploads
+                        mountPath: /var/lib/mobilizon/uploads
+                    resources:
+                      requests:
+                        cpu: 100m
+                        memory: 256Mi
+                      limits:
+                        memory: 1Gi
+                volumes:
+                  - name: uploads
+                    persistentVolumeClaim:
+                      claimName: {{ app_name }}-uploads
+          ---
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: {{ app_name }}-service
+            namespace: {{ target_namespace }}
+          spec:
+            selector:
+              app: {{ app_name }}
+            ports:
+              - protocol: TCP
+                port: 80
+                targetPort: 4000
+            type: ClusterIP
+      tags: [mobilizon, mobilizon-install]
+
+    - name: Appliquer le Deployment Mobilizon
+      ansible.builtin.command: k3s kubectl apply -f /tmp/mobilizon-app.yml
+      register: app_apply
+      changed_when: "'configured' in app_apply.stdout or 'created' in app_apply.stdout"
+      tags: [mobilizon, mobilizon-install]
+
+    - name: Supprimer le fichier Mobilizon temporaire
+      ansible.builtin.file:
+        path: /tmp/mobilizon-app.yml
+        state: absent
+      tags: [mobilizon, mobilizon-install]
+
+    # ==========================================================
+    # TLS - CERTIFICAT LET'S ENCRYPT (mobilizon.app.xixtu.eu)
+    # ==========================================================
+    # Pattern : Ingress K8s (déclenche cert-manager) + IngressRoute HTTPS
+    # ==========================================================
+
+    - name: Écrire l'Ingress TLS Mobilizon
+      ansible.builtin.copy:
+        dest: /tmp/mobilizon-ingress.yml
+        mode: '0644'
+        content: |
+          apiVersion: networking.k8s.io/v1
+          kind: Ingress
+          metadata:
+            name: {{ app_name }}-ingress
+            namespace: {{ target_namespace }}
+            annotations:
+              cert-manager.io/cluster-issuer: "letsencrypt-production"
+              cert-manager.io/private-key-algorithm: "ECDSA"
+              cert-manager.io/private-key-size: "256"
+              traefik.ingress.kubernetes.io/router.entrypoints: "web"
+              traefik.ingress.kubernetes.io/router.middlewares: "traefik-redirect-to-https@kubernetescrd"
+          spec:
+            ingressClassName: traefik
+            tls:
+              - hosts:
+                  - "{{ external_domains.mobilizon }}"
+                secretName: {{ app_name }}-tls
+            rules:
+              - host: "{{ external_domains.mobilizon }}"
+                http:
+                  paths:
+                    - path: /
+                      pathType: Prefix
+                      backend:
+                        service:
+                          name: {{ app_name }}-service
+                          port:
+                            number: 80
+      tags: [mobilizon, mobilizon-ingress, letsencrypt-tls]
+
+    - name: Appliquer l'Ingress TLS Mobilizon
+      ansible.builtin.command: k3s kubectl apply -f /tmp/mobilizon-ingress.yml
+      register: ingress_apply
+      changed_when: "'configured' in ingress_apply.stdout or 'created' in ingress_apply.stdout"
+      tags: [mobilizon, mobilizon-ingress, letsencrypt-tls]
+
+    - name: Supprimer le fichier Ingress temporaire
+      ansible.builtin.file:
+        path: /tmp/mobilizon-ingress.yml
+        state: absent
+      tags: [mobilizon, mobilizon-ingress, letsencrypt-tls]
+
+    # ==========================================================
+    # MIGRATION ECDSA (si ancien certificat RSA)
+    # ==========================================================
+
+    - name: Vérifier le type de clé du certificat actuel
+      ansible.builtin.shell: >
+        k3s kubectl get secret {{ app_name }}-tls -n {{ target_namespace }}
+        -o jsonpath='{.data.tls\.key}' | base64 -d
+        | openssl ec -noout 2>/dev/null && echo "ECDSA" || echo "RSA"
+      register: mobilizon_cert_key_type
+      changed_when: false
+      failed_when: false
+      tags: [mobilizon, mobilizon-ingress, letsencrypt-tls]
+
+    - name: Supprimer l'ancien certificat RSA pour renouvellement ECDSA
+      ansible.builtin.command: >
+        k3s kubectl delete certificate {{ app_name }}-tls
+        -n {{ target_namespace }} --ignore-not-found
+      when: mobilizon_cert_key_type.stdout is defined and 'ECDSA' not in mobilizon_cert_key_type.stdout
+      changed_when: true
+      tags: [mobilizon, mobilizon-ingress, letsencrypt-tls]
+
+    - name: Supprimer l'ancien secret TLS RSA
+      ansible.builtin.command: >
+        k3s kubectl delete secret {{ app_name }}-tls
+        -n {{ target_namespace }} --ignore-not-found
+      when: mobilizon_cert_key_type.stdout is defined and 'ECDSA' not in mobilizon_cert_key_type.stdout
+      changed_when: true
+      tags: [mobilizon, mobilizon-ingress, letsencrypt-tls]
+
+    # ==========================================================
+    # INGRESSROUTE HTTPS (Traefik CRD - router websecure)
+    # ==========================================================
+
+    - name: Écrire l'IngressRoute HTTPS Mobilizon
+      ansible.builtin.copy:
+        dest: /tmp/mobilizon-ingressroute-https.yml
+        mode: '0644'
+        content: |
+          apiVersion: traefik.io/v1alpha1
+          kind: IngressRoute
+          metadata:
+            name: {{ app_name }}-https
+            namespace: {{ target_namespace }}
+          spec:
+            entryPoints:
+              - websecure
+            routes:
+              - match: "Host(`{{ external_domains.mobilizon }}`)"
+                kind: Rule
+                services:
+                  - name: {{ app_name }}-service
+                    port: 80
+            tls:
+              secretName: {{ app_name }}-tls
+      tags: [mobilizon, mobilizon-ingress, letsencrypt-tls]
+
+    - name: Appliquer l'IngressRoute HTTPS Mobilizon
+      ansible.builtin.command: k3s kubectl apply -f /tmp/mobilizon-ingressroute-https.yml
+      register: ingressroute_apply
+      changed_when: "'configured' in ingressroute_apply.stdout or 'created' in ingressroute_apply.stdout"
+      tags: [mobilizon, mobilizon-ingress, letsencrypt-tls]
+
+    - name: Supprimer le fichier IngressRoute temporaire
+      ansible.builtin.file:
+        path: /tmp/mobilizon-ingressroute-https.yml
+        state: absent
+      tags: [mobilizon, mobilizon-ingress, letsencrypt-tls]
+
+    # ==========================================================
+    # VÉRIFICATION
+    # ==========================================================
+
+    - name: Attendre que tous les pods Mobilizon soient Ready
+      ansible.builtin.command: >
+        k3s kubectl wait --for=condition=Ready pods
+        --all -n {{ target_namespace }}
+        --timeout=180s
+      register: mobilizon_pods_ready
+      changed_when: false
+      tags: [mobilizon, mobilizon-verify]
+
+    - name: Vérifier les pods Mobilizon
+      ansible.builtin.command: k3s kubectl get pods -n {{ target_namespace }} -o wide
+      register: mobilizon_pods
+      changed_when: false
+      tags: [mobilizon, mobilizon-verify]
+
+    - name: Vérifier les services Mobilizon
+      ansible.builtin.command: k3s kubectl get svc -n {{ target_namespace }}
+      register: mobilizon_svc
+      changed_when: false
+      tags: [mobilizon, mobilizon-verify]
+
+    - name: Vérifier les PVC Mobilizon
+      ansible.builtin.command: k3s kubectl get pvc -n {{ target_namespace }}
+      register: mobilizon_pvc
+      changed_when: false
+      tags: [mobilizon, mobilizon-verify]
+
+    - name: Vérifier l'Ingress Mobilizon
+      ansible.builtin.command: k3s kubectl get ingress -n {{ target_namespace }}
+      register: mobilizon_ingress
+      changed_when: false
+      tags: [mobilizon, mobilizon-verify]
+
+    - name: Vérifier le certificat Mobilizon
+      ansible.builtin.command: k3s kubectl get certificate -n {{ target_namespace }}
+      register: mobilizon_cert
+      changed_when: false
+      failed_when: false
+      tags: [mobilizon, mobilizon-verify]
+
+    # ==========================================================
+    # RÉSUMÉ
+    # ==========================================================
+
+    - name: Résumé Mobilizon
+      ansible.builtin.debug:
+        msg:
+          - "================================================"
+          - "  Mobilizon déployé"
+          - "================================================"
+          - "Namespace    : {{ target_namespace }}"
+          - "URL publique : https://{{ external_domains.mobilizon }}"
+          - "TLS          : cert-manager / letsencrypt-production (ECDSA P-256)"
+          - "PostgreSQL   : postgis/postgis:16-3.4 ({{ db_storage_size }})"
+          - "Uploads      : {{ uploads_storage_size }} ({{ storage_class }})"
+          - "================================================"
+          - "  Pods"
+          - "================================================"
+          - "{{ mobilizon_pods.stdout_lines }}"
+          - "================================================"
+          - "  Services"
+          - "================================================"
+          - "{{ mobilizon_svc.stdout_lines }}"
+          - "================================================"
+          - "  PVC"
+          - "================================================"
+          - "{{ mobilizon_pvc.stdout_lines }}"
+          - "================================================"
+          - "  Ingress"
+          - "================================================"
+          - "{{ mobilizon_ingress.stdout_lines }}"
+          - "================================================"
+          - "  Certificat"
+          - "================================================"
+          - "{{ mobilizon_cert.stdout_lines | default(['En attente...']) }}"
+          - "================================================"
+          - ""
+          - "  IMPORTANT : Changer db_password en production !"
+          - ""
+          - "================================================"
+      tags: [mobilizon, mobilizon-verify]
