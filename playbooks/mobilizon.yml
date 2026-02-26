@@ -261,8 +261,6 @@
                     env:
                       - name: MOBILIZON_INSTANCE_HOST
                         value: "{{ external_domains.mobilizon }}"
-                      - name: MOBILIZON_INSTANCE_PORT
-                        value: "443"
                       - name: MOBILIZON_INSTANCE_NAME
                         value: "{{ mobilizon_instance_name }}"
                       - name: MOBILIZON_INSTANCE_EMAIL
