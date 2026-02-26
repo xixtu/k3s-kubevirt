@@ -1,0 +1,11 @@
+# =============================================================
+# RESOLV.CONF dédié K3s - DNS pour les pods
+# Généré par Ansible - NE PAS MODIFIER MANUELLEMENT
+# =============================================================
+# Ce fichier est utilisé par kubelet (via resolv-conf) pour
+# générer le /etc/resolv.conf des pods.
+# Il évite le dépassement de la limite de 3 nameservers Linux
+# causé par systemd-resolved (ajout IPv6 automatique).
+# =============================================================
+nameserver {{ network_dns[0] }}
+search {{ network_search_domains | join(' ') }}

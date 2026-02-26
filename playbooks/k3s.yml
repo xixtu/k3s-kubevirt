@@ -34,6 +34,13 @@
         mode: '0755'
       tags: [k3s, k3s-config, k3s-primary]
 
+    - name: Déployer le resolv.conf dédié K3s (évite limite 3 nameservers)
+      ansible.builtin.template:
+        src: ../templates/k3s-resolv.conf.j2
+        dest: /etc/k3s-resolv.conf
+        mode: '0644'
+      tags: [k3s, k3s-config, k3s-primary, k3s-dns]
+
     - name: Déployer la config K3s (nœud primaire)
       ansible.builtin.copy:
         dest: /etc/rancher/k3s/config.yaml
@@ -48,6 +55,7 @@
           cluster-cidr: "{{ cluster_network.pod_cidr }}"
           service-cidr: "{{ cluster_network.service_cidr }}"
           write-kubeconfig-mode: "{{ k3s_config.write_kubeconfig_mode }}"
+          resolv-conf: "/etc/k3s-resolv.conf"
           disable:
           {% for item in k3s_config.disable %}
             - {{ item }}
@@ -171,6 +179,13 @@
         mode: '0755'
       tags: [k3s, k3s-config, k3s-secondary]
 
+    - name: Déployer le resolv.conf dédié K3s (évite limite 3 nameservers)
+      ansible.builtin.template:
+        src: ../templates/k3s-resolv.conf.j2
+        dest: /etc/k3s-resolv.conf
+        mode: '0644'
+      tags: [k3s, k3s-config, k3s-secondary, k3s-dns]
+
     - name: Déployer la config K3s (nœud secondaire)
       ansible.builtin.copy:
         dest: /etc/rancher/k3s/config.yaml
@@ -184,6 +199,7 @@
           advertise-address: "{{ bond_ip }}"
           flannel-backend: "{{ k3s_config.flannel_backend }}"
           write-kubeconfig-mode: "{{ k3s_config.write_kubeconfig_mode }}"
+          resolv-conf: "/etc/k3s-resolv.conf"
           disable:
           {% for item in k3s_config.disable %}
             - {{ item }}
