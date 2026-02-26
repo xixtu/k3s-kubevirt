@@ -138,7 +138,11 @@
           alertmanager:
             config:
               route:
-                receiver: 'default'
+                receiver: 'telegram'
+                group_by: ['alertname', 'namespace']
+                group_wait: 30s
+                group_interval: 5m
+                repeat_interval: 4h
                 routes:
                   - match:
                       alertname: Watchdog
@@ -146,8 +150,30 @@
                   - match:
                       alertname: InfoInhibitor
                     receiver: 'null'
+                  - match:
+                      severity: critical
+                    receiver: 'telegram'
+                    repeat_interval: 1h
+                  - match:
+                      severity: warning
+                    receiver: 'telegram'
+                    repeat_interval: 4h
               receivers:
-                - name: 'default'
+                - name: 'telegram'
+                  telegram_configs:
+                    - bot_token: '{{ telegram_bot_token }}'
+                      chat_id: {{ telegram_chat_id }}
+                      parse_mode: 'HTML'
+                      message: |
+                        {{ '{{' }} if eq .Status "firing" {{ '}}' }}🔥 <b>ALERTE {{ '{{' }} .Status | toUpper {{ '}}' }}</b>{{ '{{' }} else {{ '}}' }}✅ <b>RÉSOLUE</b>{{ '{{' }} end {{ '}}' }}
+
+                        {{ '{{' }} range .Alerts {{ '}}' }}
+                        <b>{{ '{{' }} .Labels.alertname {{ '}}' }}</b> [{{ '{{' }} .Labels.severity {{ '}}' }}]
+                        {{ '{{' }} if .Annotations.summary {{ '}}' }}📋 {{ '{{' }} .Annotations.summary {{ '}}' }}{{ '{{' }} end {{ '}}' }}
+                        {{ '{{' }} if .Annotations.description {{ '}}' }}📝 {{ '{{' }} .Annotations.description {{ '}}' }}{{ '{{' }} end {{ '}}' }}
+                        🏷️ Namespace: {{ '{{' }} .Labels.namespace {{ '}}' }}
+                        🕐 {{ '{{' }} .StartsAt.Format "02/01/2006 15:04:05" {{ '}}' }}
+                        {{ '{{' }} end {{ '}}' }}
                 - name: 'null'
             alertmanagerSpec:
               externalUrl: "https://{{ external_domains.alertmanager }}"

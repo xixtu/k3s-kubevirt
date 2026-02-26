@@ -110,6 +110,12 @@ monitoring_config:
   alertmanager_storage: "10Gi"
   alertmanager_storage_class: "longhorn-fast"
 
+# --- Telegram Alerting ---
+# ⚠ Envisager ansible-vault pour chiffrer le token en production :
+#   ansible-vault encrypt_string '<token>' --name 'telegram_bot_token'
+telegram_bot_token: "7991230289:AAEIl8LouUtCYmE7fSUFpUU5r5TFr3HN_6k"
+telegram_chat_id: "-5183003485"
+
 # --- Packages Ubuntu à installer ---
 common_packages:
   - git
