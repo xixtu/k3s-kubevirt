@@ -1,79 +1,84 @@
 ---
-- name: Déploiement Paheko
+# =============================================================
+# PLAYBOOK : Déploiement Paheko - Comptabilité associative
+# =============================================================
+# Usage : ansible-playbook -i inventory/hosts.yml playbooks/paheko.yml
+# Tags :
+#   paheko-install  → Namespace, PVC, Deployment, Service
+#   paheko-ingress  → Ingress TLS + IngressRoute HTTPS
+#   letsencrypt-tls → Ingress TLS + migration ECDSA + IngressRoute HTTPS
+#   paheko-verify   → Vérification pods, service, ingress, cert
+# Prérequis :
+#   - K3s + MetalLB + Traefik installés
+#   - cert-manager + ClusterIssuer letsencrypt-production
+#   - DNS : paheko.app.xixtu.eu → A → <IP publique>
+# URL publique : https://paheko.app.xixtu.eu
+# =============================================================
+
+- name: "Paheko - Comptabilité associative"
   hosts: k3s-node-1
   become: true
-
+  gather_facts: false
+  vars_files:
+    - "../group_vars/k3s_cluster.yml"
   vars:
     target_namespace: "paheko"
     app_name: "paheko"
-    fqdn: "paheko.app.xixtu.eu"
-    k3s_config: "/etc/rancher/k3s/k3s.yaml"
     storage_size: "5Gi"
+    storage_class: "longhorn-fast"
 
   tasks:
 
-    - name: Installer python3-kubernetes
-      ansible.builtin.apt:
-        name: python3-kubernetes
-        state: present
-        update_cache: yes
+    # ==========================================================
+    # NAMESPACE
+    # ==========================================================
 
-    - name: Créer le namespace
-      kubernetes.core.k8s:
-        kubeconfig: "{{ k3s_config }}"
-        state: present
-        definition:
-          apiVersion: v1
-          kind: Namespace
-          metadata:
-            name: "{{ target_namespace }}"
+    - name: Créer le namespace paheko
+      ansible.builtin.command: k3s kubectl create namespace {{ target_namespace }}
+      register: ns_create
+      failed_when: ns_create.rc != 0 and 'already exists' not in ns_create.stderr
+      changed_when: ns_create.rc == 0
+      tags: [paheko, paheko-install]
 
-    # ------------------------
-    # PVC
-    # ------------------------
+    # ==========================================================
+    # PVC + DEPLOYMENT + SERVICE (manifeste unique)
+    # ==========================================================
 
-    - name: Créer le PersistentVolumeClaim
-      kubernetes.core.k8s:
-        kubeconfig: "{{ k3s_config }}"
-        state: present
-        definition:
+    - name: Écrire le manifeste Paheko (PVC + Deployment + Service)
+      ansible.builtin.copy:
+        dest: /tmp/paheko-manifests.yml
+        mode: '0644'
+        content: |
+          ---
           apiVersion: v1
           kind: PersistentVolumeClaim
           metadata:
-            name: "{{ app_name }}-data"
-            namespace: "{{ target_namespace }}"
+            name: {{ app_name }}-data
+            namespace: {{ target_namespace }}
           spec:
             accessModes:
               - ReadWriteOnce
+            storageClassName: {{ storage_class }}
             resources:
               requests:
-                storage: "{{ storage_size }}"
-
-    # ------------------------
-    # Deployment
-    # ------------------------
-
-    - name: Déployer Paheko
-      kubernetes.core.k8s:
-        kubeconfig: "{{ k3s_config }}"
-        state: present
-        definition:
+                storage: {{ storage_size }}
+          ---
           apiVersion: apps/v1
           kind: Deployment
           metadata:
-            name: "{{ app_name }}"
-            namespace: "{{ target_namespace }}"
+            name: {{ app_name }}
+            namespace: {{ target_namespace }}
             labels:
-              app: "{{ app_name }}"
+              app: {{ app_name }}
           spec:
             replicas: 1
             selector:
               matchLabels:
-                app: "{{ app_name }}"
+                app: {{ app_name }}
             template:
               metadata:
                 labels:
-                  app: "{{ app_name }}"
+                  app: {{ app_name }}
               spec:
                 containers:
                   - name: paheko
@@ -86,97 +91,226 @@
                 volumes:
                   - name: data-volume
                     persistentVolumeClaim:
-                      claimName: "{{ app_name }}-data"
-
-    # ------------------------
-    # Service
-    # ------------------------
-
-    - name: Créer le Service
-      kubernetes.core.k8s:
-        kubeconfig: "{{ k3s_config }}"
-        state: present
-        definition:
+                      claimName: {{ app_name }}-data
+          ---
           apiVersion: v1
           kind: Service
           metadata:
-            name: "{{ app_name }}-service"
-            namespace: "{{ target_namespace }}"
+            name: {{ app_name }}-service
+            namespace: {{ target_namespace }}
           spec:
             selector:
-              app: "{{ app_name }}"
+              app: {{ app_name }}
             ports:
               - protocol: TCP
                 port: 80
                 targetPort: 80
             type: ClusterIP
+      tags: [paheko, paheko-install]
 
-    # ------------------------
-    # Ingress
-    # ------------------------
+    - name: Appliquer les manifestes Paheko
+      ansible.builtin.command: k3s kubectl apply -f /tmp/paheko-manifests.yml
+      register: paheko_apply
+      changed_when: "'configured' in paheko_apply.stdout or 'created' in paheko_apply.stdout"
+      tags: [paheko, paheko-install]
 
-    - name: Créer l'Ingress HTTPS
-      kubernetes.core.k8s:
-        kubeconfig: "{{ k3s_config }}"
-        state: present
-        definition:
+    - name: Supprimer le fichier manifestes temporaire
+      ansible.builtin.file:
+        path: /tmp/paheko-manifests.yml
+        state: absent
+      tags: [paheko, paheko-install]
+
+    # ==========================================================
+    # TLS - CERTIFICAT LET'S ENCRYPT (paheko.app.xixtu.eu)
+    # ==========================================================
+    # Pattern : Ingress K8s (déclenche cert-manager) + IngressRoute HTTPS
+    # Le middleware redirect-to-https redirige HTTP→HTTPS sur l'Ingress,
+    # mais n'affecte PAS le solver cert-manager (Ingress temporaire séparé).
+    # ==========================================================
+
+    - name: Écrire l'Ingress TLS Paheko
+      ansible.builtin.copy:
+        dest: /tmp/paheko-ingress.yml
+        mode: '0644'
+        content: |
           apiVersion: networking.k8s.io/v1
           kind: Ingress
           metadata:
-            name: "{{ app_name }}-ingress"
-            namespace: "{{ target_namespace }}"
+            name: {{ app_name }}-ingress
+            namespace: {{ target_namespace }}
             annotations:
               cert-manager.io/cluster-issuer: "letsencrypt-production"
               cert-manager.io/private-key-algorithm: "ECDSA"
               cert-manager.io/private-key-size: "256"
               traefik.ingress.kubernetes.io/router.entrypoints: "web"
+              traefik.ingress.kubernetes.io/router.middlewares: "traefik-redirect-to-https@kubernetescrd"
           spec:
             ingressClassName: traefik
             tls:
               - hosts:
-                  - "{{ fqdn }}"
-                secretName: "{{ app_name }}-tls"
+                  - "{{ external_domains.paheko }}"
+                secretName: {{ app_name }}-tls
             rules:
-              - host: "{{ fqdn }}"
+              - host: "{{ external_domains.paheko }}"
                 http:
                   paths:
                     - path: /
                       pathType: Prefix
                       backend:
                         service:
-                          name: "{{ app_name }}-service"
+                          name: {{ app_name }}-service
                           port:
                             number: 80
+      tags: [paheko, paheko-ingress, letsencrypt-tls]
 
-    # ------------------------
-    # Vérification clé ECDSA
-    # ------------------------
+    - name: Appliquer l'Ingress TLS Paheko
+      ansible.builtin.command: k3s kubectl apply -f /tmp/paheko-ingress.yml
+      register: ingress_apply
+      changed_when: "'configured' in ingress_apply.stdout or 'created' in ingress_apply.stdout"
+      tags: [paheko, paheko-ingress, letsencrypt-tls]
 
-    - name: Vérifier le type de clé du certificat
+    - name: Supprimer le fichier Ingress temporaire
+      ansible.builtin.file:
+        path: /tmp/paheko-ingress.yml
+        state: absent
+      tags: [paheko, paheko-ingress, letsencrypt-tls]
+
+    # ==========================================================
+    # MIGRATION ECDSA (si ancien certificat RSA)
+    # ==========================================================
+
+    - name: Vérifier le type de clé du certificat actuel
       ansible.builtin.shell: >
         k3s kubectl get secret {{ app_name }}-tls -n {{ target_namespace }}
         -o jsonpath='{.data.tls\.key}' | base64 -d
         | openssl ec -noout 2>/dev/null && echo "ECDSA" || echo "RSA"
-      environment:
-        KUBECONFIG: "{{ k3s_config }}"
       register: paheko_cert_key_type
       changed_when: false
       failed_when: false
+      tags: [paheko, paheko-ingress, letsencrypt-tls]
 
-    - name: Supprimer ancien certificat RSA si nécessaire
+    - name: Supprimer l'ancien certificat RSA pour renouvellement ECDSA
       ansible.builtin.command: >
         k3s kubectl delete certificate {{ app_name }}-tls
         -n {{ target_namespace }} --ignore-not-found
-      environment:
-        KUBECONFIG: "{{ k3s_config }}"
       when: paheko_cert_key_type.stdout is defined and 'ECDSA' not in paheko_cert_key_type.stdout
       changed_when: true
+      tags: [paheko, paheko-ingress, letsencrypt-tls]
 
-    - name: Supprimer ancien secret TLS RSA
+    - name: Supprimer l'ancien secret TLS RSA
       ansible.builtin.command: >
         k3s kubectl delete secret {{ app_name }}-tls
         -n {{ target_namespace }} --ignore-not-found
-      environment:
-        KUBECONFIG: "{{ k3s_config }}"
       when: paheko_cert_key_type.stdout is defined and 'ECDSA' not in paheko_cert_key_type.stdout
       changed_when: true
+      tags: [paheko, paheko-ingress, letsencrypt-tls]
+
+    # ==========================================================
+    # INGRESSROUTE HTTPS (Traefik CRD - router websecure)
+    # ==========================================================
+
+    - name: Écrire l'IngressRoute HTTPS Paheko
+      ansible.builtin.copy:
+        dest: /tmp/paheko-ingressroute-https.yml
+        mode: '0644'
+        content: |
+          apiVersion: traefik.io/v1alpha1
+          kind: IngressRoute
+          metadata:
+            name: {{ app_name }}-https
+            namespace: {{ target_namespace }}
+          spec:
+            entryPoints:
+              - websecure
+            routes:
+              - match: "Host(`{{ external_domains.paheko }}`)"
+                kind: Rule
+                services:
+                  - name: {{ app_name }}-service
+                    port: 80
+            tls:
+              secretName: {{ app_name }}-tls
+      tags: [paheko, paheko-ingress, letsencrypt-tls]
+
+    - name: Appliquer l'IngressRoute HTTPS Paheko
+      ansible.builtin.command: k3s kubectl apply -f /tmp/paheko-ingressroute-https.yml
+      register: ingressroute_apply
+      changed_when: "'configured' in ingressroute_apply.stdout or 'created' in ingressroute_apply.stdout"
+      tags: [paheko, paheko-ingress, letsencrypt-tls]
+
+    - name: Supprimer le fichier IngressRoute temporaire
+      ansible.builtin.file:
+        path: /tmp/paheko-ingressroute-https.yml
+        state: absent
+      tags: [paheko, paheko-ingress, letsencrypt-tls]
+
+    # ==========================================================
+    # VÉRIFICATION
+    # ==========================================================
+
+    - name: Attendre que les pods Paheko soient Ready
+      ansible.builtin.command: >
+        k3s kubectl wait --for=condition=Ready pods
+        --all -n {{ target_namespace }}
+        --timeout=120s
+      register: paheko_pods_ready
+      changed_when: false
+      tags: [paheko, paheko-verify]
+
+    - name: Vérifier les pods Paheko
+      ansible.builtin.command: k3s kubectl get pods -n {{ target_namespace }} -o wide
+      register: paheko_pods
+      changed_when: false
+      tags: [paheko, paheko-verify]
+
+    - name: Vérifier le service Paheko
+      ansible.builtin.command: k3s kubectl get svc -n {{ target_namespace }}
+      register: paheko_svc
+      changed_when: false
+      tags: [paheko, paheko-verify]
+
+    - name: Vérifier l'Ingress Paheko
+      ansible.builtin.command: k3s kubectl get ingress -n {{ target_namespace }}
+      register: paheko_ingress
+      changed_when: false
+      tags: [paheko, paheko-verify]
+
+    - name: Vérifier le certificat Paheko
+      ansible.builtin.command: k3s kubectl get certificate -n {{ target_namespace }}
+      register: paheko_cert
+      changed_when: false
+      failed_when: false
+      tags: [paheko, paheko-verify]
+
+    # ==========================================================
+    # RÉSUMÉ
+    # ==========================================================
+
+    - name: Résumé Paheko
+      ansible.builtin.debug:
+        msg:
+          - "================================================"
+          - "  Paheko déployé"
+          - "================================================"
+          - "Namespace   : {{ target_namespace }}"
+          - "URL publique: https://{{ external_domains.paheko }}"
+          - "TLS         : cert-manager / letsencrypt-production (ECDSA P-256)"
+          - "Stockage    : {{ storage_size }} ({{ storage_class }})"
+          - "================================================"
+          - "  Pods"
+          - "================================================"
+          - "{{ paheko_pods.stdout_lines }}"
+          - "================================================"
+          - "  Service"
+          - "================================================"
+          - "{{ paheko_svc.stdout_lines }}"
+          - "================================================"
+          - "  Ingress"
+          - "================================================"
+          - "{{ paheko_ingress.stdout_lines }}"
+          - "================================================"
+          - "  Certificat"
+          - "================================================"
+          - "{{ paheko_cert.stdout_lines | default(['En attente...']) }}"
+          - "================================================"
+      tags: [paheko, paheko-verify]

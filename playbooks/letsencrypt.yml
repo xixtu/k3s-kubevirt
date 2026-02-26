@@ -20,11 +20,13 @@
 # Certificats gérés :
 #   - headlamp.app.xixtu.eu       (namespace: headlamp)
 #   - longhorn.app.xixtu.eu       (namespace: longhorn-system)
+#   - paheko.app.xixtu.eu         (namespace: paheko)
 #   - kwaba-kinesiologie.xixtu.eu (namespace: kwaba-kinesiologie-redirect)
 #
 # ⚠ PRÉREQUIS DNS (dans Netim) :
 #   headlamp.app.xixtu.eu       → A → <IP publique>
 #   longhorn.app.xixtu.eu       → A → <IP publique>
+#   paheko.app.xixtu.eu         → A → <IP publique>
 #   kwaba-kinesiologie.xixtu.eu → A → <IP publique>
 #   Port 80 et 443 doivent être joignables depuis Internet.
 # =============================================================
@@ -177,7 +179,7 @@
           - "================================================"
           - "IMPORTANT : Vérifier que READY=True avant de"
           - "déployer les certificats applicatifs."
-          - "Relancer headlamp.yml, longhorn.yml et kwaba_deploy_redirect.yml"
+          - "Relancer headlamp.yml, longhorn.yml, paheko.yml et kwaba_deploy_redirect.yml"
           - "avec le tag --tags letsencrypt-tls"
           - "================================================"
       tags: [certmanager, letsencrypt-config, certmanager-verify]
