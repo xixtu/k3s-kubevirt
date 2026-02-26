@@ -96,6 +96,9 @@ external_domains:
   paheko: "paheko.app.xixtu.eu"
   kwaba: "kwaba-kinesiologie.xixtu.eu"
   mobilizon: "mobilizon.app.xixtu.eu"
+  grafana: "grafana.app.xixtu.eu"
+  prometheus: "prometheus.app.xixtu.eu"
+  alertmanager: "alertmanager.app.xixtu.eu"
 
 # --- Monitoring ---
 monitoring_config:
