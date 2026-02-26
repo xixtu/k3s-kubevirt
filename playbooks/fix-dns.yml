@@ -1,0 +1,144 @@
+---
+# =============================================================
+# PLAYBOOK : Correctif DNS - Limite nameservers dans les pods
+# =============================================================
+# Problème : "Nameserver limits were exceeded, some nameservers
+#             have been omitted"
+# Cause    : systemd-resolved ajoute des entrées IPv6 au
+#            /etc/resolv.conf du node, dépassant la limite de
+#            3 nameservers Linux. Kubelet propage ce fichier
+#            aux pods → le DNS primaire (192.168.0.21) est éjecté.
+# Solution : Créer un /etc/k3s-resolv.conf dédié avec uniquement
+#            le DNS primaire (AdGuard Home), et configurer K3s
+#            pour l'utiliser via le paramètre resolv-conf.
+# =============================================================
+# Usage : ansible-playbook -i inventory/hosts.yml playbooks/fix-dns.yml
+# Tags  :
+#   k3s-dns        → Tout (resolv.conf + config + restart)
+#   k3s-dns-config → Uniquement déployer les fichiers
+#   k3s-dns-restart→ Uniquement redémarrer K3s
+# =============================================================
+
+- name: "Fix DNS - Corriger la limite de nameservers dans les pods K3s"
+  hosts: k3s_control_plane
+  become: true
+  gather_facts: false
+  serial: 1
+  vars_files:
+    - "../group_vars/k3s_cluster.yml"
+
+  tasks:
+
+    # ---------------------------------------------------------
+    # ÉTAPE 1 : Créer le resolv.conf dédié K3s
+    # ---------------------------------------------------------
+
+    - name: Déployer /etc/k3s-resolv.conf (DNS propre pour les pods)
+      ansible.builtin.template:
+        src: ../templates/k3s-resolv.conf.j2
+        dest: /etc/k3s-resolv.conf
+        mode: '0644'
+      register: resolv_conf_result
+      tags: [k3s-dns, k3s-dns-config]
+
+    # ---------------------------------------------------------
+    # ÉTAPE 2 : Ajouter resolv-conf dans la config K3s existante
+    # ---------------------------------------------------------
+
+    - name: Vérifier si resolv-conf est déjà dans la config K3s
+      ansible.builtin.command: grep -q 'resolv-conf' /etc/rancher/k3s/config.yaml
+      register: resolv_conf_check
+      failed_when: false
+      changed_when: false
+      tags: [k3s-dns, k3s-dns-config]
+
+    - name: Ajouter resolv-conf à la config K3s existante
+      ansible.builtin.lineinfile:
+        path: /etc/rancher/k3s/config.yaml
+        line: 'resolv-conf: "/etc/k3s-resolv.conf"'
+        insertafter: 'write-kubeconfig-mode:'
+      when: resolv_conf_check.rc != 0
+      register: k3s_config_result
+      tags: [k3s-dns, k3s-dns-config]
+
+    # ---------------------------------------------------------
+    # ÉTAPE 3 : Redémarrer K3s pour appliquer
+    # ---------------------------------------------------------
+
+    - name: Redémarrer K3s pour appliquer le nouveau resolv-conf
+      ansible.builtin.systemd:
+        name: k3s
+        state: restarted
+      when: >
+        (resolv_conf_result is changed) or
+        (k3s_config_result is changed | default(false))
+      tags: [k3s-dns, k3s-dns-restart]
+
+    - name: Attendre que l'API K3s réponde après redémarrage
+      ansible.builtin.wait_for:
+        host: "{{ bond_ip }}"
+        port: 6443
+        timeout: 120
+      tags: [k3s-dns, k3s-dns-restart]
+
+    - name: Attendre que le nœud soit Ready
+      ansible.builtin.command: >
+        k3s kubectl wait --for=condition=Ready node/{{ node_name }}
+        --timeout=120s
+      changed_when: false
+      retries: 3
+      delay: 10
+      register: node_ready
+      until: node_ready.rc == 0
+      tags: [k3s-dns, k3s-dns-restart]
+
+    - name: Pause de stabilisation entre les nœuds
+      ansible.builtin.pause:
+        seconds: 15
+      tags: [k3s-dns, k3s-dns-restart]
+
+# =============================================================
+# PLAY 2 : Vérification finale
+# =============================================================
+- name: "Fix DNS - Vérification"
+  hosts: k3s-node-1
+  become: true
+  gather_facts: false
+
+  tasks:
+
+    - name: Vérifier que tous les nœuds sont Ready
+      ansible.builtin.command: >
+        k3s kubectl wait --for=condition=Ready nodes
+        --all --timeout=120s
+      changed_when: false
+      tags: [k3s-dns]
+
+    - name: Afficher le contenu de /etc/k3s-resolv.conf
+      ansible.builtin.command: cat /etc/k3s-resolv.conf
+      register: resolv_content
+      changed_when: false
+      tags: [k3s-dns]
+
+    - name: Vérifier le resolv.conf d'un pod CoreDNS
+      ansible.builtin.shell: |
+        POD=$(k3s kubectl get pods -n kube-system -l k8s-app=kube-dns -o jsonpath='{.items[0].metadata.name}')
+        k3s kubectl exec -n kube-system "$POD" -- cat /etc/resolv.conf
+      register: coredns_resolv
+      changed_when: false
+      failed_when: false
+      tags: [k3s-dns]
+
+    - name: Résumé du correctif DNS
+      ansible.builtin.debug:
+        msg:
+          - "================================================"
+          - "  Correctif DNS appliqué avec succès"
+          - "================================================"
+          - "Fichier : /etc/k3s-resolv.conf"
+          - "{{ resolv_content.stdout_lines }}"
+          - "------------------------------------------------"
+          - "DNS dans le pod CoreDNS :"
+          - "{{ coredns_resolv.stdout_lines | default(['Non disponible']) }}"
+          - "================================================"
+      tags: [k3s-dns]
