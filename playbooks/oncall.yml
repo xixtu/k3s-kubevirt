@@ -1,0 +1,409 @@
+---
+# =============================================================
+# PLAYBOOK : Grafana OnCall - Gestion des astreintes
+# =============================================================
+# Usage : ansible-playbook -i inventory/hosts.yml playbooks/oncall.yml
+# Tags :
+#   oncall-install  → Installer Grafana OnCall via Helm
+#   oncall-ingress  → IngressRoutes Traefik (interne + TLS public)
+#   oncall-verify   → Vérifier pods, services, URLs
+# Prérequis : K3s + Longhorn + MetalLB + Traefik + cert-manager
+#             + kube-prometheus-stack (monitoring.yml)
+# Chart Helm : grafana/oncall
+# URLs :
+#   - http://oncall.app.corp.lcl
+#   - https://oncall.app.xixtu.eu
+# =============================================================
+# ⚠  Grafana OnCall OSS est en mode maintenance depuis mars 2025
+#    et sera archivé le 24 mars 2026.
+# =============================================================
+
+- name: "Grafana OnCall - Incident Management & On-Call"
+  hosts: k3s-node-1
+  become: true
+  gather_facts: false
+  vars_files:
+    - "../group_vars/k3s_cluster.yml"
+
+  tasks:
+
+    # ==========================================================
+    # PRÉPARATION
+    # ==========================================================
+
+    - name: Ajouter le repo Helm Grafana
+      ansible.builtin.command: >
+        helm repo add grafana https://grafana.github.io/helm-charts
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [oncall, oncall-install]
+
+    - name: Mettre à jour les repos Helm
+      ansible.builtin.command: helm repo update
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [oncall, oncall-install]
+
+    - name: Vérifier si Grafana OnCall est déjà installé
+      ansible.builtin.command: helm status oncall -n monitoring
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: oncall_helm_status
+      failed_when: false
+      changed_when: false
+      tags: [oncall, oncall-install]
+
+    # ==========================================================
+    # FICHIER DE VALEURS HELM
+    # ==========================================================
+
+    - name: Écrire le fichier de valeurs Grafana OnCall
+      ansible.builtin.copy:
+        dest: /tmp/oncall-values.yml
+        mode: '0644'
+        content: |
+          # ==============================================
+          # Grafana OnCall Helm values - cluster k3s
+          # ==============================================
+
+          # --- Application ---
+          base_url: "{{ oncall_config.base_url }}"
+          base_url_protocol: "https"
+
+          # --- Engine (API backend) ---
+          engine:
+            replicaCount: 1
+            resources:
+              requests:
+                cpu: "100m"
+                memory: "256Mi"
+              limits:
+                cpu: "500m"
+                memory: "512Mi"
+
+          # --- Celery Workers ---
+          celery:
+            worker_default:
+              replicaCount: 1
+              resources:
+                requests:
+                  cpu: "100m"
+                  memory: "256Mi"
+                limits:
+                  cpu: "500m"
+                  memory: "512Mi"
+            worker_critical:
+              replicaCount: 1
+              resources:
+                requests:
+                  cpu: "50m"
+                  memory: "128Mi"
+                limits:
+                  cpu: "250m"
+                  memory: "256Mi"
+
+          # --- Base de données (MariaDB embarqué) ---
+          mariadb:
+            enabled: true
+            auth:
+              database: oncall
+              rootPassword: "oncall-root-pwd"
+              password: "oncall-db-pwd"
+            primary:
+              persistence:
+                enabled: true
+                storageClass: "{{ oncall_config.storage_class }}"
+                size: "{{ oncall_config.mariadb_storage }}"
+              resources:
+                requests:
+                  cpu: "50m"
+                  memory: "128Mi"
+                limits:
+                  cpu: "250m"
+                  memory: "512Mi"
+          database:
+            type: mysql
+
+          # --- RabbitMQ (broker Celery) ---
+          rabbitmq:
+            enabled: true
+            auth:
+              username: oncall
+              password: "oncall-rmq-pwd"
+              erlangCookie: "oncall-erlang-secret"
+            persistence:
+              enabled: true
+              storageClass: "{{ oncall_config.storage_class }}"
+              size: "{{ oncall_config.rabbitmq_storage }}"
+            resources:
+              requests:
+                cpu: "50m"
+                memory: "128Mi"
+              limits:
+                cpu: "250m"
+                memory: "512Mi"
+          broker:
+            type: rabbitmq
+
+          # --- Redis (cache) ---
+          redis:
+            enabled: true
+            architecture: standalone
+            auth:
+              enabled: false
+            master:
+              persistence:
+                enabled: true
+                storageClass: "{{ oncall_config.storage_class }}"
+                size: "{{ oncall_config.redis_storage }}"
+              resources:
+                requests:
+                  cpu: "50m"
+                  memory: "64Mi"
+                limits:
+                  cpu: "200m"
+                  memory: "256Mi"
+
+          # --- Grafana existante (ne pas en déployer une nouvelle) ---
+          grafana:
+            enabled: false
+          externalGrafana:
+            url: "http://kube-prometheus-stack-grafana.monitoring.svc.cluster.local"
+
+          # --- Ingress (géré par Traefik IngressRoute, pas ici) ---
+          ingress:
+            enabled: false
+
+          # --- Telegram integration ---
+          # À configurer via l'interface web OnCall après installation
+      tags: [oncall, oncall-install]
+
+    # ==========================================================
+    # INSTALLATION GRAFANA ONCALL
+    # ==========================================================
+
+    - name: Installer / Mettre à jour Grafana OnCall via Helm
+      ansible.builtin.command: >
+        helm upgrade --install oncall
+        grafana/oncall
+        --namespace monitoring
+        --create-namespace
+        --version {{ oncall_version }}
+        --values /tmp/oncall-values.yml
+        --wait
+        --timeout 10m
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      tags: [oncall, oncall-install]
+
+    - name: Supprimer le fichier de valeurs temporaire
+      ansible.builtin.file:
+        path: /tmp/oncall-values.yml
+        state: absent
+      tags: [oncall, oncall-install]
+
+    - name: Attendre que tous les pods OnCall soient Ready
+      ansible.builtin.command: >
+        k3s kubectl wait --for=condition=Ready pods
+        -l app.kubernetes.io/instance=oncall
+        -n monitoring
+        --timeout=300s
+      register: oncall_pods_ready
+      changed_when: false
+      retries: 3
+      delay: 15
+      until: oncall_pods_ready.rc == 0
+      tags: [oncall, oncall-install]
+
+    # ==========================================================
+    # INGRESSROUTE INTERNE (app.corp.lcl)
+    # ==========================================================
+
+    - name: Écrire l'IngressRoute interne OnCall
+      ansible.builtin.copy:
+        dest: /tmp/oncall-ingressroute-internal.yml
+        mode: '0644'
+        content: |
+          apiVersion: traefik.io/v1alpha1
+          kind: IngressRoute
+          metadata:
+            name: oncall-internal
+            namespace: monitoring
+          spec:
+            entryPoints:
+              - web
+            routes:
+              - match: Host(`oncall.{{ cluster_network.apps_domain }}`)
+                kind: Rule
+                services:
+                  - name: oncall-engine
+                    port: 8080
+      tags: [oncall, oncall-ingress]
+
+    - name: Appliquer l'IngressRoute interne OnCall
+      ansible.builtin.command: k3s kubectl apply -f /tmp/oncall-ingressroute-internal.yml
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [oncall, oncall-ingress]
+
+    # ==========================================================
+    # TLS - CERTIFICAT LET'S ENCRYPT
+    # ==========================================================
+
+    - name: Écrire l'Ingress TLS OnCall
+      ansible.builtin.copy:
+        dest: /tmp/oncall-ingress-tls.yml
+        mode: '0644'
+        content: |
+          apiVersion: networking.k8s.io/v1
+          kind: Ingress
+          metadata:
+            name: oncall-ingress-tls
+            namespace: monitoring
+            annotations:
+              cert-manager.io/cluster-issuer: letsencrypt-production
+              cert-manager.io/private-key-algorithm: "ECDSA"
+              cert-manager.io/private-key-size: "256"
+              traefik.ingress.kubernetes.io/router.entrypoints: "web"
+              traefik.ingress.kubernetes.io/router.middlewares: "traefik-redirect-to-https@kubernetescrd"
+          spec:
+            ingressClassName: traefik
+            tls:
+              - hosts:
+                  - "{{ external_domains.oncall }}"
+                secretName: oncall-tls
+            rules:
+              - host: "{{ external_domains.oncall }}"
+                http:
+                  paths:
+                    - path: /
+                      pathType: Prefix
+                      backend:
+                        service:
+                          name: oncall-engine
+                          port:
+                            number: 8080
+      tags: [oncall, oncall-ingress]
+
+    - name: Appliquer l'Ingress TLS OnCall
+      ansible.builtin.command: k3s kubectl apply -f /tmp/oncall-ingress-tls.yml
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [oncall, oncall-ingress]
+
+    - name: Écrire l'IngressRoute HTTPS OnCall
+      ansible.builtin.copy:
+        dest: /tmp/oncall-ingressroute-https.yml
+        mode: '0644'
+        content: |
+          apiVersion: traefik.io/v1alpha1
+          kind: IngressRoute
+          metadata:
+            name: oncall-https
+            namespace: monitoring
+          spec:
+            entryPoints:
+              - websecure
+            routes:
+              - match: Host(`{{ external_domains.oncall }}`)
+                kind: Rule
+                services:
+                  - name: oncall-engine
+                    port: 8080
+            tls:
+              secretName: oncall-tls
+      tags: [oncall, oncall-ingress]
+
+    - name: Appliquer l'IngressRoute HTTPS OnCall
+      ansible.builtin.command: k3s kubectl apply -f /tmp/oncall-ingressroute-https.yml
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [oncall, oncall-ingress]
+
+    # --- Nettoyage fichiers temporaires ---
+
+    - name: Supprimer les fichiers Ingress/IngressRoute temporaires
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/oncall-ingressroute-internal.yml
+        - /tmp/oncall-ingress-tls.yml
+        - /tmp/oncall-ingressroute-https.yml
+      tags: [oncall, oncall-ingress]
+
+    # ==========================================================
+    # VÉRIFICATION
+    # ==========================================================
+
+    - name: Vérifier les pods OnCall
+      ansible.builtin.command: k3s kubectl get pods -n monitoring -l app.kubernetes.io/instance=oncall -o wide
+      register: oncall_pods
+      changed_when: false
+      tags: [oncall, oncall-verify]
+
+    - name: Vérifier les services OnCall
+      ansible.builtin.command: k3s kubectl get svc -n monitoring -l app.kubernetes.io/instance=oncall
+      register: oncall_svc
+      changed_when: false
+      tags: [oncall, oncall-verify]
+
+    - name: Vérifier les PVCs OnCall
+      ansible.builtin.command: k3s kubectl get pvc -n monitoring -l app.kubernetes.io/instance=oncall
+      register: oncall_pvc
+      changed_when: false
+      tags: [oncall, oncall-verify]
+
+    # ==========================================================
+    # RÉSUMÉ
+    # ==========================================================
+
+    - name: Résumé Grafana OnCall
+      ansible.builtin.debug:
+        msg:
+          - "================================================"
+          - "  Grafana OnCall v{{ oncall_version }} installé"
+          - "================================================"
+          - "Namespace    : monitoring"
+          - "Chart        : grafana/oncall"
+          - "================================================"
+          - "  URLs"
+          - "================================================"
+          - "URL interne  : http://oncall.{{ cluster_network.apps_domain }}"
+          - "URL publique : https://{{ external_domains.oncall }}"
+          - "================================================"
+          - "  Composants"
+          - "================================================"
+          - "Engine       : oncall-engine (API backend, port 8080)"
+          - "Celery       : worker-default + worker-critical"
+          - "MariaDB      : {{ oncall_config.mariadb_storage }} ({{ oncall_config.storage_class }})"
+          - "RabbitMQ     : {{ oncall_config.rabbitmq_storage }} ({{ oncall_config.storage_class }})"
+          - "Redis        : {{ oncall_config.redis_storage }} ({{ oncall_config.storage_class }})"
+          - "================================================"
+          - "  Pods"
+          - "================================================"
+          - "{{ oncall_pods.stdout_lines }}"
+          - "================================================"
+          - "  Services"
+          - "================================================"
+          - "{{ oncall_svc.stdout_lines }}"
+          - "================================================"
+          - "  PVCs (Longhorn)"
+          - "================================================"
+          - "{{ oncall_pvc.stdout_lines }}"
+          - "================================================"
+          - "  Post-installation"
+          - "================================================"
+          - "1. Activer le plugin OnCall dans Grafana :"
+          - "   → Grafana > Configuration > Plugins > Grafana OnCall"
+          - "2. Configurer l'URL du backend OnCall :"
+          - "   → http://oncall-engine.monitoring.svc.cluster.local:8080"
+          - "3. Créer les intégrations (Alertmanager, Telegram, etc.)"
+          - "   via l'interface web OnCall dans Grafana"
+          - "================================================"
+      tags: [oncall, oncall-verify]

@@ -13,6 +13,7 @@ traefik_version: "34.2.0"
 headlamp_version: "0.40.0"
 prometheus_stack_version: "55.5.0"
 rancher_version: "2.8.0"
+oncall_version: "1.15.4"
 
 # --- Headlamp dashboard ---
 headlamp_config:
@@ -99,6 +100,15 @@ external_domains:
   grafana: "grafana.app.xixtu.eu"
   prometheus: "prometheus.app.xixtu.eu"
   alertmanager: "alertmanager.app.xixtu.eu"
+  oncall: "oncall.app.xixtu.eu"
+
+# --- Grafana OnCall ---
+oncall_config:
+  base_url: "https://oncall.app.xixtu.eu"
+  storage_class: "longhorn-fast"
+  mariadb_storage: "10Gi"
+  rabbitmq_storage: "5Gi"
+  redis_storage: "2Gi"
 
 # --- Monitoring ---
 monitoring_config:
