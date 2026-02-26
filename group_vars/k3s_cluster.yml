@@ -5,7 +5,7 @@
 
 # --- Version des composants ---
 k3s_version: "v1.30.0+k3s1"
-longhorn_version: "1.6.0"
+longhorn_version: "1.11.0"
 kubevirt_version: "v1.2.0"
 metallb_version: "v0.13.12"
 cert_manager_version: "v1.13.0"
@@ -96,6 +96,9 @@ external_domains:
   paheko: "paheko.app.xixtu.eu"
   kwaba: "kwaba-kinesiologie.xixtu.eu"
   mobilizon: "mobilizon.app.xixtu.eu"
+  grafana: "grafana.app.xixtu.eu"
+  prometheus: "prometheus.app.xixtu.eu"
+  alertmanager: "alertmanager.app.xixtu.eu"
 
 # --- Monitoring ---
 monitoring_config:
@@ -106,6 +109,12 @@ monitoring_config:
   grafana_storage_class: "longhorn-fast"
   alertmanager_storage: "10Gi"
   alertmanager_storage_class: "longhorn-fast"
+
+# --- Telegram Alerting ---
+# ⚠ Envisager ansible-vault pour chiffrer le token en production :
+#   ansible-vault encrypt_string '<token>' --name 'telegram_bot_token'
+telegram_bot_token: "7991230289:AAEIl8LouUtCYmE7fSUFpUU5r5TFr3HN_6k"
+telegram_chat_id: "-5183003485"
 
 # --- Packages Ubuntu à installer ---
 common_packages:

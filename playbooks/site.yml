@@ -63,10 +63,10 @@
   import_playbook: headlamp.yml
   tags: [headlamp]
 
-# PHASE 8 : Monitoring (à venir)
-# - name: "PHASE 8 - Monitoring Stack"
-#   import_playbook: monitoring.yml
-#   tags: [monitoring]
+# PHASE 8 : Monitoring (Prometheus + Grafana + Alertmanager)
+- name: "PHASE 8 - Monitoring Stack"
+  import_playbook: monitoring.yml
+  tags: [monitoring]
 
 # PHASE 9 : KubeVirt (à venir)
 # - name: "PHASE 9 - KubeVirt"

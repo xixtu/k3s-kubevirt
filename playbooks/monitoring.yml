@@ -1,0 +1,852 @@
+---
+# =============================================================
+# PLAYBOOK : Monitoring Stack - Prometheus + Grafana + Alertmanager
+# =============================================================
+# Usage : ansible-playbook -i inventory/hosts.yml playbooks/monitoring.yml
+# Tags :
+#   monitoring-install  → Installer kube-prometheus-stack via Helm
+#   monitoring-longhorn → ServiceMonitor + alertes + dashboard Longhorn
+#   monitoring-ingress  → IngressRoutes Traefik (interne + TLS public)
+#   monitoring-verify   → Vérifier pods, services, URLs
+# Prérequis : K3s + Longhorn + MetalLB + Traefik + cert-manager installés
+# Chart Helm : kube-prometheus-stack (Prometheus Community)
+# URLs internes :
+#   - http://grafana.app.corp.lcl
+#   - http://prometheus.app.corp.lcl
+#   - http://alertmanager.app.corp.lcl
+# URLs publiques :
+#   - https://grafana.app.xixtu.eu
+#   - https://prometheus.app.xixtu.eu
+#   - https://alertmanager.app.xixtu.eu
+# =============================================================
+
+- name: "Monitoring - Prometheus + Grafana + Alertmanager"
+  hosts: k3s-node-1
+  become: true
+  gather_facts: false
+  vars_files:
+    - "../group_vars/k3s_cluster.yml"
+
+  tasks:
+
+    # ==========================================================
+    # PRÉPARATION
+    # ==========================================================
+
+    - name: Ajouter le repo Helm prometheus-community
+      ansible.builtin.command: >
+        helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [monitoring, monitoring-install]
+
+    - name: Mettre à jour les repos Helm
+      ansible.builtin.command: helm repo update
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [monitoring, monitoring-install]
+
+    - name: Vérifier si kube-prometheus-stack est déjà installé
+      ansible.builtin.command: helm status kube-prometheus-stack -n monitoring
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: monitoring_helm_status
+      failed_when: false
+      changed_when: false
+      tags: [monitoring, monitoring-install]
+
+    - name: Créer le namespace monitoring (si absent)
+      ansible.builtin.command: k3s kubectl create namespace monitoring
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: ns_create
+      failed_when: ns_create.rc != 0 and 'already exists' not in ns_create.stderr
+      changed_when: ns_create.rc == 0
+      tags: [monitoring, monitoring-install]
+
+    # ==========================================================
+    # FICHIER DE VALEURS HELM
+    # ==========================================================
+
+    - name: Écrire le fichier de valeurs kube-prometheus-stack
+      ansible.builtin.copy:
+        dest: /tmp/monitoring-values.yml
+        mode: '0644'
+        content: |
+          # ==============================================
+          # kube-prometheus-stack Helm values - cluster k3s
+          # ==============================================
+
+          # --- Prometheus ---
+          prometheus:
+            prometheusSpec:
+              externalUrl: "https://{{ external_domains.prometheus }}"
+              retention: "{{ monitoring_config.prometheus_retention }}"
+              storageSpec:
+                volumeClaimTemplate:
+                  spec:
+                    storageClassName: "{{ monitoring_config.prometheus_storage_class }}"
+                    accessModes: ["ReadWriteOnce"]
+                    resources:
+                      requests:
+                        storage: "{{ monitoring_config.prometheus_storage }}"
+              resources:
+                requests:
+                  cpu: "200m"
+                  memory: "512Mi"
+                limits:
+                  cpu: "1000m"
+                  memory: "2Gi"
+              # Scrape tous les namespaces
+              serviceMonitorSelectorNilUsesHelmValues: false
+              podMonitorSelectorNilUsesHelmValues: false
+              ruleSelectorNilUsesHelmValues: false
+            ingress:
+              enabled: false
+
+          # --- Grafana ---
+          grafana:
+            adminUser: admin
+            adminPassword: admin
+            grafana.ini:
+              server:
+                root_url: "https://{{ external_domains.grafana }}"
+            persistence:
+              enabled: true
+              storageClassName: "{{ monitoring_config.grafana_storage_class }}"
+              size: "{{ monitoring_config.grafana_storage }}"
+            resources:
+              requests:
+                cpu: "100m"
+                memory: "128Mi"
+              limits:
+                cpu: "500m"
+                memory: "512Mi"
+            ingress:
+              enabled: false
+            # Datasource Prometheus auto-configuré par le chart
+            sidecar:
+              dashboards:
+                enabled: true
+                searchNamespace: ALL
+              datasources:
+                enabled: true
+
+          # --- Alertmanager ---
+          alertmanager:
+            config:
+              route:
+                receiver: 'telegram'
+                group_by: ['alertname', 'namespace']
+                group_wait: 30s
+                group_interval: 5m
+                repeat_interval: 4h
+                routes:
+                  - match:
+                      alertname: Watchdog
+                    receiver: 'null'
+                  - match:
+                      alertname: InfoInhibitor
+                    receiver: 'null'
+                  - match:
+                      severity: critical
+                    receiver: 'telegram'
+                    repeat_interval: 1h
+                  - match:
+                      severity: warning
+                    receiver: 'telegram'
+                    repeat_interval: 4h
+              receivers:
+                - name: 'telegram'
+                  telegram_configs:
+                    - bot_token: '{{ telegram_bot_token }}'
+                      chat_id: {{ telegram_chat_id }}
+                      parse_mode: 'HTML'
+                      message: |
+                        {{ '{{' }} if eq .Status "firing" {{ '}}' }}🔥 <b>ALERTE {{ '{{' }} .Status | toUpper {{ '}}' }}</b>{{ '{{' }} else {{ '}}' }}✅ <b>RÉSOLUE</b>{{ '{{' }} end {{ '}}' }}
+
+                        {{ '{{' }} range .Alerts {{ '}}' }}
+                        <b>{{ '{{' }} .Labels.alertname {{ '}}' }}</b> [{{ '{{' }} .Labels.severity {{ '}}' }}]
+                        {{ '{{' }} if .Annotations.summary {{ '}}' }}📋 {{ '{{' }} .Annotations.summary {{ '}}' }}{{ '{{' }} end {{ '}}' }}
+                        {{ '{{' }} if .Annotations.description {{ '}}' }}📝 {{ '{{' }} .Annotations.description {{ '}}' }}{{ '{{' }} end {{ '}}' }}
+                        🏷️ Namespace: {{ '{{' }} .Labels.namespace {{ '}}' }}
+                        🕐 {{ '{{' }} .StartsAt.Format "02/01/2006 15:04:05" {{ '}}' }}
+                        {{ '{{' }} end {{ '}}' }}
+                - name: 'null'
+            alertmanagerSpec:
+              externalUrl: "https://{{ external_domains.alertmanager }}"
+              storage:
+                volumeClaimTemplate:
+                  spec:
+                    storageClassName: "{{ monitoring_config.alertmanager_storage_class }}"
+                    accessModes: ["ReadWriteOnce"]
+                    resources:
+                      requests:
+                        storage: "{{ monitoring_config.alertmanager_storage }}"
+              resources:
+                requests:
+                  cpu: "50m"
+                  memory: "64Mi"
+                limits:
+                  cpu: "200m"
+                  memory: "256Mi"
+            ingress:
+              enabled: false
+
+          # --- Node Exporter ---
+          nodeExporter:
+            enabled: true
+
+          # --- Kube State Metrics ---
+          kubeStateMetrics:
+            enabled: true
+
+          # --- Désactiver les composants non compatibles K3s ---
+          kubeEtcd:
+            enabled: false
+          kubeControllerManager:
+            enabled: false
+          kubeScheduler:
+            enabled: false
+          kubeProxy:
+            enabled: false
+      tags: [monitoring, monitoring-install]
+
+    # ==========================================================
+    # INSTALLATION KUBE-PROMETHEUS-STACK
+    # ==========================================================
+
+    - name: Installer / Mettre à jour kube-prometheus-stack via Helm
+      ansible.builtin.command: >
+        helm upgrade --install kube-prometheus-stack
+        prometheus-community/kube-prometheus-stack
+        --namespace monitoring
+        --create-namespace
+        --version {{ prometheus_stack_version }}
+        --values /tmp/monitoring-values.yml
+        --wait
+        --timeout 10m
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      tags: [monitoring, monitoring-install]
+
+    - name: Supprimer le fichier de valeurs temporaire
+      ansible.builtin.file:
+        path: /tmp/monitoring-values.yml
+        state: absent
+      tags: [monitoring, monitoring-install]
+
+    - name: Attendre que tous les pods monitoring soient Ready
+      ansible.builtin.command: >
+        k3s kubectl wait --for=condition=Ready pods
+        --all -n monitoring
+        --timeout=300s
+      register: monitoring_pods_ready
+      changed_when: false
+      retries: 3
+      delay: 15
+      until: monitoring_pods_ready.rc == 0
+      tags: [monitoring, monitoring-install]
+
+    # ==========================================================
+    # LONGHORN MONITORING (ServiceMonitor + Alertes + Dashboard)
+    # ==========================================================
+
+    - name: Écrire le ServiceMonitor Longhorn
+      ansible.builtin.copy:
+        dest: /tmp/longhorn-servicemonitor.yml
+        mode: '0644'
+        content: |
+          apiVersion: monitoring.coreos.com/v1
+          kind: ServiceMonitor
+          metadata:
+            name: longhorn-prometheus-servicemonitor
+            namespace: longhorn-system
+            labels:
+              name: longhorn-prometheus-servicemonitor
+          spec:
+            selector:
+              matchLabels:
+                app: longhorn-manager
+            namespaceSelector:
+              matchNames:
+                - longhorn-system
+            endpoints:
+              - port: manager
+      tags: [monitoring, monitoring-longhorn]
+
+    - name: Appliquer le ServiceMonitor Longhorn
+      ansible.builtin.command: k3s kubectl apply -f /tmp/longhorn-servicemonitor.yml
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [monitoring, monitoring-longhorn]
+
+    - name: Écrire les PrometheusRules Longhorn
+      ansible.builtin.copy:
+        dest: /tmp/longhorn-prometheusrules.yml
+        mode: '0644'
+        content: |
+          apiVersion: monitoring.coreos.com/v1
+          kind: PrometheusRule
+          metadata:
+            name: prometheus-longhorn-rules
+            namespace: longhorn-system
+            labels:
+              prometheus: longhorn
+              role: alert-rules
+          spec:
+            groups:
+              - name: longhorn.rules
+                rules:
+                  - alert: LonghornVolumeUsageCritical
+                    expr: 100 * (longhorn_volume_actual_size_bytes / longhorn_volume_capacity_bytes) > 90
+                    for: 5m
+                    labels:
+                      severity: critical
+                    annotations:
+                      summary: "Volume Longhorn {{ '{{' }} $labels.volume {{ '}}' }} utilisation critique"
+                      description: "Le volume {{ '{{' }} $labels.volume {{ '}}' }} sur {{ '{{' }} $labels.node {{ '}}' }} dépasse 90% de capacité ({{ '{{' }} $value | printf \"%.1f\" {{ '}}' }}%)."
+
+                  - alert: LonghornVolumeUsageWarning
+                    expr: 100 * (longhorn_volume_actual_size_bytes / longhorn_volume_capacity_bytes) > 70
+                    for: 5m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: "Volume Longhorn {{ '{{' }} $labels.volume {{ '}}' }} utilisation élevée"
+                      description: "Le volume {{ '{{' }} $labels.volume {{ '}}' }} dépasse 70% de capacité ({{ '{{' }} $value | printf \"%.1f\" {{ '}}' }}%)."
+
+                  - alert: LonghornVolumeStatusCritical
+                    expr: longhorn_volume_robustness == 3
+                    for: 5m
+                    labels:
+                      severity: critical
+                    annotations:
+                      summary: "Volume Longhorn {{ '{{' }} $labels.volume {{ '}}' }} en état Faulted"
+                      description: "Le volume {{ '{{' }} $labels.volume {{ '}}' }} est en erreur (Faulted). Intervention nécessaire."
+
+                  - alert: LonghornVolumeStatusDegraded
+                    expr: longhorn_volume_robustness == 2
+                    for: 5m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: "Volume Longhorn {{ '{{' }} $labels.volume {{ '}}' }} dégradé"
+                      description: "Le volume {{ '{{' }} $labels.volume {{ '}}' }} est dégradé — réplicas insuffisants."
+
+                  - alert: LonghornNodeStorageWarning
+                    expr: 100 * (longhorn_node_storage_usage_bytes / longhorn_node_storage_capacity_bytes) > 70
+                    for: 5m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: "Noeud Longhorn {{ '{{' }} $labels.node {{ '}}' }} stockage > 70%"
+                      description: "Le noeud {{ '{{' }} $labels.node {{ '}}' }} utilise {{ '{{' }} $value | printf \"%.1f\" {{ '}}' }}% de son stockage."
+
+                  - alert: LonghornNodeStorageCritical
+                    expr: 100 * (longhorn_node_storage_usage_bytes / longhorn_node_storage_capacity_bytes) > 90
+                    for: 5m
+                    labels:
+                      severity: critical
+                    annotations:
+                      summary: "Noeud Longhorn {{ '{{' }} $labels.node {{ '}}' }} stockage critique > 90%"
+                      description: "Le noeud {{ '{{' }} $labels.node {{ '}}' }} utilise {{ '{{' }} $value | printf \"%.1f\" {{ '}}' }}% de son stockage. Libérer de l'espace."
+
+                  - alert: LonghornNodeDown
+                    expr: longhorn_node_status{condition="ready"} == 0
+                    for: 5m
+                    labels:
+                      severity: critical
+                    annotations:
+                      summary: "Noeud Longhorn {{ '{{' }} $labels.node {{ '}}' }} indisponible"
+                      description: "Le noeud {{ '{{' }} $labels.node {{ '}}' }} n'est plus Ready depuis 5 minutes."
+      tags: [monitoring, monitoring-longhorn]
+
+    - name: Appliquer les PrometheusRules Longhorn
+      ansible.builtin.command: k3s kubectl apply -f /tmp/longhorn-prometheusrules.yml
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [monitoring, monitoring-longhorn]
+
+    - name: Télécharger le dashboard Grafana Longhorn (ID 17626)
+      ansible.builtin.command: >
+        curl -sL https://grafana.com/api/dashboards/17626/revisions/1/download
+        -o /tmp/longhorn-dashboard.json
+      changed_when: false
+      tags: [monitoring, monitoring-longhorn]
+
+    - name: Lire le contenu du dashboard Longhorn
+      ansible.builtin.slurp:
+        src: /tmp/longhorn-dashboard.json
+      register: longhorn_dashboard_json
+      tags: [monitoring, monitoring-longhorn]
+
+    - name: Créer le ConfigMap du dashboard Longhorn pour le sidecar Grafana
+      ansible.builtin.copy:
+        dest: /tmp/longhorn-dashboard-configmap.yml
+        mode: '0644'
+        content: |
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: longhorn-grafana-dashboard
+            namespace: monitoring
+            labels:
+              grafana_dashboard: "1"
+          data:
+            longhorn-dashboard.json: |
+              {{ longhorn_dashboard_json.content | b64decode | indent(8) }}
+      tags: [monitoring, monitoring-longhorn]
+
+    - name: Appliquer le ConfigMap du dashboard Longhorn
+      ansible.builtin.command: k3s kubectl apply -f /tmp/longhorn-dashboard-configmap.yml
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [monitoring, monitoring-longhorn]
+
+    - name: Supprimer les fichiers Longhorn monitoring temporaires
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/longhorn-servicemonitor.yml
+        - /tmp/longhorn-prometheusrules.yml
+        - /tmp/longhorn-dashboard.json
+        - /tmp/longhorn-dashboard-configmap.yml
+      tags: [monitoring, monitoring-longhorn]
+
+    # ==========================================================
+    # INGRESSROUTES INTERNES (app.corp.lcl)
+    # ==========================================================
+
+    - name: Écrire les IngressRoutes internes monitoring
+      ansible.builtin.copy:
+        dest: /tmp/monitoring-ingressroutes-internal.yml
+        mode: '0644'
+        content: |
+          ---
+          apiVersion: traefik.io/v1alpha1
+          kind: IngressRoute
+          metadata:
+            name: grafana-internal
+            namespace: monitoring
+          spec:
+            entryPoints:
+              - web
+            routes:
+              - match: Host(`grafana.{{ cluster_network.apps_domain }}`)
+                kind: Rule
+                services:
+                  - name: kube-prometheus-stack-grafana
+                    port: 80
+          ---
+          apiVersion: traefik.io/v1alpha1
+          kind: IngressRoute
+          metadata:
+            name: prometheus-internal
+            namespace: monitoring
+          spec:
+            entryPoints:
+              - web
+            routes:
+              - match: Host(`prometheus.{{ cluster_network.apps_domain }}`)
+                kind: Rule
+                services:
+                  - name: kube-prometheus-stack-prometheus
+                    port: 9090
+          ---
+          apiVersion: traefik.io/v1alpha1
+          kind: IngressRoute
+          metadata:
+            name: alertmanager-internal
+            namespace: monitoring
+          spec:
+            entryPoints:
+              - web
+            routes:
+              - match: Host(`alertmanager.{{ cluster_network.apps_domain }}`)
+                kind: Rule
+                services:
+                  - name: kube-prometheus-stack-alertmanager
+                    port: 9093
+      tags: [monitoring, monitoring-ingress]
+
+    - name: Appliquer les IngressRoutes internes monitoring
+      ansible.builtin.command: k3s kubectl apply -f /tmp/monitoring-ingressroutes-internal.yml
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [monitoring, monitoring-ingress]
+
+    - name: Supprimer le fichier IngressRoutes internes temporaire
+      ansible.builtin.file:
+        path: /tmp/monitoring-ingressroutes-internal.yml
+        state: absent
+      tags: [monitoring, monitoring-ingress]
+
+    # ==========================================================
+    # TLS - CERTIFICATS LET'S ENCRYPT (*.app.xixtu.eu)
+    # ==========================================================
+    # Pattern : Ingress K8s (déclenche cert-manager) + IngressRoute HTTPS
+    # ==========================================================
+
+    # --- GRAFANA ---
+
+    - name: Écrire l'Ingress TLS Grafana
+      ansible.builtin.copy:
+        dest: /tmp/grafana-ingress-tls.yml
+        mode: '0644'
+        content: |
+          apiVersion: networking.k8s.io/v1
+          kind: Ingress
+          metadata:
+            name: grafana-ingress-tls
+            namespace: monitoring
+            annotations:
+              cert-manager.io/cluster-issuer: letsencrypt-production
+              cert-manager.io/private-key-algorithm: "ECDSA"
+              cert-manager.io/private-key-size: "256"
+              traefik.ingress.kubernetes.io/router.entrypoints: "web"
+              traefik.ingress.kubernetes.io/router.middlewares: "traefik-redirect-to-https@kubernetescrd"
+          spec:
+            ingressClassName: traefik
+            tls:
+              - hosts:
+                  - "{{ external_domains.grafana }}"
+                secretName: grafana-tls
+            rules:
+              - host: "{{ external_domains.grafana }}"
+                http:
+                  paths:
+                    - path: /
+                      pathType: Prefix
+                      backend:
+                        service:
+                          name: kube-prometheus-stack-grafana
+                          port:
+                            number: 80
+      tags: [monitoring, monitoring-ingress]
+
+    - name: Appliquer l'Ingress TLS Grafana
+      ansible.builtin.command: k3s kubectl apply -f /tmp/grafana-ingress-tls.yml
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [monitoring, monitoring-ingress]
+
+    - name: Écrire l'IngressRoute HTTPS Grafana
+      ansible.builtin.copy:
+        dest: /tmp/grafana-ingressroute-https.yml
+        mode: '0644'
+        content: |
+          apiVersion: traefik.io/v1alpha1
+          kind: IngressRoute
+          metadata:
+            name: grafana-https
+            namespace: monitoring
+          spec:
+            entryPoints:
+              - websecure
+            routes:
+              - match: Host(`{{ external_domains.grafana }}`)
+                kind: Rule
+                services:
+                  - name: kube-prometheus-stack-grafana
+                    port: 80
+            tls:
+              secretName: grafana-tls
+      tags: [monitoring, monitoring-ingress]
+
+    - name: Appliquer l'IngressRoute HTTPS Grafana
+      ansible.builtin.command: k3s kubectl apply -f /tmp/grafana-ingressroute-https.yml
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [monitoring, monitoring-ingress]
+
+    # --- PROMETHEUS ---
+
+    - name: Écrire l'Ingress TLS Prometheus
+      ansible.builtin.copy:
+        dest: /tmp/prometheus-ingress-tls.yml
+        mode: '0644'
+        content: |
+          apiVersion: networking.k8s.io/v1
+          kind: Ingress
+          metadata:
+            name: prometheus-ingress-tls
+            namespace: monitoring
+            annotations:
+              cert-manager.io/cluster-issuer: letsencrypt-production
+              cert-manager.io/private-key-algorithm: "ECDSA"
+              cert-manager.io/private-key-size: "256"
+              traefik.ingress.kubernetes.io/router.entrypoints: "web"
+              traefik.ingress.kubernetes.io/router.middlewares: "traefik-redirect-to-https@kubernetescrd"
+          spec:
+            ingressClassName: traefik
+            tls:
+              - hosts:
+                  - "{{ external_domains.prometheus }}"
+                secretName: prometheus-tls
+            rules:
+              - host: "{{ external_domains.prometheus }}"
+                http:
+                  paths:
+                    - path: /
+                      pathType: Prefix
+                      backend:
+                        service:
+                          name: kube-prometheus-stack-prometheus
+                          port:
+                            number: 9090
+      tags: [monitoring, monitoring-ingress]
+
+    - name: Appliquer l'Ingress TLS Prometheus
+      ansible.builtin.command: k3s kubectl apply -f /tmp/prometheus-ingress-tls.yml
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [monitoring, monitoring-ingress]
+
+    - name: Écrire l'IngressRoute HTTPS Prometheus
+      ansible.builtin.copy:
+        dest: /tmp/prometheus-ingressroute-https.yml
+        mode: '0644'
+        content: |
+          apiVersion: traefik.io/v1alpha1
+          kind: IngressRoute
+          metadata:
+            name: prometheus-https
+            namespace: monitoring
+          spec:
+            entryPoints:
+              - websecure
+            routes:
+              - match: Host(`{{ external_domains.prometheus }}`)
+                kind: Rule
+                services:
+                  - name: kube-prometheus-stack-prometheus
+                    port: 9090
+            tls:
+              secretName: prometheus-tls
+      tags: [monitoring, monitoring-ingress]
+
+    - name: Appliquer l'IngressRoute HTTPS Prometheus
+      ansible.builtin.command: k3s kubectl apply -f /tmp/prometheus-ingressroute-https.yml
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [monitoring, monitoring-ingress]
+
+    # --- ALERTMANAGER ---
+
+    - name: Écrire l'Ingress TLS Alertmanager
+      ansible.builtin.copy:
+        dest: /tmp/alertmanager-ingress-tls.yml
+        mode: '0644'
+        content: |
+          apiVersion: networking.k8s.io/v1
+          kind: Ingress
+          metadata:
+            name: alertmanager-ingress-tls
+            namespace: monitoring
+            annotations:
+              cert-manager.io/cluster-issuer: letsencrypt-production
+              cert-manager.io/private-key-algorithm: "ECDSA"
+              cert-manager.io/private-key-size: "256"
+              traefik.ingress.kubernetes.io/router.entrypoints: "web"
+              traefik.ingress.kubernetes.io/router.middlewares: "traefik-redirect-to-https@kubernetescrd"
+          spec:
+            ingressClassName: traefik
+            tls:
+              - hosts:
+                  - "{{ external_domains.alertmanager }}"
+                secretName: alertmanager-tls
+            rules:
+              - host: "{{ external_domains.alertmanager }}"
+                http:
+                  paths:
+                    - path: /
+                      pathType: Prefix
+                      backend:
+                        service:
+                          name: kube-prometheus-stack-alertmanager
+                          port:
+                            number: 9093
+      tags: [monitoring, monitoring-ingress]
+
+    - name: Appliquer l'Ingress TLS Alertmanager
+      ansible.builtin.command: k3s kubectl apply -f /tmp/alertmanager-ingress-tls.yml
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [monitoring, monitoring-ingress]
+
+    - name: Écrire l'IngressRoute HTTPS Alertmanager
+      ansible.builtin.copy:
+        dest: /tmp/alertmanager-ingressroute-https.yml
+        mode: '0644'
+        content: |
+          apiVersion: traefik.io/v1alpha1
+          kind: IngressRoute
+          metadata:
+            name: alertmanager-https
+            namespace: monitoring
+          spec:
+            entryPoints:
+              - websecure
+            routes:
+              - match: Host(`{{ external_domains.alertmanager }}`)
+                kind: Rule
+                services:
+                  - name: kube-prometheus-stack-alertmanager
+                    port: 9093
+            tls:
+              secretName: alertmanager-tls
+      tags: [monitoring, monitoring-ingress]
+
+    - name: Appliquer l'IngressRoute HTTPS Alertmanager
+      ansible.builtin.command: k3s kubectl apply -f /tmp/alertmanager-ingressroute-https.yml
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [monitoring, monitoring-ingress]
+
+    # --- Nettoyage fichiers temporaires TLS ---
+
+    - name: Supprimer les fichiers Ingress/IngressRoute temporaires
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/grafana-ingress-tls.yml
+        - /tmp/grafana-ingressroute-https.yml
+        - /tmp/prometheus-ingress-tls.yml
+        - /tmp/prometheus-ingressroute-https.yml
+        - /tmp/alertmanager-ingress-tls.yml
+        - /tmp/alertmanager-ingressroute-https.yml
+      tags: [monitoring, monitoring-ingress]
+
+    # ==========================================================
+    # VÉRIFICATION
+    # ==========================================================
+
+    - name: Vérifier les pods monitoring
+      ansible.builtin.command: k3s kubectl get pods -n monitoring -o wide
+      register: monitoring_pods
+      changed_when: false
+      tags: [monitoring, monitoring-verify]
+
+    - name: Vérifier les services monitoring
+      ansible.builtin.command: k3s kubectl get svc -n monitoring
+      register: monitoring_svc
+      changed_when: false
+      tags: [monitoring, monitoring-verify]
+
+    - name: Vérifier les PVCs monitoring
+      ansible.builtin.command: k3s kubectl get pvc -n monitoring
+      register: monitoring_pvc
+      changed_when: false
+      tags: [monitoring, monitoring-verify]
+
+    - name: Vérifier les IngressRoutes monitoring
+      ansible.builtin.command: k3s kubectl get ingressroute -n monitoring
+      register: monitoring_ingress
+      changed_when: false
+      failed_when: false
+      tags: [monitoring, monitoring-verify]
+
+    - name: Vérifier les Ingress TLS monitoring
+      ansible.builtin.command: k3s kubectl get ingress -n monitoring
+      register: monitoring_ingress_tls
+      changed_when: false
+      failed_when: false
+      tags: [monitoring, monitoring-verify]
+
+    - name: Vérifier les certificats monitoring
+      ansible.builtin.command: k3s kubectl get certificate -n monitoring
+      register: monitoring_certs
+      changed_when: false
+      failed_when: false
+      tags: [monitoring, monitoring-verify]
+
+    - name: Vérifier le ServiceMonitor Longhorn
+      ansible.builtin.command: k3s kubectl get servicemonitor -n longhorn-system
+      register: longhorn_servicemonitor
+      changed_when: false
+      failed_when: false
+      tags: [monitoring, monitoring-verify]
+
+    - name: Vérifier les PrometheusRules Longhorn
+      ansible.builtin.command: k3s kubectl get prometheusrule -n longhorn-system
+      register: longhorn_prometheusrules
+      changed_when: false
+      failed_when: false
+      tags: [monitoring, monitoring-verify]
+
+    # ==========================================================
+    # RÉSUMÉ
+    # ==========================================================
+
+    - name: Résumé Monitoring Stack
+      ansible.builtin.debug:
+        msg:
+          - "================================================"
+          - "  Monitoring Stack v{{ prometheus_stack_version }} installé"
+          - "================================================"
+          - "Namespace    : monitoring"
+          - "Chart        : kube-prometheus-stack"
+          - "================================================"
+          - "  Grafana"
+          - "================================================"
+          - "URL interne  : http://grafana.{{ cluster_network.apps_domain }}"
+          - "URL publique : https://{{ external_domains.grafana }}"
+          - "Login        : admin / admin (à changer !)"
+          - "Stockage     : {{ monitoring_config.grafana_storage }} ({{ monitoring_config.grafana_storage_class }})"
+          - "================================================"
+          - "  Prometheus"
+          - "================================================"
+          - "URL interne  : http://prometheus.{{ cluster_network.apps_domain }}"
+          - "URL publique : https://{{ external_domains.prometheus }}"
+          - "Rétention    : {{ monitoring_config.prometheus_retention }}"
+          - "Stockage     : {{ monitoring_config.prometheus_storage }} ({{ monitoring_config.prometheus_storage_class }})"
+          - "================================================"
+          - "  Alertmanager"
+          - "================================================"
+          - "URL interne  : http://alertmanager.{{ cluster_network.apps_domain }}"
+          - "URL publique : https://{{ external_domains.alertmanager }}"
+          - "Stockage     : {{ monitoring_config.alertmanager_storage }} ({{ monitoring_config.alertmanager_storage_class }})"
+          - "================================================"
+          - "  Pods"
+          - "================================================"
+          - "{{ monitoring_pods.stdout_lines }}"
+          - "================================================"
+          - "  Services"
+          - "================================================"
+          - "{{ monitoring_svc.stdout_lines }}"
+          - "================================================"
+          - "  PVCs (Longhorn)"
+          - "================================================"
+          - "{{ monitoring_pvc.stdout_lines }}"
+          - "================================================"
+          - "  Ingress / IngressRoutes"
+          - "================================================"
+          - "{{ monitoring_ingress.stdout_lines | default(['Aucun']) }}"
+          - "{{ monitoring_ingress_tls.stdout_lines | default(['Aucun']) }}"
+          - "================================================"
+          - "  Certificats TLS"
+          - "================================================"
+          - "{{ monitoring_certs.stdout_lines | default(['En attente...']) }}"
+          - "================================================"
+          - "  Longhorn Monitoring"
+          - "================================================"
+          - "ServiceMonitor : {{ longhorn_servicemonitor.stdout_lines | default(['Non trouvé']) }}"
+          - "PrometheusRule : {{ longhorn_prometheusrules.stdout_lines | default(['Non trouvé']) }}"
+          - "Dashboard      : longhorn-grafana-dashboard (ConfigMap, ID 17626)"
+          - "================================================"
+      tags: [monitoring, monitoring-verify]
