@@ -4,26 +4,191 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>K3s Ingress Index</title>
+        <title>K3s Services Index</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
         <style>
-            body { font-family: sans-serif; background: #f4f7f6; color: #333; padding: 20px; }
-            .container { max-width: 800px; margin: auto; }
-            h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
-            .namespace-section { background: white; margin-bottom: 20px; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-            .namespace-title { color: #e67e22; margin-top: 0; text-transform: uppercase; font-size: 0.9em; }
-            ul { list-style: none; padding: 0; }
-            li { margin: 10px 0; }
-            a { text-decoration: none; color: #3498db; font-weight: bold; }
-            a:hover { text-decoration: underline; }
-            .footer { font-size: 0.8em; color: #7f8c8d; margin-top: 20px; }
+            body { background-color: #0f172a; color: #f8fafc; font-family: 'Inter', sans-serif; }
+            .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+            .card:hover { transform: translateY(-5px); transition: all 0.3s ease; box-shadow: 0 10px 20px rgba(0,0,0,0.3); }
+            .badge-ns { background: linear-gradient(90deg, #3b82f6, #2dd4bf); }
         </style>
     </head>
-    <body>
-        <div class="container">
-            <h1>Cluster Ingress Index</h1>
-            <p>Services disponibles sur le cluster :</p>
-    <div class="namespace-section"><h2 class="namespace-title">Namespace: headlamp</h2><ul><li>headlamp : <a href="https://headlamp.app.xixtu.eu" target="_blank">https://headlamp.app.xixtu.eu</a></li></ul></div><div class="namespace-section"><h2 class="namespace-title">Namespace: kwaba-kinesiologie-redirect</h2><ul><li>kwaba-redirect-ingress : <a href="https://kwaba-kinesiologie.xixtu.eu" target="_blank">https://kwaba-kinesiologie.xixtu.eu</a></li></ul></div><div class="namespace-section"><h2 class="namespace-title">Namespace: longhorn-system</h2><ul><li>longhorn-ingress-tls : <a href="https://longhorn.app.xixtu.eu" target="_blank">https://longhorn.app.xixtu.eu</a></li></ul></div><div class="namespace-section"><h2 class="namespace-title">Namespace: mobilizon</h2><ul><li>mobilizon-ingress : <a href="https://mobilizon.app.xixtu.eu" target="_blank">https://mobilizon.app.xixtu.eu</a></li></ul></div><div class="namespace-section"><h2 class="namespace-title">Namespace: monitoring</h2><ul><li>alertmanager-ingress-tls : <a href="https://alertmanager.app.xixtu.eu" target="_blank">https://alertmanager.app.xixtu.eu</a></li><li>grafana-ingress-tls : <a href="https://grafana.app.xixtu.eu" target="_blank">https://grafana.app.xixtu.eu</a></li><li>prometheus-ingress-tls : <a href="https://prometheus.app.xixtu.eu" target="_blank">https://prometheus.app.xixtu.eu</a></li></ul></div><div class="namespace-section"><h2 class="namespace-title">Namespace: paheko</h2><ul><li>paheko-ingress : <a href="https://paheko.app.xixtu.eu" target="_blank">https://paheko.app.xixtu.eu</a></li></ul></div>
-            <div class="footer">Généré le 26/02/2026 20:46</div>
+    <body class="p-4 md:p-10">
+        <div class="max-w-6xl mx-auto">
+            <header class="flex flex-col md:flex-row justify-between items-center mb-12 gap-4">
+                <div>
+                    <h1 class="text-4xl font-extrabold tracking-tight text-white flex items-center gap-3">
+                        <i class="fas fa-cubes text-blue-400"></i> K3s Ingress Hub
+                    </h1>
+                    <p class="text-slate-400 mt-2">Index automatique des services exposés</p>
+                </div>
+                <div class="text-right">
+                    <span class="px-4 py-2 rounded-full glass text-sm font-mono text-blue-300">
+                        <i class="far fa-clock mr-2"></i>26 Feb 2026 - 20:52
+                    </span>
+                </div>
+            </header>
+
+            <div class="space-y-12">
+    
+                <section>
+                    <div class="flex items-center gap-4 mb-6">
+                        <h2 class="text-xl font-bold uppercase tracking-widest text-slate-300">headlamp</h2>
+                        <div class="h-px flex-grow bg-slate-800"></div>
+                        <span class="text-xs font-mono text-slate-500">1 service(s)</span>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        
+                        <a href="https://headlamp.app.xixtu.eu" target="_blank" class="card glass p-6 rounded-2xl flex flex-col justify-between group">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                                    <i class="fas fa-link fa-lg"></i>
+                                </div>
+                                <i class="fas fa-external-link-alt text-slate-600 group-hover:text-blue-400"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg text-white mb-1 truncate">headlamp</h3>
+                                <p class="text-sm text-slate-400 font-mono truncate">headlamp.app.xixtu.eu</p>
+                            </div>
+                        </a>
+            </div></section>
+                <section>
+                    <div class="flex items-center gap-4 mb-6">
+                        <h2 class="text-xl font-bold uppercase tracking-widest text-slate-300">kwaba-kinesiologie-redirect</h2>
+                        <div class="h-px flex-grow bg-slate-800"></div>
+                        <span class="text-xs font-mono text-slate-500">1 service(s)</span>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        
+                        <a href="https://kwaba-kinesiologie.xixtu.eu" target="_blank" class="card glass p-6 rounded-2xl flex flex-col justify-between group">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                                    <i class="fas fa-link fa-lg"></i>
+                                </div>
+                                <i class="fas fa-external-link-alt text-slate-600 group-hover:text-blue-400"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg text-white mb-1 truncate">kwaba-redirect-ingress</h3>
+                                <p class="text-sm text-slate-400 font-mono truncate">kwaba-kinesiologie.xixtu.eu</p>
+                            </div>
+                        </a>
+            </div></section>
+                <section>
+                    <div class="flex items-center gap-4 mb-6">
+                        <h2 class="text-xl font-bold uppercase tracking-widest text-slate-300">longhorn-system</h2>
+                        <div class="h-px flex-grow bg-slate-800"></div>
+                        <span class="text-xs font-mono text-slate-500">1 service(s)</span>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        
+                        <a href="https://longhorn.app.xixtu.eu" target="_blank" class="card glass p-6 rounded-2xl flex flex-col justify-between group">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                                    <i class="fas fa-link fa-lg"></i>
+                                </div>
+                                <i class="fas fa-external-link-alt text-slate-600 group-hover:text-blue-400"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg text-white mb-1 truncate">longhorn-ingress-tls</h3>
+                                <p class="text-sm text-slate-400 font-mono truncate">longhorn.app.xixtu.eu</p>
+                            </div>
+                        </a>
+            </div></section>
+                <section>
+                    <div class="flex items-center gap-4 mb-6">
+                        <h2 class="text-xl font-bold uppercase tracking-widest text-slate-300">mobilizon</h2>
+                        <div class="h-px flex-grow bg-slate-800"></div>
+                        <span class="text-xs font-mono text-slate-500">1 service(s)</span>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        
+                        <a href="https://mobilizon.app.xixtu.eu" target="_blank" class="card glass p-6 rounded-2xl flex flex-col justify-between group">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                                    <i class="fas fa-link fa-lg"></i>
+                                </div>
+                                <i class="fas fa-external-link-alt text-slate-600 group-hover:text-blue-400"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg text-white mb-1 truncate">mobilizon-ingress</h3>
+                                <p class="text-sm text-slate-400 font-mono truncate">mobilizon.app.xixtu.eu</p>
+                            </div>
+                        </a>
+            </div></section>
+                <section>
+                    <div class="flex items-center gap-4 mb-6">
+                        <h2 class="text-xl font-bold uppercase tracking-widest text-slate-300">monitoring</h2>
+                        <div class="h-px flex-grow bg-slate-800"></div>
+                        <span class="text-xs font-mono text-slate-500">3 service(s)</span>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        
+                        <a href="https://alertmanager.app.xixtu.eu" target="_blank" class="card glass p-6 rounded-2xl flex flex-col justify-between group">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                                    <i class="fas fa-link fa-lg"></i>
+                                </div>
+                                <i class="fas fa-external-link-alt text-slate-600 group-hover:text-blue-400"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg text-white mb-1 truncate">alertmanager-ingress-tls</h3>
+                                <p class="text-sm text-slate-400 font-mono truncate">alertmanager.app.xixtu.eu</p>
+                            </div>
+                        </a>
+            
+                        <a href="https://grafana.app.xixtu.eu" target="_blank" class="card glass p-6 rounded-2xl flex flex-col justify-between group">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                                    <i class="fas fa-link fa-lg"></i>
+                                </div>
+                                <i class="fas fa-external-link-alt text-slate-600 group-hover:text-blue-400"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg text-white mb-1 truncate">grafana-ingress-tls</h3>
+                                <p class="text-sm text-slate-400 font-mono truncate">grafana.app.xixtu.eu</p>
+                            </div>
+                        </a>
+            
+                        <a href="https://prometheus.app.xixtu.eu" target="_blank" class="card glass p-6 rounded-2xl flex flex-col justify-between group">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                                    <i class="fas fa-link fa-lg"></i>
+                                </div>
+                                <i class="fas fa-external-link-alt text-slate-600 group-hover:text-blue-400"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg text-white mb-1 truncate">prometheus-ingress-tls</h3>
+                                <p class="text-sm text-slate-400 font-mono truncate">prometheus.app.xixtu.eu</p>
+                            </div>
+                        </a>
+            </div></section>
+                <section>
+                    <div class="flex items-center gap-4 mb-6">
+                        <h2 class="text-xl font-bold uppercase tracking-widest text-slate-300">paheko</h2>
+                        <div class="h-px flex-grow bg-slate-800"></div>
+                        <span class="text-xs font-mono text-slate-500">1 service(s)</span>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        
+                        <a href="https://paheko.app.xixtu.eu" target="_blank" class="card glass p-6 rounded-2xl flex flex-col justify-between group">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                                    <i class="fas fa-link fa-lg"></i>
+                                </div>
+                                <i class="fas fa-external-link-alt text-slate-600 group-hover:text-blue-400"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg text-white mb-1 truncate">paheko-ingress</h3>
+                                <p class="text-sm text-slate-400 font-mono truncate">paheko.app.xixtu.eu</p>
+                            </div>
+                        </a>
+            </div></section>
+            </div>
+            
+            <footer class="mt-20 pt-8 border-t border-slate-800 text-center text-slate-500 text-sm">
+                <p>Généré dynamiquement par l'API Kubernetes • <i class="fab fa-python"></i> Python v3</p>
+            </footer>
         </div>
     </body>
     </html>
