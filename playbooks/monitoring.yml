@@ -4,9 +4,10 @@
 # =============================================================
 # Usage : ansible-playbook -i inventory/hosts.yml playbooks/monitoring.yml
 # Tags :
-#   monitoring-install → Installer kube-prometheus-stack via Helm
-#   monitoring-ingress → IngressRoutes Traefik (interne + TLS public)
-#   monitoring-verify  → Vérifier pods, services, URLs
+#   monitoring-install  → Installer kube-prometheus-stack via Helm
+#   monitoring-longhorn → ServiceMonitor + alertes + dashboard Longhorn
+#   monitoring-ingress  → IngressRoutes Traefik (interne + TLS public)
+#   monitoring-verify   → Vérifier pods, services, URLs
 # Prérequis : K3s + Longhorn + MetalLB + Traefik + cert-manager installés
 # Chart Helm : kube-prometheus-stack (Prometheus Community)
 # URLs internes :
@@ -209,6 +210,176 @@
       delay: 15
       until: monitoring_pods_ready.rc == 0
       tags: [monitoring, monitoring-install]
+
+    # ==========================================================
+    # LONGHORN MONITORING (ServiceMonitor + Alertes + Dashboard)
+    # ==========================================================
+
+    - name: Écrire le ServiceMonitor Longhorn
+      ansible.builtin.copy:
+        dest: /tmp/longhorn-servicemonitor.yml
+        mode: '0644'
+        content: |
+          apiVersion: monitoring.coreos.com/v1
+          kind: ServiceMonitor
+          metadata:
+            name: longhorn-prometheus-servicemonitor
+            namespace: longhorn-system
+            labels:
+              name: longhorn-prometheus-servicemonitor
+          spec:
+            selector:
+              matchLabels:
+                app: longhorn-manager
+            namespaceSelector:
+              matchNames:
+                - longhorn-system
+            endpoints:
+              - port: manager
+      tags: [monitoring, monitoring-longhorn]
+
+    - name: Appliquer le ServiceMonitor Longhorn
+      ansible.builtin.command: k3s kubectl apply -f /tmp/longhorn-servicemonitor.yml
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [monitoring, monitoring-longhorn]
+
+    - name: Écrire les PrometheusRules Longhorn
+      ansible.builtin.copy:
+        dest: /tmp/longhorn-prometheusrules.yml
+        mode: '0644'
+        content: |
+          apiVersion: monitoring.coreos.com/v1
+          kind: PrometheusRule
+          metadata:
+            name: prometheus-longhorn-rules
+            namespace: longhorn-system
+            labels:
+              prometheus: longhorn
+              role: alert-rules
+          spec:
+            groups:
+              - name: longhorn.rules
+                rules:
+                  - alert: LonghornVolumeUsageCritical
+                    expr: 100 * (longhorn_volume_actual_size_bytes / longhorn_volume_capacity_bytes) > 90
+                    for: 5m
+                    labels:
+                      severity: critical
+                    annotations:
+                      summary: "Volume Longhorn {{ '{{' }} $labels.volume {{ '}}' }} utilisation critique"
+                      description: "Le volume {{ '{{' }} $labels.volume {{ '}}' }} sur {{ '{{' }} $labels.node {{ '}}' }} dépasse 90% de capacité ({{ '{{' }} $value | printf \"%.1f\" {{ '}}' }}%)."
+
+                  - alert: LonghornVolumeUsageWarning
+                    expr: 100 * (longhorn_volume_actual_size_bytes / longhorn_volume_capacity_bytes) > 70
+                    for: 5m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: "Volume Longhorn {{ '{{' }} $labels.volume {{ '}}' }} utilisation élevée"
+                      description: "Le volume {{ '{{' }} $labels.volume {{ '}}' }} dépasse 70% de capacité ({{ '{{' }} $value | printf \"%.1f\" {{ '}}' }}%)."
+
+                  - alert: LonghornVolumeStatusCritical
+                    expr: longhorn_volume_robustness == 3
+                    for: 5m
+                    labels:
+                      severity: critical
+                    annotations:
+                      summary: "Volume Longhorn {{ '{{' }} $labels.volume {{ '}}' }} en état Faulted"
+                      description: "Le volume {{ '{{' }} $labels.volume {{ '}}' }} est en erreur (Faulted). Intervention nécessaire."
+
+                  - alert: LonghornVolumeStatusDegraded
+                    expr: longhorn_volume_robustness == 2
+                    for: 5m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: "Volume Longhorn {{ '{{' }} $labels.volume {{ '}}' }} dégradé"
+                      description: "Le volume {{ '{{' }} $labels.volume {{ '}}' }} est dégradé — réplicas insuffisants."
+
+                  - alert: LonghornNodeStorageWarning
+                    expr: 100 * (longhorn_node_storage_usage_bytes / longhorn_node_storage_capacity_bytes) > 70
+                    for: 5m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: "Noeud Longhorn {{ '{{' }} $labels.node {{ '}}' }} stockage > 70%"
+                      description: "Le noeud {{ '{{' }} $labels.node {{ '}}' }} utilise {{ '{{' }} $value | printf \"%.1f\" {{ '}}' }}% de son stockage."
+
+                  - alert: LonghornNodeStorageCritical
+                    expr: 100 * (longhorn_node_storage_usage_bytes / longhorn_node_storage_capacity_bytes) > 90
+                    for: 5m
+                    labels:
+                      severity: critical
+                    annotations:
+                      summary: "Noeud Longhorn {{ '{{' }} $labels.node {{ '}}' }} stockage critique > 90%"
+                      description: "Le noeud {{ '{{' }} $labels.node {{ '}}' }} utilise {{ '{{' }} $value | printf \"%.1f\" {{ '}}' }}% de son stockage. Libérer de l'espace."
+
+                  - alert: LonghornNodeDown
+                    expr: longhorn_node_status{condition="ready"} == 0
+                    for: 5m
+                    labels:
+                      severity: critical
+                    annotations:
+                      summary: "Noeud Longhorn {{ '{{' }} $labels.node {{ '}}' }} indisponible"
+                      description: "Le noeud {{ '{{' }} $labels.node {{ '}}' }} n'est plus Ready depuis 5 minutes."
+      tags: [monitoring, monitoring-longhorn]
+
+    - name: Appliquer les PrometheusRules Longhorn
+      ansible.builtin.command: k3s kubectl apply -f /tmp/longhorn-prometheusrules.yml
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [monitoring, monitoring-longhorn]
+
+    - name: Télécharger le dashboard Grafana Longhorn (ID 17626)
+      ansible.builtin.command: >
+        curl -sL https://grafana.com/api/dashboards/17626/revisions/1/download
+        -o /tmp/longhorn-dashboard.json
+      changed_when: false
+      tags: [monitoring, monitoring-longhorn]
+
+    - name: Lire le contenu du dashboard Longhorn
+      ansible.builtin.slurp:
+        src: /tmp/longhorn-dashboard.json
+      register: longhorn_dashboard_json
+      tags: [monitoring, monitoring-longhorn]
+
+    - name: Créer le ConfigMap du dashboard Longhorn pour le sidecar Grafana
+      ansible.builtin.copy:
+        dest: /tmp/longhorn-dashboard-configmap.yml
+        mode: '0644'
+        content: |
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: longhorn-grafana-dashboard
+            namespace: monitoring
+            labels:
+              grafana_dashboard: "1"
+          data:
+            longhorn-dashboard.json: |
+              {{ longhorn_dashboard_json.content | b64decode | indent(8) }}
+      tags: [monitoring, monitoring-longhorn]
+
+    - name: Appliquer le ConfigMap du dashboard Longhorn
+      ansible.builtin.command: k3s kubectl apply -f /tmp/longhorn-dashboard-configmap.yml
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [monitoring, monitoring-longhorn]
+
+    - name: Supprimer les fichiers Longhorn monitoring temporaires
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/longhorn-servicemonitor.yml
+        - /tmp/longhorn-prometheusrules.yml
+        - /tmp/longhorn-dashboard.json
+        - /tmp/longhorn-dashboard-configmap.yml
+      tags: [monitoring, monitoring-longhorn]
 
     # ==========================================================
     # INGRESSROUTES INTERNES (app.corp.lcl)
@@ -565,6 +736,20 @@
       failed_when: false
       tags: [monitoring, monitoring-verify]
 
+    - name: Vérifier le ServiceMonitor Longhorn
+      ansible.builtin.command: k3s kubectl get servicemonitor -n longhorn-system
+      register: longhorn_servicemonitor
+      changed_when: false
+      failed_when: false
+      tags: [monitoring, monitoring-verify]
+
+    - name: Vérifier les PrometheusRules Longhorn
+      ansible.builtin.command: k3s kubectl get prometheusrule -n longhorn-system
+      register: longhorn_prometheusrules
+      changed_when: false
+      failed_when: false
+      tags: [monitoring, monitoring-verify]
+
     # ==========================================================
     # RÉSUMÉ
     # ==========================================================
@@ -618,5 +803,11 @@
           - "  Certificats TLS"
           - "================================================"
           - "{{ monitoring_certs.stdout_lines | default(['En attente...']) }}"
+          - "================================================"
+          - "  Longhorn Monitoring"
+          - "================================================"
+          - "ServiceMonitor : {{ longhorn_servicemonitor.stdout_lines | default(['Non trouvé']) }}"
+          - "PrometheusRule : {{ longhorn_prometheusrules.stdout_lines | default(['Non trouvé']) }}"
+          - "Dashboard      : longhorn-grafana-dashboard (ConfigMap, ID 17626)"
           - "================================================"
       tags: [monitoring, monitoring-verify]
