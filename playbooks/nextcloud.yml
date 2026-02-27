@@ -562,9 +562,8 @@
     # ==========================================================
     # LDAP / ACTIVE DIRECTORY
     # ==========================================================
-    # Le compte de service {{ nextcloud_config.ldap_bind_user }} doit exister
-    # dans le DC ({{ nas_config.ad_dc_hostname }}) avant d'exécuter ce playbook.
-    # Nextcloud utilise user_ldap pour authentifier les utilisateurs AD.
+    # Crée le compte de service {{ nextcloud_config.ldap_bind_user }} dans AD
+    # via le pod Samba (déjà membre du domaine) puis configure user_ldap.
     # ==========================================================
 
     - name: Attendre que Nextcloud soit prêt pour la configuration LDAP
@@ -573,6 +572,15 @@
         -l app={{ app_name }}
         -n {{ target_namespace }}
         --timeout=300s
+      changed_when: false
+      tags: [nextcloud, nextcloud-ldap]
+
+    - name: Attendre que le pod Samba soit prêt
+      ansible.builtin.command: >
+        k3s kubectl wait --for=condition=Ready pods
+        -l app=samba
+        -n nas
+        --timeout=120s
       changed_when: false
       tags: [nextcloud, nextcloud-ldap]
 
@@ -596,6 +604,57 @@
           stderr: {{ ldap_network_test.stderr | default('') }}
           {% endif %}
       failed_when: ldap_network_test.rc != 0
+      tags: [nextcloud, nextcloud-ldap]
+
+    # --- Création du compte de service AD pour Nextcloud LDAP ---
+    # Utilise 'net rpc' depuis le pod Samba (membre du domaine)
+    # au lieu de 'samba-tool' qui échoue avec ldb_ldap backend.
+
+    - name: Vérifier si le compte AD {{ nextcloud_config.ldap_bind_user }} existe
+      ansible.builtin.shell: >
+        k3s kubectl exec -n nas deployment/samba --
+        net rpc user info {{ nextcloud_config.ldap_bind_user }}
+        -S {{ nas_config.ad_dc_hostname }}
+        -U "{{ nas_config.ad_join_user }}%{{ nas_config.ad_join_password }}"
+      register: ad_user_check
+      changed_when: false
+      failed_when: false
+      tags: [nextcloud, nextcloud-ldap]
+
+    - name: Créer le compte AD {{ nextcloud_config.ldap_bind_user }} (via net rpc)
+      ansible.builtin.shell: >
+        k3s kubectl exec -n nas deployment/samba --
+        net rpc user add {{ nextcloud_config.ldap_bind_user }}
+        "{{ nextcloud_config.ldap_bind_password }}"
+        -S {{ nas_config.ad_dc_hostname }}
+        -U "{{ nas_config.ad_join_user }}%{{ nas_config.ad_join_password }}"
+      register: ad_user_create
+      when: ad_user_check.rc != 0
+      changed_when: ad_user_create.rc == 0
+      tags: [nextcloud, nextcloud-ldap]
+
+    - name: Résultat création compte AD
+      ansible.builtin.debug:
+        msg: >-
+          {% if ad_user_check.rc == 0 %}
+          OK - Le compte {{ nextcloud_config.ldap_bind_user }} existe déjà dans AD
+          {% elif ad_user_create.rc | default(1) == 0 %}
+          OK - Le compte {{ nextcloud_config.ldap_bind_user }} a été créé dans AD
+          {% else %}
+          ERREUR - Impossible de créer {{ nextcloud_config.ldap_bind_user }} :
+          {{ ad_user_create.stderr | default('erreur inconnue') }}
+          {% endif %}
+      tags: [nextcloud, nextcloud-ldap]
+
+    - name: Définir le mot de passe à ne jamais expirer
+      ansible.builtin.shell: >
+        k3s kubectl exec -n nas deployment/samba --
+        net rpc user setexpiry {{ nextcloud_config.ldap_bind_user }} --never
+        -S {{ nas_config.ad_dc_hostname }}
+        -U "{{ nas_config.ad_join_user }}%{{ nas_config.ad_join_password }}"
+      register: ad_user_expiry
+      changed_when: true
+      failed_when: false
       tags: [nextcloud, nextcloud-ldap]
 
     - name: Activer l'app user_ldap dans Nextcloud
@@ -705,7 +764,7 @@
         su -s /bin/bash www-data -c "php /var/www/html/occ log:tail 10"
       register: nc_log
       changed_when: false
-      when: ldap_test.rc != 0 or 'not' in (ldap_test.stdout | default('') | lower)
+      when: ldap_test.rc != 0 or 'not' in (ldap_test.stdout | default('') | lower) or 'fail' in (ldap_test.stdout | default('') | lower)
       tags: [nextcloud, nextcloud-ldap]
 
     - name: Log Nextcloud (dernières entrées)
