@@ -92,6 +92,7 @@
                   # Active Directory
                   workgroup = {{ nas_config.ad_workgroup }}
                   realm = {{ nas_config.ad_realm }}
+                  netbios name = MULTINAS
                   security = ADS
                   server role = member server
                   server string = NAS K3s Cluster
@@ -181,12 +182,16 @@
               if ! command -v smbd &>/dev/null; then
                   echo "[1/5] Installation Samba + Winbind + Kerberos..."
                   apt-get update -qq
+                  # Preseed krb5-config pour eviter les prompts interactifs
+                  echo "krb5-config krb5-config/default_realm string ${AD_REALM}" | debconf-set-selections
+                  echo "krb5-config krb5-config/kerberos_servers string ${AD_DC_HOSTNAME}" | debconf-set-selections
+                  echo "krb5-config krb5-config/admin_server string ${AD_DC_HOSTNAME}" | debconf-set-selections
                   DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
                       --no-install-recommends \
                       samba samba-vfs-modules \
                       winbind libpam-winbind libnss-winbind \
                       krb5-user libpam-krb5 \
-                      procps 2>&1 | tail -5
+                      procps
                   echo "[1/5] Packages installes"
               else
                   echo "[1/5] Packages deja presents"
@@ -364,6 +369,7 @@
                 labels:
                   app: samba
               spec:
+                hostname: multinas
                 # --- Init container : créer l'arborescence NAS ---
                 initContainers:
                   - name: init-nas-dirs
@@ -397,6 +403,8 @@
                             key: password
                       - name: AD_REALM
                         value: "{{ nas_config.ad_realm }}"
+                      - name: AD_DC_HOSTNAME
+                        value: "{{ nas_config.ad_dc_hostname }}"
                     ports:
                       - containerPort: 445
                         name: smb
