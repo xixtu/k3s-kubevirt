@@ -47,7 +47,7 @@
     # Nextcloud
     nextcloud_image: "nextcloud:29-apache"
     # LDAP / Active Directory
-    ldap_bind_dn: "CN={{ nextcloud_config.ldap_bind_user }},CN=Users,DC=corp,DC=lcl"
+    ldap_bind_dn: "CN={{ nextcloud_config.ldap_bind_user }},OU=service_accounts,OU=CORP,DC=corp,DC=lcl"
     ldap_base_dn: "DC=corp,DC=lcl"
     ldap_users_dn: "CN=Users,DC=corp,DC=lcl"
 
