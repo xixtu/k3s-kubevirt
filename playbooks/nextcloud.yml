@@ -621,23 +621,34 @@
         su -s /bin/bash www-data -c
         "php /var/www/html/occ ldap:set-config s01 {{ item.key }} '{{ item.value }}'"
       loop:
-        - { key: ldapHost, value: "{{ nas_config.ad_dc_ip }}" }
+        # --- Connexion au DC ---
+        - { key: ldapHost, value: "ldap://{{ nas_config.ad_dc_ip }}" }
         - { key: ldapPort, value: "389" }
         - { key: ldapAgentName, value: "{{ ldap_bind_dn }}" }
         - { key: ldapAgentPassword, value: "{{ nextcloud_config.ldap_bind_password }}" }
         - { key: ldapBase, value: "{{ ldap_base_dn }}" }
+        - { key: ldapTLS, value: "0" }
+        - { key: turnOffCertCheck, value: "1" }
+        # --- Utilisateurs ---
         - { key: ldapBaseUsers, value: "{{ ldap_users_dn }}" }
-        - { key: ldapBaseGroups, value: "{{ ldap_users_dn }}" }
         - { key: ldapUserFilter, value: "(&(objectClass=user)(!(objectClass=computer)))" }
         - { key: ldapUserFilterObjectclass, value: "user" }
-        - { key: ldapLoginFilter, value: "(&(objectClass=user)(sAMAccountName=%uid))" }
-        - { key: ldapLoginFilterUsername, value: "1" }
-        - { key: ldapGroupFilter, value: "(objectClass=group)" }
-        - { key: ldapGroupFilterObjectclass, value: "group" }
         - { key: ldapUserDisplayName, value: "displayName" }
         - { key: ldapEmailAttribute, value: "mail" }
         - { key: ldapExpertUsernameAttr, value: "sAMAccountName" }
-        - { key: turnOffCertCheck, value: "1" }
+        - { key: ldapExpertUUIDUserAttr, value: "sAMAccountName" }
+        # --- Login ---
+        - { key: ldapLoginFilter, value: "(&(objectClass=user)(|(sAMAccountName=%uid)(userPrincipalName=%uid)))" }
+        - { key: ldapLoginFilterUsername, value: "1" }
+        # --- Groupes ---
+        - { key: ldapBaseGroups, value: "{{ ldap_users_dn }}" }
+        - { key: ldapGroupFilter, value: "(objectClass=group)" }
+        - { key: ldapGroupFilterObjectclass, value: "group" }
+        - { key: ldapGroupMemberAssocAttr, value: "member" }
+        - { key: ldapExpertUUIDGroupAttr, value: "cn" }
+        # --- Compatibilité Active Directory ---
+        - { key: hasMemberOfFilterSupport, value: "1" }
+        - { key: useMemberOfToDetectMembership, value: "1" }
         - { key: ldapConfigurationActive, value: "1" }
       loop_control:
         label: "{{ item.key }}"
