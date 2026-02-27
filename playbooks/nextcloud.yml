@@ -85,51 +85,6 @@
       tags: [nextcloud, nextcloud-install]
 
     # ==========================================================
-    # CONFIGMAP - Script hook pour installer smbclient
-    # ==========================================================
-    # Le hook s'exécute à chaque démarrage du conteneur via
-    # /docker-entrypoint-hooks.d/before-starting/
-    # Installe le binaire smbclient requis par le plugin
-    # "External Storage: SMB/CIFS" de Nextcloud.
-    # ==========================================================
-
-    - name: Créer le ConfigMap SMB hook
-      ansible.builtin.copy:
-        dest: /tmp/nextcloud-smb-hook.yml
-        mode: '0644'
-        content: |
-          apiVersion: v1
-          kind: ConfigMap
-          metadata:
-            name: {{ app_name }}-smb-hook
-            namespace: {{ target_namespace }}
-          data:
-            install-smb.sh: |
-              #!/bin/bash
-              set -e
-              if ! command -v smbclient &>/dev/null; then
-                echo "[hook] Installation de smbclient pour External Storage SMB..."
-                apt-get update -qq
-                apt-get install -y -qq --no-install-recommends smbclient
-                echo "[hook] smbclient installé avec succès"
-              else
-                echo "[hook] smbclient déjà présent"
-              fi
-      tags: [nextcloud, nextcloud-install]
-
-    - name: Appliquer le ConfigMap SMB hook
-      ansible.builtin.command: k3s kubectl apply -f /tmp/nextcloud-smb-hook.yml
-      register: cm_apply
-      changed_when: "'configured' in cm_apply.stdout or 'created' in cm_apply.stdout"
-      tags: [nextcloud, nextcloud-install]
-
-    - name: Supprimer le fichier ConfigMap temporaire
-      ansible.builtin.file:
-        path: /tmp/nextcloud-smb-hook.yml
-        state: absent
-      tags: [nextcloud, nextcloud-install]
-
-    # ==========================================================
     # PVC (PostgreSQL + Nextcloud data)
     # ==========================================================
 
@@ -269,7 +224,7 @@
     # NEXTCLOUD (Application)
     # ==========================================================
     # Image : nextcloud:29-apache
-    # - smbclient installé via hook before-starting
+    # - smbclient installé via command override (root) avant entrypoint
     # - Derrière Traefik reverse proxy (OVERWRITEPROTOCOL=https)
     # - Trusted proxies = pod CIDR (Flannel)
     # ==========================================================
@@ -301,6 +256,18 @@
                 containers:
                   - name: nextcloud
                     image: {{ nextcloud_image }}
+                    # Override : installe smbclient en root puis lance l'entrypoint
+                    # Le hook before-starting échoue (Permission denied) car Nextcloud 29
+                    # exécute les hooks avec des privileges réduits.
+                    command: ["/bin/bash", "-c"]
+                    args:
+                      - |
+                        echo "[init] Installation de smbclient..."
+                        apt-get update -qq && \
+                        apt-get install -y -qq --no-install-recommends smbclient && \
+                        rm -rf /var/lib/apt/lists/*
+                        echo "[init] smbclient OK - lancement Nextcloud"
+                        exec /entrypoint.sh apache2-foreground
                     ports:
                       - containerPort: 80
                     envFrom:
@@ -336,10 +303,6 @@
                     volumeMounts:
                       - name: nextcloud-data
                         mountPath: /var/www/html
-                      # Hook : installe smbclient au démarrage
-                      - name: smb-hook
-                        mountPath: /docker-entrypoint-hooks.d/before-starting/install-smb.sh
-                        subPath: install-smb.sh
                     resources:
                       requests:
                         cpu: 200m
@@ -353,7 +316,7 @@
                         httpHeaders:
                           - name: Host
                             value: "{{ external_domains.nextcloud }}"
-                      initialDelaySeconds: 60
+                      initialDelaySeconds: 120
                       periodSeconds: 30
                       timeoutSeconds: 10
                     readinessProbe:
@@ -363,17 +326,13 @@
                         httpHeaders:
                           - name: Host
                             value: "{{ external_domains.nextcloud }}"
-                      initialDelaySeconds: 30
+                      initialDelaySeconds: 60
                       periodSeconds: 10
                       timeoutSeconds: 5
                 volumes:
                   - name: nextcloud-data
                     persistentVolumeClaim:
                       claimName: {{ app_name }}-data
-                  - name: smb-hook
-                    configMap:
-                      name: {{ app_name }}-smb-hook
-                      defaultMode: 0755
           ---
           apiVersion: v1
           kind: Service
