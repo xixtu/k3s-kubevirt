@@ -1,15 +1,19 @@
 ---
 # =============================================================
-# PLAYBOOK : Déploiement NAS - Option C Hybride
+# PLAYBOOK : Déploiement NAS - Option C Hybride + Active Directory
 # =============================================================
 # Architecture :
 #   Longhorn PVC (RWX - longhorn-slow)
-#   ├── Samba Server (RW) → SMB shares pour postes + Nextcloud
+#   ├── Samba AD Member (RW) → SMB shares auth AD (corp.lcl)
 #   └── Plex (RO) → Streaming média direct
+#
+# Samba est joint au domaine corp.lcl via winbind + Kerberos.
+# Les utilisateurs s'authentifient avec leurs comptes AD.
+# Les permissions sont gérées par groupes AD par share.
 #
 # Usage : ansible-playbook -i inventory/hosts.yml playbooks/nas.yml
 # Tags :
-#   nas-install  → Namespace, Secrets, PVC, Samba, Plex
+#   nas-install  → Namespace, Secrets, ConfigMaps, PVC, Samba, Plex
 #   nas-samba    → Samba Deployment + Service uniquement
 #   nas-plex     → Plex Deployment + Service uniquement
 #   nas-verify   → Vérification pods, services, PVC
@@ -18,12 +22,16 @@
 #   - Longhorn StorageClass longhorn-slow + longhorn-fast
 #   - nfs-common installé sur tous les nœuds (requis pour RWX)
 #   - MetalLB pool : 192.168.0.21-192.168.0.60
+#   - DC Active Directory corp.lcl joignable (dc1.corp.lcl / 192.168.0.100)
+#   - Groupes AD créés : media-rw, documents-rw, shared-rw
+#   - Compte de service AD svc-adjoin avec droit de jonction machine
+#   - DNS : dc1.corp.lcl résolvable depuis les nœuds K3s
 # Accès :
-#   Samba : \\192.168.0.30\media, \\192.168.0.30\documents, \\192.168.0.30\shared
+#   Samba : \\192.168.0.30\media (auth AD : user@corp.lcl)
 #   Plex  : http://192.168.0.31:32400/web
 # =============================================================
 
-- name: "NAS - Stockage partagé (Option C Hybride)"
+- name: "NAS - Stockage partagé (Option C Hybride + Active Directory)"
   hosts: k3s-node-1
   become: true
   gather_facts: false
@@ -31,7 +39,7 @@
     - "../group_vars/k3s_cluster.yml"
   vars:
     target_namespace: "nas"
-    samba_image: "dperson/samba:latest"
+    samba_image: "debian:bookworm"
     plex_image: "linuxserver/plex:latest"
 
   tasks:
@@ -48,24 +56,206 @@
       tags: [nas, nas-install]
 
     # ==========================================================
-    # SECRETS (Samba credentials)
+    # SECRETS (AD join credentials)
     # ==========================================================
 
-    - name: Créer le Secret Samba credentials
+    - name: Créer le Secret AD join credentials
       ansible.builtin.shell: |
-        k3s kubectl create secret generic samba-credentials \
+        k3s kubectl create secret generic samba-ad-credentials \
           --namespace {{ target_namespace }} \
-          --from-literal=username={{ nas_config.samba_user }} \
-          --from-literal=password={{ nas_config.samba_password }} \
+          --from-literal=username={{ nas_config.ad_join_user }} \
+          --from-literal=password={{ nas_config.ad_join_password }} \
           --dry-run=client -o yaml | k3s kubectl apply -f -
       changed_when: true
       tags: [nas, nas-install]
 
     # ==========================================================
-    # PVC - NAS Data (RWX - longhorn-slow)
+    # CONFIGMAP - Samba AD Member (smb.conf, krb5.conf, startup.sh)
     # ==========================================================
-    # Longhorn RWX utilise un Share Manager (NFS interne) automatiquement.
-    # nfs-common doit être installé sur tous les nœuds.
+
+    - name: Écrire la ConfigMap Samba AD
+      ansible.builtin.copy:
+        dest: /tmp/nas-samba-config.yml
+        mode: '0644'
+        content: |
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: samba-config
+            namespace: {{ target_namespace }}
+          data:
+            smb.conf: |
+              # ==============================================
+              # smb.conf - Samba AD Member (corp.lcl)
+              # ==============================================
+              [global]
+                  # Active Directory
+                  workgroup = {{ nas_config.ad_workgroup }}
+                  realm = {{ nas_config.ad_realm }}
+                  security = ADS
+                  server role = member server
+                  server string = NAS K3s Cluster
+
+                  # Kerberos
+                  kerberos method = secrets and keytab
+
+                  # Winbind
+                  winbind use default domain = yes
+                  winbind enum users = yes
+                  winbind enum groups = yes
+                  winbind refresh tickets = yes
+                  winbind offline logon = yes
+
+                  # ID Mapping (AD RID → Unix UID/GID)
+                  idmap config * : backend = tdb
+                  idmap config * : range = 3000-7999
+                  idmap config {{ nas_config.ad_workgroup }} : backend = rid
+                  idmap config {{ nas_config.ad_workgroup }} : range = 10000-999999
+
+                  # DNS
+                  dns forwarder = {{ nas_config.ad_dc_ip }}
+
+                  # SMB Protocol & Security
+                  server min protocol = SMB2
+                  server signing = mandatory
+
+                  # Logging
+                  log file = /var/log/samba/%m.log
+                  max log size = 1000
+                  log level = 1
+
+                  # Performance
+                  socket options = TCP_NODELAY IPTOS_LOWDELAY
+
+                  # Disable unused
+                  load printers = no
+                  printing = bsd
+                  printcap name = /dev/null
+                  disable netbios = yes
+              {% for share in nas_config.shares %}
+
+              [{{ share.name }}]
+                  path = {{ share.path }}
+                  comment = {{ share.comment }}
+                  browseable = yes
+                  read only = no
+                  valid users = @"{{ nas_config.ad_workgroup }}\{{ share.ad_group }}"
+                  force group = {{ share.ad_group }}
+                  create mask = 0664
+                  force create mode = 0644
+                  directory mask = 0775
+                  force directory mode = 0755
+                  vfs objects = acl_xattr
+              {% endfor %}
+
+            krb5.conf: |
+              # ==============================================
+              # Kerberos config pour domaine {{ nas_config.ad_realm }}
+              # ==============================================
+              [libdefaults]
+                  default_realm = {{ nas_config.ad_realm }}
+                  dns_lookup_realm = false
+                  dns_lookup_kdc = true
+                  forwardable = true
+                  rdns = false
+
+              [realms]
+                  {{ nas_config.ad_realm }} = {
+                      kdc = {{ nas_config.ad_dc_hostname }}
+                      admin_server = {{ nas_config.ad_dc_hostname }}
+                  }
+
+              [domain_realm]
+                  .{{ nas_config.ad_domain }} = {{ nas_config.ad_realm }}
+                  {{ nas_config.ad_domain }} = {{ nas_config.ad_realm }}
+
+            startup.sh: |
+              #!/bin/bash
+              set -e
+
+              echo "=========================================="
+              echo " NAS Samba AD Member - Demarrage"
+              echo "=========================================="
+
+              # --- 1. Install packages ---
+              if ! command -v smbd &>/dev/null; then
+                  echo "[1/5] Installation Samba + Winbind + Kerberos..."
+                  apt-get update -qq
+                  DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
+                      --no-install-recommends \
+                      samba samba-vfs-modules \
+                      winbind libpam-winbind libnss-winbind \
+                      krb5-user libpam-krb5 \
+                      procps 2>&1 | tail -5
+                  echo "[1/5] Packages installes"
+              else
+                  echo "[1/5] Packages deja presents"
+              fi
+
+              # --- 2. Configure NSS for winbind ---
+              echo "[2/5] Configuration NSS (winbind)..."
+              if ! grep -q winbind /etc/nsswitch.conf; then
+                  sed -i 's/^passwd:.*/passwd: files winbind/' /etc/nsswitch.conf
+                  sed -i 's/^group:.*/group: files winbind/' /etc/nsswitch.conf
+              fi
+
+              # --- 3. Create NAS directories ---
+              echo "[3/5] Creation arborescence NAS..."
+              mkdir -p /nas/media /nas/documents /nas/shared
+              mkdir -p /var/log/samba /run/samba
+              chmod 0775 /nas/media /nas/documents /nas/shared
+
+              # --- 4. Domain join ---
+              echo "[4/5] Verification appartenance domaine..."
+              if net ads testjoin &>/dev/null 2>&1; then
+                  echo "[4/5] Deja membre du domaine ${AD_REALM}"
+              else
+                  echo "[4/5] Jonction au domaine ${AD_REALM}..."
+                  echo "${AD_JOIN_PASSWORD}" | kinit "${AD_JOIN_USER}@${AD_REALM}" 2>&1
+                  net ads join \
+                      -U "${AD_JOIN_USER}%${AD_JOIN_PASSWORD}" \
+                      --no-dns-updates 2>&1
+                  kdestroy 2>/dev/null || true
+                  echo "[4/5] Jonction reussie"
+              fi
+
+              # --- 5. Start services ---
+              echo "[5/5] Demarrage Winbind + Samba..."
+              winbindd -D
+              sleep 3
+
+              # Verification
+              echo "=========================================="
+              echo " Verifications"
+              echo "=========================================="
+              wbinfo -t 2>&1 && echo "Trust: OK" || echo "Trust: ATTENTION (winbind demarre)"
+              echo "Utilisateurs AD (5 premiers):"
+              wbinfo -u 2>&1 | head -5 || echo "(winbind en cours d initialisation)"
+              echo "=========================================="
+
+              echo "Demarrage smbd en foreground..."
+              exec smbd --foreground --no-process-group --debuglevel=1
+      tags: [nas, nas-install, nas-samba]
+
+    - name: Appliquer la ConfigMap Samba AD
+      ansible.builtin.command: k3s kubectl apply -f /tmp/nas-samba-config.yml
+      register: samba_config_apply
+      changed_when: "'configured' in samba_config_apply.stdout or 'created' in samba_config_apply.stdout"
+      tags: [nas, nas-install, nas-samba]
+
+    - name: Supprimer le fichier ConfigMap temporaire
+      ansible.builtin.file:
+        path: /tmp/nas-samba-config.yml
+        state: absent
+      tags: [nas, nas-install, nas-samba]
+
+    # ==========================================================
+    # PVC - NAS Data (RWX) + Plex Config (RWO) + Samba State (RWO)
+    # ==========================================================
+    # nas-data    : RWX longhorn-slow  (données NAS partagées)
+    # plex-config : RWO longhorn-fast  (config/BDD Plex)
+    # samba-state : RWO longhorn-fast  (machine account AD, tdb files)
+    #               → persiste la jonction AD entre redémarrages du pod
     # ==========================================================
 
     - name: Écrire les PVC NAS
@@ -105,6 +295,23 @@
             resources:
               requests:
                 storage: {{ nas_config.plex_config_storage_size }}
+          ---
+          apiVersion: v1
+          kind: PersistentVolumeClaim
+          metadata:
+            name: samba-state
+            namespace: {{ target_namespace }}
+            labels:
+              app: samba
+              tier: fast
+              purpose: ad-machine-account
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            storageClassName: {{ nas_config.plex_config_storage_class }}
+            resources:
+              requests:
+                storage: 1Gi
       tags: [nas, nas-install]
 
     - name: Appliquer les PVC NAS
@@ -120,17 +327,20 @@
       tags: [nas, nas-install]
 
     # ==========================================================
-    # SAMBA SERVER (seul writer sur le volume)
+    # SAMBA AD MEMBER (seul writer sur le volume)
     # ==========================================================
-    # Image : dperson/samba
+    # Image : debian:bookworm (installe samba+winbind+krb5 au démarrage)
+    # Auth  : Active Directory corp.lcl via Kerberos + Winbind
     # Shares exposés via SMB (port 445) :
-    #   \\<samba_ip>\media      → /nas/media
-    #   \\<samba_ip>\documents  → /nas/documents
-    #   \\<samba_ip>\shared     → /nas/shared
-    # Nextcloud se connecte via plugin "External Storage: SMB/CIFS"
+    #   \\<samba_ip>\media      → /nas/media      (groupe AD: media-rw)
+    #   \\<samba_ip>\documents  → /nas/documents  (groupe AD: documents-rw)
+    #   \\<samba_ip>\shared     → /nas/shared     (groupe AD: shared-rw)
+    #
+    # Le PVC samba-state persiste /var/lib/samba (machine account AD)
+    # → évite de re-joindre le domaine à chaque redémarrage du pod
     # ==========================================================
 
-    - name: Écrire le Deployment Samba
+    - name: Écrire le Deployment Samba AD
       ansible.builtin.copy:
         dest: /tmp/nas-samba.yml
         mode: '0644'
@@ -163,59 +373,70 @@
                       - -c
                       - |
                         mkdir -p /nas/media /nas/documents /nas/shared
-                        chown -R 1000:1000 /nas
                         chmod -R 0775 /nas
-                        echo "Arborescence NAS initialisée"
+                        echo "Arborescence NAS initialisee"
                         ls -la /nas/
                     volumeMounts:
                       - name: nas-data
                         mountPath: /nas
-                # --- Samba container ---
+                # --- Samba AD Member container ---
                 containers:
                   - name: samba
                     image: {{ samba_image }}
+                    command: ["/bin/bash", "/opt/samba/startup.sh"]
                     env:
-                      - name: SAMBA_USER
+                      - name: AD_JOIN_USER
                         valueFrom:
                           secretKeyRef:
-                            name: samba-credentials
+                            name: samba-ad-credentials
                             key: username
-                      - name: SAMBA_PASSWORD
+                      - name: AD_JOIN_PASSWORD
                         valueFrom:
                           secretKeyRef:
-                            name: samba-credentials
+                            name: samba-ad-credentials
                             key: password
-                    command:
-                      - /bin/bash
-                      - -c
-                      - |
-                        samba.sh \
-                          -u "${SAMBA_USER};${SAMBA_PASSWORD}" \
-                          -s "media;/nas/media;yes;no;no;${SAMBA_USER};${SAMBA_USER};;Fichiers media" \
-                          -s "documents;/nas/documents;yes;no;no;${SAMBA_USER};${SAMBA_USER};;Documents" \
-                          -s "shared;/nas/shared;yes;no;no;${SAMBA_USER};${SAMBA_USER};;Partage commun" \
-                          -G "force user=${SAMBA_USER}" \
-                          -G "force group=smb" \
-                          -G "create mask=0664" \
-                          -G "directory mask=0775" \
-                          -p
+                      - name: AD_REALM
+                        value: "{{ nas_config.ad_realm }}"
                     ports:
                       - containerPort: 445
                         name: smb
                         protocol: TCP
                     volumeMounts:
+                      # Données NAS (RW)
                       - name: nas-data
                         mountPath: /nas
+                      # État Samba (machine account AD, tdb)
+                      - name: samba-state
+                        mountPath: /var/lib/samba
+                      # smb.conf
+                      - name: samba-config
+                        mountPath: /etc/samba/smb.conf
+                        subPath: smb.conf
+                      # krb5.conf
+                      - name: samba-config
+                        mountPath: /etc/krb5.conf
+                        subPath: krb5.conf
+                      # Startup script
+                      - name: samba-config
+                        mountPath: /opt/samba/startup.sh
+                        subPath: startup.sh
                     resources:
                       requests:
                         cpu: 100m
-                        memory: 128Mi
+                        memory: 256Mi
                       limits:
-                        memory: 512Mi
+                        memory: 1Gi
                 volumes:
                   - name: nas-data
                     persistentVolumeClaim:
                       claimName: nas-data
+                  - name: samba-state
+                    persistentVolumeClaim:
+                      claimName: samba-state
+                  - name: samba-config
+                    configMap:
+                      name: samba-config
+                      defaultMode: 0755
           ---
           apiVersion: v1
           kind: Service
@@ -235,7 +456,7 @@
             type: LoadBalancer
       tags: [nas, nas-install, nas-samba]
 
-    - name: Appliquer le Deployment Samba
+    - name: Appliquer le Deployment Samba AD
       ansible.builtin.command: k3s kubectl apply -f /tmp/nas-samba.yml
       register: samba_apply
       changed_when: "'configured' in samba_apply.stdout or 'created' in samba_apply.stdout"
@@ -259,8 +480,9 @@
     # ==========================================================
     # PLEX MEDIA SERVER (read-only sur le volume NAS)
     # ==========================================================
-    # Image : linuxserver/plex (PUID/PGID=1000 pour lire les fichiers Samba)
+    # Image : linuxserver/plex (PUID/PGID=1000)
     # Monte le PVC NAS en read-only → pas de conflit d'écriture
+    # Les fichiers créés via Samba AD sont world-readable (force create mode 0644)
     # Config/DB Plex sur PVC séparé (longhorn-fast) pour performance
     # Accès : http://<plex_ip>:32400/web
     # ==========================================================
@@ -431,37 +653,47 @@
       ansible.builtin.debug:
         msg:
           - "================================================================"
-          - "  NAS déployé - Option C Hybride"
+          - "  NAS deploye - Option C Hybride + Active Directory"
           - "================================================================"
           - ""
           - "  Architecture :"
           - "  Longhorn PVC (RWX - {{ nas_config.storage_class }})"
-          - "  ├── Samba Server (RW) → SMB shares"
-          - "  └── Plex (RO) → Streaming média"
+          - "  ├── Samba AD Member (RW) → SMB shares (auth AD)"
+          - "  └── Plex (RO) → Streaming media"
+          - ""
+          - "  Active Directory : {{ nas_config.ad_realm }}"
+          - "  Domain Controller: {{ nas_config.ad_dc_hostname }} ({{ nas_config.ad_dc_ip }})"
           - ""
           - "================================================================"
           - "  Namespace    : {{ target_namespace }}"
           - "  Volume NAS   : {{ nas_config.nas_storage_size }} ({{ nas_config.storage_class }}, replica:2)"
           - "  Volume Plex  : {{ nas_config.plex_config_storage_size }} ({{ nas_config.plex_config_storage_class }})"
+          - "  Volume Samba : 1Gi ({{ nas_config.plex_config_storage_class }}, machine account AD)"
           - "================================================================"
           - ""
-          - "  SAMBA ({{ nas_config.samba_ip }}:445)"
+          - "  SAMBA AD Member ({{ nas_config.samba_ip }}:445)"
           - "  ────────────────────────────────────"
-          - "  Windows : \\\\{{ nas_config.samba_ip }}\\media"
-          - "            \\\\{{ nas_config.samba_ip }}\\documents"
-          - "            \\\\{{ nas_config.samba_ip }}\\shared"
-          - "  Linux   : smb://{{ nas_config.samba_ip }}/media"
-          - "  User    : {{ nas_config.samba_user }}"
+          - "  Domaine : {{ nas_config.ad_realm }}"
+          - "  Auth    : Kerberos / NTLM (comptes AD)"
+          - ""
+          - "  Shares :"
+          - "    \\\\{{ nas_config.samba_ip }}\\media      → groupe AD: media-rw"
+          - "    \\\\{{ nas_config.samba_ip }}\\documents  → groupe AD: documents-rw"
+          - "    \\\\{{ nas_config.samba_ip }}\\shared     → groupe AD: shared-rw"
+          - ""
+          - "  Connexion Windows : net use Z: \\\\{{ nas_config.samba_ip }}\\media"
+          - "  Connexion Linux   : smb://{{ nas_config.samba_ip }}/media"
+          - "  (les postes doivent etre membres du domaine corp.lcl)"
           - ""
           - "  Nextcloud (External Storage SMB/CIFS) :"
           - "    Host interne : samba-service.{{ target_namespace }}.svc.cluster.local"
           - "    Host externe : {{ nas_config.samba_ip }}"
-          - "    Share : media / documents / shared"
+          - "    Auth : compte de service AD (ex: svc-nextcloud@{{ nas_config.ad_domain }})"
           - ""
           - "  PLEX ({{ nas_config.plex_ip }}:32400)"
           - "  ────────────────────────────────────"
           - "  Web UI  : http://{{ nas_config.plex_ip }}:32400/web"
-          - "  Médias  : /data/media (read-only depuis le volume NAS)"
+          - "  Medias  : /data/media (read-only depuis le volume NAS)"
           - "  Config  : /config ({{ nas_config.plex_config_storage_class }})"
           - ""
           - "================================================================"
@@ -478,7 +710,13 @@
           - "{{ nas_pvc.stdout_lines }}"
           - "================================================================"
           - ""
-          - "  IMPORTANT : Changer samba_password en production !"
+          - "  PREREQUIS AD :"
+          - "  1. Creer les groupes AD : media-rw, documents-rw, shared-rw"
+          - "  2. Ajouter les utilisateurs aux groupes correspondants"
+          - "  3. Le compte {{ nas_config.ad_join_user }} doit pouvoir joindre des machines"
+          - "  4. DNS : dc1.corp.lcl doit resoudre vers {{ nas_config.ad_dc_ip }}"
+          - ""
+          - "  IMPORTANT : ansible-vault pour ad_join_password en production !"
           - "  IMPORTANT : Obtenir PLEX_CLAIM sur https://plex.tv/claim"
           - "  OPTIONNEL : DNS AdGuard → nas.corp.lcl → {{ nas_config.samba_ip }}"
           - ""

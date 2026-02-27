@@ -85,16 +85,16 @@ longhorn_storage_classes:
     reclaim_policy: Delete
     fs_type: ext4
 
-# --- NAS Configuration (Option C Hybride) ---
+# --- NAS Configuration (Option C Hybride + Active Directory) ---
 # Architecture :
 #   Longhorn PVC (RWX - longhorn-slow)
-#   ├── Samba Server (RW) → SMB shares pour postes de travail + Nextcloud
+#   ├── Samba AD Member (RW) → SMB shares auth AD pour postes + Nextcloud
 #   └── Plex (RO) → Streaming média direct depuis le volume
 #
 # Flux :
-#   Postes de travail ──SMB──► Samba Pod ──écrit──► Volume Longhorn
-#   Nextcloud          ──SMB──► Samba Pod ──écrit──►       │
-#   Plex               ◄──lit directement (read-only)──────┘
+#   Postes AD (corp.lcl) ──SMB/Kerberos──► Samba Pod ──écrit──► Volume Longhorn
+#   Nextcloud             ──SMB (svc AD)──► Samba Pod ──écrit──►       │
+#   Plex                  ◄──lit directement (read-only)───────────────┘
 nas_config:
   storage_class: "longhorn-slow"
   nas_storage_size: "2Ti"                # ⚠ Ajuster selon besoin (~10.5 TB dispo avec replica:2)
@@ -102,23 +102,34 @@ nas_config:
   plex_config_storage_size: "20Gi"       # Config Plex + base de données métadonnées
   samba_ip: "192.168.0.30"              # IP fixe MetalLB pour Samba (\\192.168.0.30\media)
   plex_ip: "192.168.0.31"              # IP fixe MetalLB pour Plex (http://192.168.0.31:32400)
-  samba_user: "nasuser"
-  samba_password: "ch4nge-me-n4s"       # ⚠ Changer en production (ou ansible-vault)
   plex_claim_token: ""                  # Obtenir sur https://plex.tv/claim (optionnel, config via UI)
+  # --- Active Directory (corp.lcl) ---
+  ad_domain: "corp.lcl"
+  ad_realm: "CORP.LCL"
+  ad_workgroup: "CORP"
+  ad_dc_hostname: "dc1.corp.lcl"
+  ad_dc_ip: "192.168.0.100"
+  ad_join_user: "svc-adjoin"            # Compte de service pour jonction AD
+  ad_join_password: "ch4nge-me-ad"       # ⚠ ansible-vault en production
+  # --- Shares avec groupes AD ---
   shares:
     - name: media
       path: /nas/media
       comment: "Fichiers media (vidéos, musique, photos)"
+      ad_group: "media-rw"
     - name: documents
       path: /nas/documents
       comment: "Documents partagés"
+      ad_group: "documents-rw"
     - name: shared
       path: /nas/shared
       comment: "Partage commun"
+      ad_group: "shared-rw"
 
 # --- Nextcloud Configuration ---
 # Se connecte au NAS via plugin "External Storage: SMB/CIFS"
 # Host SMB interne : samba-service.nas.svc.cluster.local
+# Auth : utiliser un compte de service AD (ex: svc-nextcloud@corp.lcl)
 nextcloud_config:
   admin_user: "admin"
   admin_password: "ch4nge-me-nextcloud"   # ⚠ Changer en production (ou ansible-vault)
