@@ -116,15 +116,15 @@ nas_config:
     - name: media
       path: /nas/media
       comment: "Fichiers media (vidéos, musique, photos)"
-      ad_group: "media-rw"
+      ad_group: "NAS-media-rw"
     - name: documents
       path: /nas/documents
       comment: "Documents partagés"
-      ad_group: "documents-rw"
+      ad_group: "NAS-documents-rw"
     - name: shared
       path: /nas/shared
       comment: "Partage commun"
-      ad_group: "shared-rw"
+      ad_group: "NAS-shared-rw"
 
 # --- Nextcloud Configuration ---
 # Se connecte au NAS via plugin "External Storage: SMB/CIFS"
