@@ -146,7 +146,6 @@
                   force create mode = 0644
                   directory mask = 0775
                   force directory mode = 0755
-                  vfs objects = acl_xattr
               {% endfor %}
 
             krb5.conf: |
@@ -216,7 +215,7 @@
               echo "[4/6] Creation arborescence NAS..."
               mkdir -p /nas/media /nas/documents /nas/shared
               mkdir -p /var/log/samba /run/samba
-              chmod 0775 /nas/media /nas/documents /nas/shared
+              chmod 0777 /nas/media /nas/documents /nas/shared
 
               # --- 5. Domain join ---
               echo "[5/6] Verification appartenance domaine..."
@@ -387,7 +386,7 @@
                       - -c
                       - |
                         mkdir -p /nas/media /nas/documents /nas/shared
-                        chmod -R 0775 /nas
+                        chmod 0777 /nas/media /nas/documents /nas/shared
                         echo "Arborescence NAS initialisee"
                         ls -la /nas/
                     volumeMounts:
