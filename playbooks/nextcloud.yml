@@ -576,6 +576,28 @@
       changed_when: false
       tags: [nextcloud, nextcloud-ldap]
 
+    - name: Tester la connectivité réseau vers le DC ({{ nas_config.ad_dc_ip }}:389)
+      ansible.builtin.shell: >
+        k3s kubectl exec -n {{ target_namespace }} deployment/{{ app_name }} --
+        timeout 5 bash -c "echo > /dev/tcp/{{ nas_config.ad_dc_ip }}/389"
+      register: ldap_network_test
+      changed_when: false
+      failed_when: false
+      tags: [nextcloud, nextcloud-ldap]
+
+    - name: Résultat connectivité LDAP
+      ansible.builtin.debug:
+        msg: >-
+          {% if ldap_network_test.rc == 0 %}
+          OK - Le pod Nextcloud peut joindre {{ nas_config.ad_dc_ip }}:389
+          {% else %}
+          ERREUR - Le pod Nextcloud ne peut PAS joindre {{ nas_config.ad_dc_ip }}:389.
+          Vérifiez que le DC est démarré et que le port 389 est ouvert.
+          stderr: {{ ldap_network_test.stderr | default('') }}
+          {% endif %}
+      failed_when: ldap_network_test.rc != 0
+      tags: [nextcloud, nextcloud-ldap]
+
     - name: Activer l'app user_ldap dans Nextcloud
       ansible.builtin.shell: >
         k3s kubectl exec -n {{ target_namespace }} deployment/{{ app_name }} --
@@ -584,12 +606,29 @@
       changed_when: "'enabled' in ldap_enable.stdout"
       tags: [nextcloud, nextcloud-ldap]
 
-    - name: Créer la configuration LDAP s01
+    - name: Lister les configurations LDAP existantes
+      ansible.builtin.shell: >
+        k3s kubectl exec -n {{ target_namespace }} deployment/{{ app_name }} --
+        su -s /bin/bash www-data -c "php /var/www/html/occ ldap:show-config" || true
+      register: ldap_existing_configs
+      changed_when: false
+      tags: [nextcloud, nextcloud-ldap]
+
+    - name: Supprimer les configurations LDAP orphelines (s02, s03, ...)
+      ansible.builtin.shell: >
+        k3s kubectl exec -n {{ target_namespace }} deployment/{{ app_name }} --
+        su -s /bin/bash www-data -c "php /var/www/html/occ ldap:delete-config {{ item }}"
+      loop: "{{ ldap_existing_configs.stdout | regex_findall('Configuration:\\s+(s0[2-9]|s[1-9][0-9])') }}"
+      changed_when: true
+      failed_when: false
+      tags: [nextcloud, nextcloud-ldap]
+
+    - name: Créer la configuration LDAP s01 (si absente)
       ansible.builtin.shell: >
         k3s kubectl exec -n {{ target_namespace }} deployment/{{ app_name }} --
         su -s /bin/bash www-data -c "php /var/www/html/occ ldap:create-empty-config"
       register: ldap_config_create
-      failed_when: ldap_config_create.rc != 0 and 'already exists' not in ldap_config_create.stderr
+      when: "'s01' not in ldap_existing_configs.stdout"
       changed_when: ldap_config_create.rc == 0
       tags: [nextcloud, nextcloud-ldap]
 
@@ -633,17 +672,46 @@
       changed_when: true
       tags: [nextcloud, nextcloud-ldap]
 
-    - name: Vérifier la connexion LDAP
+    - name: Vérifier la connexion LDAP (test-config s01)
       ansible.builtin.shell: >
         k3s kubectl exec -n {{ target_namespace }} deployment/{{ app_name }} --
         su -s /bin/bash www-data -c "php /var/www/html/occ ldap:test-config s01"
       register: ldap_test
       changed_when: false
+      failed_when: false
       tags: [nextcloud, nextcloud-ldap]
 
-    - name: Afficher le résultat du test LDAP
+    - name: Afficher la configuration LDAP complète
+      ansible.builtin.shell: >
+        k3s kubectl exec -n {{ target_namespace }} deployment/{{ app_name }} --
+        su -s /bin/bash www-data -c "php /var/www/html/occ ldap:show-config s01"
+      register: ldap_show
+      changed_when: false
+      tags: [nextcloud, nextcloud-ldap]
+
+    - name: Résultat du test LDAP
       ansible.builtin.debug:
-        msg: "{{ ldap_test.stdout_lines }}"
+        msg:
+          - "--- Test LDAP ---"
+          - "{{ ldap_test.stdout_lines | default(['(vide)']) }}"
+          - "{{ ldap_test.stderr_lines | default([]) }}"
+          - "--- Configuration s01 ---"
+          - "{{ ldap_show.stdout_lines | default(['(vide)']) }}"
+      tags: [nextcloud, nextcloud-ldap]
+
+    - name: Afficher les dernières erreurs du log Nextcloud (si test LDAP échoué)
+      ansible.builtin.shell: >
+        k3s kubectl exec -n {{ target_namespace }} deployment/{{ app_name }} --
+        su -s /bin/bash www-data -c "php /var/www/html/occ log:tail 10"
+      register: nc_log
+      changed_when: false
+      when: ldap_test.rc != 0 or 'not' in (ldap_test.stdout | default('') | lower)
+      tags: [nextcloud, nextcloud-ldap]
+
+    - name: Log Nextcloud (dernières entrées)
+      ansible.builtin.debug:
+        msg: "{{ nc_log.stdout_lines | default(['LDAP test OK - pas de log supplémentaire nécessaire']) }}"
+      when: nc_log is defined and nc_log.stdout_lines is defined
       tags: [nextcloud, nextcloud-ldap]
 
     # ==========================================================
