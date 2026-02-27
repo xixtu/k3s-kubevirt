@@ -562,32 +562,10 @@
     # ==========================================================
     # LDAP / ACTIVE DIRECTORY
     # ==========================================================
-    # Compte de service : s_next_ad (lecture seule sur l'annuaire)
-    # Le compte est créé dans le DC via samba-tool depuis le pod NAS
-    # Nextcloud utilise user_ldap pour authentifier les utilisateurs AD
+    # Le compte de service {{ nextcloud_config.ldap_bind_user }} doit exister
+    # dans le DC ({{ nas_config.ad_dc_hostname }}) avant d'exécuter ce playbook.
+    # Nextcloud utilise user_ldap pour authentifier les utilisateurs AD.
     # ==========================================================
-
-    - name: Créer le compte de service AD pour Nextcloud ({{ nextcloud_config.ldap_bind_user }})
-      ansible.builtin.shell: |
-        k3s kubectl exec -n nas deployment/samba -- \
-          samba-tool user add {{ nextcloud_config.ldap_bind_user }} \
-          '{{ nextcloud_config.ldap_bind_password }}' \
-          --description="Nextcloud LDAP bind account (read-only)" \
-          -H ldap://{{ nas_config.ad_dc_hostname }} \
-          -U {{ nas_config.ad_join_user }}%{{ nas_config.ad_join_password }}
-      register: ad_user_create
-      failed_when: ad_user_create.rc != 0 and 'already exists' not in ad_user_create.stderr
-      changed_when: ad_user_create.rc == 0
-      tags: [nextcloud, nextcloud-ldap]
-
-    - name: Désactiver l'expiration du mot de passe pour {{ nextcloud_config.ldap_bind_user }}
-      ansible.builtin.shell: |
-        k3s kubectl exec -n nas deployment/samba -- \
-          samba-tool user setexpiry {{ nextcloud_config.ldap_bind_user }} --noexpiry \
-          -H ldap://{{ nas_config.ad_dc_hostname }} \
-          -U {{ nas_config.ad_join_user }}%{{ nas_config.ad_join_password }}
-      changed_when: true
-      tags: [nextcloud, nextcloud-ldap]
 
     - name: Attendre que Nextcloud soit prêt pour la configuration LDAP
       ansible.builtin.command: >
