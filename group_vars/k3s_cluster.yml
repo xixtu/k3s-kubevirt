@@ -155,6 +155,7 @@ external_domains:
   prometheus: "prometheus.app.xixtu.eu"
   alertmanager: "alertmanager.app.xixtu.eu"
   nextcloud: "nextcloud.app.xixtu.eu"
+  plex: "plex.app.xixtu.eu"
 
 # --- Monitoring ---
 monitoring_config:

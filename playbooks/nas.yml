@@ -28,7 +28,8 @@
 #   - DNS : dc1.corp.lcl résolvable depuis les nœuds K3s
 # Accès :
 #   Samba : \\192.168.0.30\media (auth AD : user@corp.lcl)
-#   Plex  : http://192.168.0.31:32400/web
+#   Plex  : https://plex.app.xixtu.eu (Let's Encrypt)
+#   Plex  : http://192.168.0.31:32400/web (LAN direct)
 # =============================================================
 
 - name: "NAS - Stockage partagé (Option C Hybride + Active Directory)"
@@ -618,6 +619,80 @@
       tags: [nas, nas-install, nas-plex]
 
     # ==========================================================
+    # PLEX TLS - Let's Encrypt via cert-manager + Traefik
+    # ==========================================================
+    # Ingress K8s   → déclenche cert-manager HTTP-01 challenge
+    # IngressRoute  → Traefik route HTTPS vers plex-service:32400
+    # Le LoadBalancer MetalLB reste actif pour l'accès LAN direct
+    # ==========================================================
+
+    - name: Écrire l'Ingress + IngressRoute Plex TLS
+      ansible.builtin.copy:
+        dest: /tmp/nas-plex-ingress.yml
+        mode: '0644'
+        content: |
+          # --- Ingress : cert-manager trigger (HTTP-01 challenge) ---
+          apiVersion: networking.k8s.io/v1
+          kind: Ingress
+          metadata:
+            name: plex-ingress
+            namespace: {{ target_namespace }}
+            annotations:
+              cert-manager.io/cluster-issuer: "letsencrypt-production"
+              cert-manager.io/private-key-algorithm: "ECDSA"
+              cert-manager.io/private-key-size: "256"
+              traefik.ingress.kubernetes.io/router.entrypoints: "web"
+              traefik.ingress.kubernetes.io/router.middlewares: "traefik-redirect-to-https@kubernetescrd"
+          spec:
+            ingressClassName: traefik
+            tls:
+              - hosts:
+                  - "{{ external_domains.plex }}"
+                secretName: plex-tls
+            rules:
+              - host: "{{ external_domains.plex }}"
+                http:
+                  paths:
+                    - path: /
+                      pathType: Prefix
+                      backend:
+                        service:
+                          name: plex-service
+                          port:
+                            number: 32400
+          ---
+          # --- IngressRoute : Traefik HTTPS handler ---
+          apiVersion: traefik.io/v1alpha1
+          kind: IngressRoute
+          metadata:
+            name: plex-https
+            namespace: {{ target_namespace }}
+          spec:
+            entryPoints:
+              - websecure
+            routes:
+              - match: Host(`{{ external_domains.plex }}`)
+                kind: Rule
+                services:
+                  - name: plex-service
+                    port: 32400
+            tls:
+              secretName: plex-tls
+      tags: [nas, nas-install, nas-plex]
+
+    - name: Appliquer l'Ingress Plex TLS
+      ansible.builtin.command: k3s kubectl apply -f /tmp/nas-plex-ingress.yml
+      register: plex_ingress_apply
+      changed_when: "'configured' in plex_ingress_apply.stdout or 'created' in plex_ingress_apply.stdout"
+      tags: [nas, nas-install, nas-plex]
+
+    - name: Supprimer le fichier Ingress Plex temporaire
+      ansible.builtin.file:
+        path: /tmp/nas-plex-ingress.yml
+        state: absent
+      tags: [nas, nas-install, nas-plex]
+
+    # ==========================================================
     # VÉRIFICATION
     # ==========================================================
 
@@ -700,7 +775,8 @@
           - ""
           - "  PLEX ({{ nas_config.plex_ip }}:32400)"
           - "  ────────────────────────────────────"
-          - "  Web UI  : http://{{ nas_config.plex_ip }}:32400/web"
+          - "  HTTPS   : https://{{ external_domains.plex }} (Let's Encrypt)"
+          - "  LAN     : http://{{ nas_config.plex_ip }}:32400/web"
           - "  Medias  : /data/media (read-only depuis le volume NAS)"
           - "  Config  : /config ({{ nas_config.plex_config_storage_class }})"
           - ""
@@ -726,6 +802,7 @@
           - ""
           - "  IMPORTANT : ansible-vault pour ad_join_password en production !"
           - "  IMPORTANT : Obtenir PLEX_CLAIM sur https://plex.tv/claim"
+          - "  IMPORTANT : DNS public {{ external_domains.plex }} → {{ cluster_network.traefik_ip }} (Traefik)"
           - "  OPTIONNEL : DNS AdGuard → nas.corp.lcl → {{ nas_config.samba_ip }}"
           - ""
           - "================================================================"
