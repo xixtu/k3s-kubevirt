@@ -22,7 +22,8 @@
 #      - Type : SMB/CIFS
 #      - Host : samba-service.nas.svc.cluster.local
 #      - Share : media / documents / shared
-#      - User/Pass : nasuser / <samba_password>
+#      - Auth  : "User entered, stored in database"
+#      - Les utilisateurs saisissent leurs identifiants AD (user@corp.lcl)
 #   L'indexation est automatique via le plugin (pas de occ files:scan)
 # =============================================================
 
@@ -632,17 +633,17 @@
           - "{{ nextcloud_cert.stdout_lines | default(['En attente...']) }}"
           - "================================================================"
           - ""
-          - "  CONNEXION AU NAS (post-déploiement) :"
+          - "  CONNEXION AU NAS (post-deploiement) :"
           - "  ────────────────────────────────────────"
-          - "  1. Se connecter à https://{{ external_domains.nextcloud }}"
+          - "  1. Se connecter a https://{{ external_domains.nextcloud }}"
           - "     Admin : {{ nextcloud_config.admin_user }} / <admin_password>"
           - "  2. Applications > Activer 'External storage support'"
           - "  3. Administration > Stockages externes > Ajouter :"
           - "     Type  : SMB/CIFS"
           - "     Host  : samba-service.nas.svc.cluster.local"
           - "     Share : media (ou documents / shared)"
-          - "     User  : {{ nas_config.samba_user }}"
-          - "     Pass  : <samba_password>"
+          - "     Auth  : User entered, stored in database"
+          - "     → Chaque utilisateur saisit ses identifiants AD (user@{{ nas_config.ad_domain }})"
           - "  L'indexation est automatique (pas de occ files:scan)"
           - ""
           - "  IMPORTANT : Changer admin_password et db_password !"

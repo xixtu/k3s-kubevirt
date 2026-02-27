@@ -626,12 +626,11 @@
     # Le LoadBalancer MetalLB reste actif pour l'accès LAN direct
     # ==========================================================
 
-    - name: Écrire l'Ingress + IngressRoute Plex TLS
+    - name: Écrire l'Ingress Plex TLS (cert-manager)
       ansible.builtin.copy:
         dest: /tmp/nas-plex-ingress.yml
         mode: '0644'
         content: |
-          # --- Ingress : cert-manager trigger (HTTP-01 challenge) ---
           apiVersion: networking.k8s.io/v1
           kind: Ingress
           metadata:
@@ -660,8 +659,25 @@
                           name: plex-service
                           port:
                             number: 32400
-          ---
-          # --- IngressRoute : Traefik HTTPS handler ---
+      tags: [nas, nas-install, nas-plex]
+
+    - name: Appliquer l'Ingress Plex TLS
+      ansible.builtin.command: k3s kubectl apply -f /tmp/nas-plex-ingress.yml
+      register: plex_ingress_apply
+      changed_when: "'configured' in plex_ingress_apply.stdout or 'created' in plex_ingress_apply.stdout"
+      tags: [nas, nas-install, nas-plex]
+
+    - name: Supprimer le fichier Ingress Plex temporaire
+      ansible.builtin.file:
+        path: /tmp/nas-plex-ingress.yml
+        state: absent
+      tags: [nas, nas-install, nas-plex]
+
+    - name: Écrire l'IngressRoute Plex HTTPS (Traefik)
+      ansible.builtin.copy:
+        dest: /tmp/nas-plex-ingressroute.yml
+        mode: '0644'
+        content: |
           apiVersion: traefik.io/v1alpha1
           kind: IngressRoute
           metadata:
@@ -680,15 +696,15 @@
               secretName: plex-tls
       tags: [nas, nas-install, nas-plex]
 
-    - name: Appliquer l'Ingress Plex TLS
-      ansible.builtin.command: k3s kubectl apply -f /tmp/nas-plex-ingress.yml
-      register: plex_ingress_apply
-      changed_when: "'configured' in plex_ingress_apply.stdout or 'created' in plex_ingress_apply.stdout"
+    - name: Appliquer l'IngressRoute Plex HTTPS
+      ansible.builtin.command: k3s kubectl apply -f /tmp/nas-plex-ingressroute.yml
+      register: plex_ingressroute_apply
+      changed_when: "'configured' in plex_ingressroute_apply.stdout or 'created' in plex_ingressroute_apply.stdout"
       tags: [nas, nas-install, nas-plex]
 
-    - name: Supprimer le fichier Ingress Plex temporaire
+    - name: Supprimer le fichier IngressRoute Plex temporaire
       ansible.builtin.file:
-        path: /tmp/nas-plex-ingress.yml
+        path: /tmp/nas-plex-ingressroute.yml
         state: absent
       tags: [nas, nas-install, nas-plex]
 
