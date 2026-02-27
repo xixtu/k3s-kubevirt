@@ -4,28 +4,27 @@
 # =============================================================
 # Usage : ansible-playbook -i inventory/hosts.yml playbooks/nextcloud.yml
 # Tags :
-#   nextcloud-install → Namespace, Secrets, PVC, PostgreSQL, Nextcloud, Service
-#   nextcloud-ingress → Ingress TLS + IngressRoute HTTPS
-#   letsencrypt-tls   → Ingress TLS + migration ECDSA + IngressRoute HTTPS
-#   nextcloud-ldap    → Compte AD s_next_ad + configuration LDAP backend
-#   nextcloud-verify  → Vérification pods, service, ingress, cert
+#   nextcloud-install    → Namespace, Secrets, PVC, PostgreSQL, Nextcloud, Service
+#   nextcloud-ingress    → Ingress TLS + IngressRoute HTTPS
+#   letsencrypt-tls      → Ingress TLS + migration ECDSA + IngressRoute HTTPS
+#   nextcloud-ldap       → Compte AD s_next_ad + configuration LDAP backend
+#   nextcloud-collabora  → Collabora Online + richdocuments
+#   nextcloud-storage    → Montage SMB externe (\\multinas.corp.lcl\documents)
+#   nextcloud-verify     → Vérification pods, service, ingress, cert
 # Prérequis :
 #   - K3s + MetalLB + Traefik installés
 #   - Longhorn StorageClasses (longhorn-fast)
 #   - cert-manager + ClusterIssuer letsencrypt-production
 #   - NAS déployé (playbooks/nas.yml) pour le plugin External Storage SMB
-#   - DNS : nextcloud.app.xixtu.eu → A → <IP publique>
+#   - DNS : nextcloud.app.xixtu.eu  → A → <IP publique>
+#   - DNS : collabora.app.xixtu.eu  → A → <IP publique>
 # URL publique : https://nextcloud.app.xixtu.eu
+# Collabora    : https://collabora.app.xixtu.eu
 # =============================================================
-# Connexion au NAS (post-déploiement, via interface admin Nextcloud) :
-#   1. Activer l'app "External storage support" dans Nextcloud
-#   2. Administration > Stockages externes > Ajouter :
-#      - Type : SMB/CIFS
-#      - Host : samba-service.nas.svc.cluster.local
-#      - Share : media / documents / shared
-#      - Auth  : "User entered, stored in database"
-#      - Les utilisateurs saisissent leurs identifiants AD (user@corp.lcl)
-#   L'indexation est automatique via le plugin (pas de occ files:scan)
+# Stockage externe SMB (configuré automatiquement via occ) :
+#   - Montage global : \\multinas.corp.lcl\documents\$user → /Documents
+#   - Auth : credentials LDAP de l'utilisateur (password::logincredentials)
+#   - Chaque utilisateur voit son dossier personnel du NAS
 # =============================================================
 
 - name: "Nextcloud - Cloud personnel avec External Storage SMB"
@@ -46,10 +45,11 @@
     db_password: "{{ nextcloud_config.db_password }}"
     # Nextcloud
     nextcloud_image: "nextcloud:29-apache"
+    collabora_image: "collabora/code:24.04"
     # LDAP / Active Directory
     ldap_bind_dn: "CN={{ nextcloud_config.ldap_bind_user }},OU=service_accounts,OU=CORP,DC=corp,DC=lcl"
     ldap_base_dn: "DC=corp,DC=lcl"
-    ldap_users_dn: "CN=Users,DC=corp,DC=lcl"
+    ldap_users_dn: "OU=Users,OU=CORP,DC=corp,DC=lcl"
 
   tasks:
 
@@ -774,6 +774,355 @@
       tags: [nextcloud, nextcloud-ldap]
 
     # ==========================================================
+    # COLLABORA ONLINE (Édition de documents dans le navigateur)
+    # ==========================================================
+    # Image : collabora/code (LibreOffice Online)
+    # Port : 9980 (TLS terminé par Traefik)
+    # ==========================================================
+
+    - name: Écrire le Deployment Collabora
+      ansible.builtin.copy:
+        dest: /tmp/collabora-app.yml
+        mode: '0644'
+        content: |
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: collabora
+            namespace: {{ target_namespace }}
+            labels:
+              app: collabora
+          spec:
+            replicas: 1
+            strategy:
+              type: Recreate
+            selector:
+              matchLabels:
+                app: collabora
+            template:
+              metadata:
+                labels:
+                  app: collabora
+              spec:
+                containers:
+                  - name: collabora
+                    image: {{ collabora_image }}
+                    ports:
+                      - containerPort: 9980
+                    env:
+                      - name: aliasgroup1
+                        value: https://{{ external_domains.nextcloud | replace('.', '\\.') }}:443
+                      - name: extra_params
+                        value: "--o:ssl.enable=false --o:ssl.termination=true"
+                      - name: dictionaries
+                        value: "fr_FR en_US"
+                      - name: server_name
+                        value: "{{ external_domains.collabora }}"
+                      - name: username
+                        value: "{{ collabora_config.admin_user }}"
+                      - name: password
+                        value: "{{ collabora_config.admin_password }}"
+                    resources:
+                      requests:
+                        cpu: 200m
+                        memory: 512Mi
+                      limits:
+                        memory: 2Gi
+                    readinessProbe:
+                      tcpSocket:
+                        port: 9980
+                      initialDelaySeconds: 30
+                      periodSeconds: 10
+                    livenessProbe:
+                      tcpSocket:
+                        port: 9980
+                      initialDelaySeconds: 60
+                      periodSeconds: 30
+          ---
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: collabora-service
+            namespace: {{ target_namespace }}
+          spec:
+            selector:
+              app: collabora
+            ports:
+              - protocol: TCP
+                port: 9980
+                targetPort: 9980
+            type: ClusterIP
+      tags: [nextcloud, nextcloud-collabora]
+
+    - name: Appliquer le Deployment Collabora
+      ansible.builtin.command: k3s kubectl apply -f /tmp/collabora-app.yml
+      register: collabora_apply
+      changed_when: "'configured' in collabora_apply.stdout or 'created' in collabora_apply.stdout"
+      tags: [nextcloud, nextcloud-collabora]
+
+    - name: Supprimer le fichier Collabora temporaire
+      ansible.builtin.file:
+        path: /tmp/collabora-app.yml
+        state: absent
+      tags: [nextcloud, nextcloud-collabora]
+
+    - name: Attendre que Collabora soit Ready
+      ansible.builtin.command: >
+        k3s kubectl wait --for=condition=Ready pods
+        -l app=collabora
+        -n {{ target_namespace }}
+        --timeout=180s
+      changed_when: false
+      tags: [nextcloud, nextcloud-collabora]
+
+    # --- TLS Collabora (cert-manager + Let's Encrypt) ---
+
+    - name: Écrire l'Ingress TLS Collabora
+      ansible.builtin.copy:
+        dest: /tmp/collabora-ingress.yml
+        mode: '0644'
+        content: |
+          apiVersion: networking.k8s.io/v1
+          kind: Ingress
+          metadata:
+            name: collabora-ingress
+            namespace: {{ target_namespace }}
+            annotations:
+              cert-manager.io/cluster-issuer: "letsencrypt-production"
+              cert-manager.io/private-key-algorithm: "ECDSA"
+              cert-manager.io/private-key-size: "256"
+              traefik.ingress.kubernetes.io/router.entrypoints: "web"
+              traefik.ingress.kubernetes.io/router.middlewares: "traefik-redirect-to-https@kubernetescrd"
+          spec:
+            ingressClassName: traefik
+            tls:
+              - hosts:
+                  - "{{ external_domains.collabora }}"
+                secretName: collabora-tls
+            rules:
+              - host: "{{ external_domains.collabora }}"
+                http:
+                  paths:
+                    - path: /
+                      pathType: Prefix
+                      backend:
+                        service:
+                          name: collabora-service
+                          port:
+                            number: 9980
+      tags: [nextcloud, nextcloud-collabora, letsencrypt-tls]
+
+    - name: Appliquer l'Ingress TLS Collabora
+      ansible.builtin.command: k3s kubectl apply -f /tmp/collabora-ingress.yml
+      register: collabora_ingress_apply
+      changed_when: "'configured' in collabora_ingress_apply.stdout or 'created' in collabora_ingress_apply.stdout"
+      tags: [nextcloud, nextcloud-collabora, letsencrypt-tls]
+
+    - name: Supprimer le fichier Ingress Collabora temporaire
+      ansible.builtin.file:
+        path: /tmp/collabora-ingress.yml
+        state: absent
+      tags: [nextcloud, nextcloud-collabora, letsencrypt-tls]
+
+    # --- Migration ECDSA Collabora ---
+
+    - name: Vérifier le type de clé du certificat Collabora
+      ansible.builtin.shell: >
+        k3s kubectl get secret collabora-tls -n {{ target_namespace }}
+        -o jsonpath='{.data.tls\.key}' | base64 -d
+        | openssl ec -noout 2>/dev/null && echo "ECDSA" || echo "RSA"
+      register: collabora_cert_key_type
+      changed_when: false
+      failed_when: false
+      tags: [nextcloud, nextcloud-collabora, letsencrypt-tls]
+
+    - name: Supprimer l'ancien certificat RSA Collabora pour renouvellement ECDSA
+      ansible.builtin.command: >
+        k3s kubectl delete certificate collabora-tls
+        -n {{ target_namespace }} --ignore-not-found
+      when: collabora_cert_key_type.stdout is defined and 'ECDSA' not in collabora_cert_key_type.stdout
+      changed_when: true
+      tags: [nextcloud, nextcloud-collabora, letsencrypt-tls]
+
+    - name: Supprimer l'ancien secret TLS RSA Collabora
+      ansible.builtin.command: >
+        k3s kubectl delete secret collabora-tls
+        -n {{ target_namespace }} --ignore-not-found
+      when: collabora_cert_key_type.stdout is defined and 'ECDSA' not in collabora_cert_key_type.stdout
+      changed_when: true
+      tags: [nextcloud, nextcloud-collabora, letsencrypt-tls]
+
+    # --- IngressRoute HTTPS Collabora (Traefik CRD) ---
+
+    - name: Écrire l'IngressRoute HTTPS Collabora
+      ansible.builtin.copy:
+        dest: /tmp/collabora-ingressroute-https.yml
+        mode: '0644'
+        content: |
+          apiVersion: traefik.io/v1alpha1
+          kind: Middleware
+          metadata:
+            name: collabora-headers
+            namespace: {{ target_namespace }}
+          spec:
+            headers:
+              customRequestHeaders:
+                X-Forwarded-Proto: "https"
+              stsSeconds: 15552000
+              stsIncludeSubdomains: true
+              stsPreload: true
+          ---
+          apiVersion: traefik.io/v1alpha1
+          kind: IngressRoute
+          metadata:
+            name: collabora-https
+            namespace: {{ target_namespace }}
+          spec:
+            entryPoints:
+              - websecure
+            routes:
+              - match: "Host(`{{ external_domains.collabora }}`)"
+                kind: Rule
+                middlewares:
+                  - name: collabora-headers
+                services:
+                  - name: collabora-service
+                    port: 9980
+            tls:
+              secretName: collabora-tls
+      tags: [nextcloud, nextcloud-collabora, letsencrypt-tls]
+
+    - name: Appliquer l'IngressRoute HTTPS Collabora
+      ansible.builtin.command: k3s kubectl apply -f /tmp/collabora-ingressroute-https.yml
+      register: collabora_ingressroute_apply
+      changed_when: "'configured' in collabora_ingressroute_apply.stdout or 'created' in collabora_ingressroute_apply.stdout"
+      tags: [nextcloud, nextcloud-collabora, letsencrypt-tls]
+
+    - name: Supprimer le fichier IngressRoute Collabora temporaire
+      ansible.builtin.file:
+        path: /tmp/collabora-ingressroute-https.yml
+        state: absent
+      tags: [nextcloud, nextcloud-collabora, letsencrypt-tls]
+
+    # --- Configurer richdocuments dans Nextcloud ---
+
+    - name: Attendre que Nextcloud soit prêt pour la configuration Collabora
+      ansible.builtin.command: >
+        k3s kubectl wait --for=condition=Ready pods
+        -l app={{ app_name }}
+        -n {{ target_namespace }}
+        --timeout=300s
+      changed_when: false
+      tags: [nextcloud, nextcloud-collabora]
+
+    - name: Installer l'app richdocuments (Nextcloud Office / Collabora)
+      ansible.builtin.shell: >
+        k3s kubectl exec -n {{ target_namespace }} deployment/{{ app_name }} --
+        su -s /bin/bash www-data -c "php /var/www/html/occ app:install richdocuments"
+      register: richdocuments_install
+      changed_when: "'installed' in richdocuments_install.stdout"
+      failed_when: false
+      tags: [nextcloud, nextcloud-collabora]
+
+    - name: Activer richdocuments (si déjà installée)
+      ansible.builtin.shell: >
+        k3s kubectl exec -n {{ target_namespace }} deployment/{{ app_name }} --
+        su -s /bin/bash www-data -c "php /var/www/html/occ app:enable richdocuments"
+      register: richdocuments_enable
+      changed_when: "'enabled' in richdocuments_enable.stdout"
+      failed_when: false
+      tags: [nextcloud, nextcloud-collabora]
+
+    - name: Configurer l'URL WOPI de Collabora
+      ansible.builtin.shell: >
+        k3s kubectl exec -n {{ target_namespace }} deployment/{{ app_name }} --
+        su -s /bin/bash www-data -c
+        "php /var/www/html/occ config:app:set richdocuments wopi_url --value='https://{{ external_domains.collabora }}'"
+      changed_when: true
+      tags: [nextcloud, nextcloud-collabora]
+
+    - name: Configurer le WOPI allowlist (pod CIDR)
+      ansible.builtin.shell: >
+        k3s kubectl exec -n {{ target_namespace }} deployment/{{ app_name }} --
+        su -s /bin/bash www-data -c
+        "php /var/www/html/occ config:app:set richdocuments wopi_allowlist --value='{{ cluster_network.pod_cidr }}'"
+      changed_when: true
+      tags: [nextcloud, nextcloud-collabora]
+
+    - name: Résultat Collabora
+      ansible.builtin.debug:
+        msg:
+          - "Collabora Online déployé dans {{ target_namespace }}"
+          - "URL admin    : https://{{ external_domains.collabora }}"
+          - "WOPI URL     : https://{{ external_domains.collabora }}"
+          - "richdocuments: installé et configuré"
+      tags: [nextcloud, nextcloud-collabora]
+
+    # ==========================================================
+    # STOCKAGE EXTERNE SMB (\\multinas.corp.lcl\documents)
+    # ==========================================================
+    # Monte le partage documents du NAS comme dossier personnel
+    # de chaque utilisateur via files_external.
+    # Auth : credentials de login AD (password::logincredentials)
+    # Sous-dossier : $user (chaque utilisateur = son répertoire)
+    # ==========================================================
+
+    - name: Attendre que Nextcloud soit prêt pour la configuration stockage
+      ansible.builtin.command: >
+        k3s kubectl wait --for=condition=Ready pods
+        -l app={{ app_name }}
+        -n {{ target_namespace }}
+        --timeout=300s
+      changed_when: false
+      tags: [nextcloud, nextcloud-storage]
+
+    - name: Activer l'app files_external
+      ansible.builtin.shell: >
+        k3s kubectl exec -n {{ target_namespace }} deployment/{{ app_name }} --
+        su -s /bin/bash www-data -c "php /var/www/html/occ app:enable files_external"
+      register: files_external_enable
+      changed_when: "'enabled' in files_external_enable.stdout"
+      failed_when: false
+      tags: [nextcloud, nextcloud-storage]
+
+    - name: Vérifier si le montage SMB {{ external_storage.mount_point }} existe déjà
+      ansible.builtin.shell: >
+        k3s kubectl exec -n {{ target_namespace }} deployment/{{ app_name }} --
+        su -s /bin/bash www-data -c "php /var/www/html/occ files_external:list --output=json"
+      register: ext_storage_list
+      changed_when: false
+      failed_when: false
+      tags: [nextcloud, nextcloud-storage]
+
+    - name: Créer le montage SMB \\{{ external_storage.smb_host }}\{{ external_storage.smb_share }}
+      ansible.builtin.shell: >
+        k3s kubectl exec -n {{ target_namespace }} deployment/{{ app_name }} --
+        su -s /bin/bash www-data -c
+        "php /var/www/html/occ files_external:create
+        '/{{ external_storage.mount_point }}' smb::smb password::logincredentials
+        --config host={{ external_storage.smb_host }}
+        --config share={{ external_storage.smb_share }}
+        --config root='\$user'
+        --config domain={{ external_storage.smb_domain }}
+        --output=json"
+      register: smb_mount_create
+      when: "external_storage.smb_host not in (ext_storage_list.stdout | default(''))"
+      changed_when: smb_mount_create.rc == 0
+      tags: [nextcloud, nextcloud-storage]
+
+    - name: Résultat montage SMB
+      ansible.builtin.debug:
+        msg: >-
+          {% if smb_mount_create is skipped %}
+          Le montage SMB {{ external_storage.mount_point }} existe déjà
+          {% elif smb_mount_create.rc | default(1) == 0 %}
+          Montage SMB créé : \\{{ external_storage.smb_host }}\{{ external_storage.smb_share }}\$user → /{{ external_storage.mount_point }}
+          {% else %}
+          ERREUR : {{ smb_mount_create.stderr | default('erreur inconnue') }}
+          {% endif %}
+      tags: [nextcloud, nextcloud-storage]
+
+    # ==========================================================
     # RÉSUMÉ
     # ==========================================================
 
@@ -781,10 +1130,11 @@
       ansible.builtin.debug:
         msg:
           - "================================================================"
-          - "  Nextcloud déployé"
+          - "  Nextcloud + Collabora déployés"
           - "================================================================"
           - "Namespace    : {{ target_namespace }}"
-          - "URL publique : https://{{ external_domains.nextcloud }}"
+          - "Nextcloud    : https://{{ external_domains.nextcloud }}"
+          - "Collabora    : https://{{ external_domains.collabora }}"
           - "TLS          : cert-manager / letsencrypt-production (ECDSA P-256)"
           - "PostgreSQL   : postgres:16-bookworm ({{ db_storage_size }})"
           - "Data         : {{ data_storage_size }} ({{ storage_class }})"
@@ -819,15 +1169,18 @@
           - "  Ex: jean.dupont / <mot_de_passe_AD>"
           - "  Les groupes AD sont synchronises automatiquement"
           - ""
-          - "  STOCKAGE EXTERNE (SMB) - post-deploiement :"
+          - "  COLLABORA ONLINE :"
           - "  ────────────────────────────────────────"
-          - "  1. Administration > Applications > Activer 'External storage support'"
-          - "  2. Administration > Stockages externes > Ajouter :"
-          - "     Type  : SMB/CIFS"
-          - "     Host  : samba-service.nas.svc.cluster.local"
-          - "     Share : media (ou documents / shared)"
-          - "     Auth  : User entered, stored in database"
-          - "     → Chaque utilisateur saisit ses identifiants AD (user@{{ nas_config.ad_domain }})"
+          - "  Edition de documents Office dans le navigateur"
+          - "  URL : https://{{ external_domains.collabora }}"
+          - "  App : richdocuments (Nextcloud Office)"
+          - ""
+          - "  STOCKAGE EXTERNE (SMB) :"
+          - "  ────────────────────────────────────────"
+          - "  Montage global : \\\\{{ external_storage.smb_host }}\\{{ external_storage.smb_share }}\\$user"
+          - "  Point de montage : /{{ external_storage.mount_point }}"
+          - "  Auth : credentials LDAP (login automatique)"
+          - "  → Chaque utilisateur voit son dossier personnel du NAS"
           - ""
           - "  IMPORTANT : Changer admin_password et db_password !"
           - ""
