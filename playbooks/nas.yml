@@ -180,7 +180,7 @@
 
               # --- 1. Install packages ---
               if ! command -v smbd &>/dev/null; then
-                  echo "[1/5] Installation Samba + Winbind + Kerberos..."
+                  echo "[1/6] Installation Samba + Winbind + Kerberos..."
                   apt-get update -qq
                   # Preseed krb5-config pour eviter les prompts interactifs
                   echo "krb5-config krb5-config/default_realm string ${AD_REALM}" | debconf-set-selections
@@ -192,40 +192,48 @@
                       winbind libpam-winbind libnss-winbind \
                       krb5-user libpam-krb5 \
                       procps
-                  echo "[1/5] Packages installes"
+                  echo "[1/6] Packages installes"
               else
-                  echo "[1/5] Packages deja presents"
+                  echo "[1/6] Packages deja presents"
               fi
 
-              # --- 2. Configure NSS for winbind ---
-              echo "[2/5] Configuration NSS (winbind)..."
+              # --- 2. Deploy configs from ConfigMap staging ---
+              # Les fichiers sont montes en lecture dans /opt/samba/ (ConfigMap)
+              # On les copie vers /etc/ pour que smbd/winbindd les trouvent
+              # (monter directement sur /etc/ casse les post-install dpkg : Device or resource busy)
+              echo "[2/6] Deploiement smb.conf et krb5.conf..."
+              cp /opt/samba/smb.conf /etc/samba/smb.conf
+              cp /opt/samba/krb5.conf /etc/krb5.conf
+
+              # --- 3. Configure NSS for winbind ---
+              echo "[3/6] Configuration NSS (winbind)..."
               if ! grep -q winbind /etc/nsswitch.conf; then
                   sed -i 's/^passwd:.*/passwd: files winbind/' /etc/nsswitch.conf
                   sed -i 's/^group:.*/group: files winbind/' /etc/nsswitch.conf
               fi
 
-              # --- 3. Create NAS directories ---
-              echo "[3/5] Creation arborescence NAS..."
+              # --- 4. Create NAS directories ---
+              echo "[4/6] Creation arborescence NAS..."
               mkdir -p /nas/media /nas/documents /nas/shared
               mkdir -p /var/log/samba /run/samba
               chmod 0775 /nas/media /nas/documents /nas/shared
 
-              # --- 4. Domain join ---
-              echo "[4/5] Verification appartenance domaine..."
+              # --- 5. Domain join ---
+              echo "[5/6] Verification appartenance domaine..."
               if net ads testjoin &>/dev/null 2>&1; then
-                  echo "[4/5] Deja membre du domaine ${AD_REALM}"
+                  echo "[5/6] Deja membre du domaine ${AD_REALM}"
               else
-                  echo "[4/5] Jonction au domaine ${AD_REALM}..."
+                  echo "[5/6] Jonction au domaine ${AD_REALM}..."
                   echo "${AD_JOIN_PASSWORD}" | kinit "${AD_JOIN_USER}@${AD_REALM}" 2>&1
                   net ads join \
                       -U "${AD_JOIN_USER}%${AD_JOIN_PASSWORD}" \
                       --no-dns-updates 2>&1
                   kdestroy 2>/dev/null || true
-                  echo "[4/5] Jonction reussie"
+                  echo "[5/6] Jonction reussie"
               fi
 
-              # --- 5. Start services ---
-              echo "[5/5] Demarrage Winbind + Samba..."
+              # --- 6. Start services ---
+              echo "[6/6] Demarrage Winbind + Samba..."
               winbindd -D
               sleep 3
 
@@ -416,18 +424,11 @@
                       # État Samba (machine account AD, tdb)
                       - name: samba-state
                         mountPath: /var/lib/samba
-                      # smb.conf
+                      # ConfigMap staging (smb.conf, krb5.conf, startup.sh)
+                      # Monté dans /opt/samba/ - copié vers /etc/ par startup.sh
+                      # (les subPath directs sur /etc cassent les post-install dpkg)
                       - name: samba-config
-                        mountPath: /etc/samba/smb.conf
-                        subPath: smb.conf
-                      # krb5.conf
-                      - name: samba-config
-                        mountPath: /etc/krb5.conf
-                        subPath: krb5.conf
-                      # Startup script
-                      - name: samba-config
-                        mountPath: /opt/samba/startup.sh
-                        subPath: startup.sh
+                        mountPath: /opt/samba
                     resources:
                       requests:
                         cpu: 100m
@@ -685,9 +686,9 @@
           - "  Auth    : Kerberos / NTLM (comptes AD)"
           - ""
           - "  Shares :"
-          - "    \\\\{{ nas_config.samba_ip }}\\media      → groupe AD: media-rw"
-          - "    \\\\{{ nas_config.samba_ip }}\\documents  → groupe AD: documents-rw"
-          - "    \\\\{{ nas_config.samba_ip }}\\shared     → groupe AD: shared-rw"
+          - "    \\\\{{ nas_config.samba_ip }}\\media      → groupe AD: NAS-media-rw"
+          - "    \\\\{{ nas_config.samba_ip }}\\documents  → groupe AD: NAS-documents-rw"
+          - "    \\\\{{ nas_config.samba_ip }}\\shared     → groupe AD: NAS-shared-rw"
           - ""
           - "  Connexion Windows : net use Z: \\\\{{ nas_config.samba_ip }}\\media"
           - "  Connexion Linux   : smb://{{ nas_config.samba_ip }}/media"
@@ -719,7 +720,7 @@
           - "================================================================"
           - ""
           - "  PREREQUIS AD :"
-          - "  1. Creer les groupes AD : media-rw, documents-rw, shared-rw"
+          - "  1. Creer les groupes AD : NAS-media-rw, NAS-documents-rw, NAS-shared-rw"
           - "  2. Ajouter les utilisateurs aux groupes correspondants"
           - "  3. Le compte {{ nas_config.ad_join_user }} doit pouvoir joindre des machines"
           - "  4. DNS : dc1.corp.lcl doit resoudre vers {{ nas_config.ad_dc_ip }}"
