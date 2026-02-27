@@ -573,7 +573,7 @@
           samba-tool user add {{ nextcloud_config.ldap_bind_user }} \
           '{{ nextcloud_config.ldap_bind_password }}' \
           --description="Nextcloud LDAP bind account (read-only)" \
-          --server={{ nas_config.ad_dc_hostname }} \
+          -H ldap://{{ nas_config.ad_dc_hostname }} \
           -U {{ nas_config.ad_join_user }}%{{ nas_config.ad_join_password }}
       register: ad_user_create
       failed_when: ad_user_create.rc != 0 and 'already exists' not in ad_user_create.stderr
@@ -584,7 +584,7 @@
       ansible.builtin.shell: |
         k3s kubectl exec -n nas deployment/samba -- \
           samba-tool user setexpiry {{ nextcloud_config.ldap_bind_user }} --noexpiry \
-          --server={{ nas_config.ad_dc_hostname }} \
+          -H ldap://{{ nas_config.ad_dc_hostname }} \
           -U {{ nas_config.ad_join_user }}%{{ nas_config.ad_join_password }}
       changed_when: true
       tags: [nextcloud, nextcloud-ldap]
