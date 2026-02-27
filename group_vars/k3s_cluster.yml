@@ -139,6 +139,9 @@ nextcloud_config:
   storage_class: "longhorn-fast"
   db_storage_size: "5Gi"
   data_storage_size: "50Gi"               # Données app, cache, thumbnails (fichiers sur NAS via SMB)
+  # LDAP / Active Directory
+  ldap_bind_user: "s_next_ad"
+  ldap_bind_password: "ffofkOPJPO+236f"   # ⚠ Changer en production (ou ansible-vault)
 
 # --- Domaines et certificats ---
 cluster_domain: "cluster.local"
