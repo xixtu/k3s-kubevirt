@@ -143,6 +143,18 @@ nextcloud_config:
   ldap_bind_user: "s_next_ad"
   ldap_bind_password: "ffofkOPJPO+236f"   # ⚠ Changer en production (ou ansible-vault)
 
+# --- Collabora Online Configuration ---
+collabora_config:
+  admin_user: "admin"
+  admin_password: "ch4nge-me-collabora"   # ⚠ Changer en production (ou ansible-vault)
+
+# --- External Storage SMB (montage global Nextcloud) ---
+external_storage:
+  smb_host: "multinas.corp.lcl"            # NAS cible (hostname ou IP)
+  smb_share: "documents"                   # Nom du partage SMB
+  smb_domain: "CORP"                       # Domaine NetBIOS pour auth SMB
+  mount_point: "Documents"                 # Point de montage dans Nextcloud
+
 # --- Domaines et certificats ---
 cluster_domain: "cluster.local"
 letsencrypt_email: "admin@xixtu.eu"    # ⚠ Mettre l'email réel du compte Let's Encrypt
@@ -158,6 +170,7 @@ external_domains:
   prometheus: "prometheus.app.xixtu.eu"
   alertmanager: "alertmanager.app.xixtu.eu"
   nextcloud: "nextcloud.app.xixtu.eu"
+  collabora: "collabora.app.xixtu.eu"
   plex: "plex.app.xixtu.eu"
 
 # --- Monitoring ---
