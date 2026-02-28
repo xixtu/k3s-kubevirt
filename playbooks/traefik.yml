@@ -198,13 +198,21 @@
     # INSTALLATION TRAEFIK
     # ==========================================================
 
-    # Toujours supprimer la TLSOption secure-pro avant helm upgrade.
-    # Helm la recréera avec les bons labels de ownership.
-    # Cela résout l'erreur "invalid ownership metadata" qui survient
-    # quand la TLSOption existe sans labels Helm.
-    - name: Supprimer TLSOption secure-pro existante (Helm la recréera)
-      ansible.builtin.command: >
-        k3s kubectl delete tlsoption secure-pro -n traefik --ignore-not-found
+    # Adopter les ressources existantes dans le release Helm "traefik".
+    # Résout l'erreur "invalid ownership metadata" en ajoutant les
+    # labels/annotations que Helm exige pour gérer une ressource.
+    - name: Adopter TLSOption + Middlewares dans le release Helm traefik
+      ansible.builtin.shell: |
+        for kind in tlsoption middleware; do
+          for res in $(k3s kubectl get ${kind}.traefik.io -n traefik -o name 2>/dev/null); do
+            k3s kubectl label   "$res" -n traefik app.kubernetes.io/managed-by=Helm --overwrite 2>/dev/null || true
+            k3s kubectl annotate "$res" -n traefik meta.helm.sh/release-name=traefik meta.helm.sh/release-namespace=traefik --overwrite 2>/dev/null || true
+          done
+          for res in $(k3s kubectl get ${kind}.traefik.containo.us -n traefik -o name 2>/dev/null); do
+            k3s kubectl label   "$res" -n traefik app.kubernetes.io/managed-by=Helm --overwrite 2>/dev/null || true
+            k3s kubectl annotate "$res" -n traefik meta.helm.sh/release-name=traefik meta.helm.sh/release-namespace=traefik --overwrite 2>/dev/null || true
+          done
+        done
       changed_when: false
       tags: [traefik, traefik-install]
 
