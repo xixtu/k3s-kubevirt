@@ -294,7 +294,7 @@
           - "================================================"
           - "Namespace   : {{ target_namespace }}"
           - "URL publique: https://{{ external_domains.paheko }}"
-          - "TLS         : cert-manager / letsencrypt-production (ECDSA P-256)"
+          - "TLS         : cert-manager / letsencrypt-production (ECDSA P-384)"
           - "Stockage    : {{ storage_size }} ({{ storage_class }})"
           - "================================================"
           - "  Pods"

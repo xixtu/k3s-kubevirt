@@ -492,7 +492,7 @@
           - "Replicas     : {{ longhorn_config.default_replica_count }}"
           - "UI interne   : http://longhorn.{{ cluster_network.apps_domain }}"
           - "UI publique  : https://{{ external_domains.longhorn }}"
-          - "TLS          : cert-manager / letsencrypt-production (ECDSA P-256)"
+          - "TLS          : cert-manager / letsencrypt-production (ECDSA P-384)"
           - "================================================"
           - "  StorageClasses"
           - "================================================"

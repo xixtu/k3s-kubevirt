@@ -498,7 +498,7 @@
           - "================================================"
           - "Namespace    : {{ target_namespace }}"
           - "URL publique : https://{{ external_domains.mobilizon }}"
-          - "TLS          : cert-manager / letsencrypt-production (ECDSA P-256)"
+          - "TLS          : cert-manager / letsencrypt-production (ECDSA P-384)"
           - "PostgreSQL   : postgis/postgis:16-3.4 ({{ db_storage_size }})"
           - "Uploads      : {{ uploads_storage_size }} ({{ storage_class }})"
           - "================================================"
