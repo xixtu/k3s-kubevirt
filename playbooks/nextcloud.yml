@@ -8,7 +8,7 @@
 #   nextcloud-ingress    → Ingress TLS + IngressRoute HTTPS
 #   letsencrypt-tls      → Ingress TLS + migration ECDSA + IngressRoute HTTPS
 #   nextcloud-ldap       → Compte AD s_next_ad + configuration LDAP backend
-#   nextcloud-collabora  → Collabora Online (Helm chart) + richdocuments
+#   nextcloud-collabora  → Collabora Online (Helm CLI) + richdocuments
 #   nextcloud-storage    → Montage SMB externe (\\multinas.corp.lcl\documents)
 #   nextcloud-verify     → Vérification pods, service, ingress, cert
 # Prérequis :
@@ -45,7 +45,6 @@
     db_password: "{{ nextcloud_config.db_password }}"
     # Nextcloud
     nextcloud_image: "nextcloud:29-apache"
-    collabora_image: "collabora/code"          # utilisé par le Helm chart (tag géré par le chart)
     # LDAP / Active Directory
     ldap_bind_dn: "CN={{ nextcloud_config.ldap_bind_user }},OU=service_accounts,OU=CORP,DC=corp,DC=lcl"
     ldap_base_dn: "DC=corp,DC=lcl"
@@ -778,96 +777,126 @@
     # ==========================================================
     # Chart : collabora/collabora-online
     # Repo  : https://collaboraonline.github.io/online/
-    # Déployé via K3s HelmChart CRD (Helm Controller intégré)
+    # Déployé via Helm CLI (helm upgrade --install)
     # Ingress cert-manager inclus dans le chart
     # IngressRoute Traefik (websecure) séparé pour le pattern HTTPS
     # ==========================================================
 
-    - name: Écrire le HelmChart Collabora Online
+    # --- Prérequis : Helm CLI ---
+
+    - name: Vérifier si Helm CLI est installé
+      ansible.builtin.command: helm version --short
+      register: helm_check
+      changed_when: false
+      failed_when: false
+      tags: [nextcloud, nextcloud-collabora]
+
+    - name: Installer Helm CLI (si absent)
+      ansible.builtin.shell: |
+        curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+      when: helm_check.rc != 0
+      changed_when: true
+      tags: [nextcloud, nextcloud-collabora]
+
+    # --- Nettoyage ancien HelmChart CRD (si migration depuis CRD) ---
+
+    - name: Supprimer l'ancien HelmChart CRD Collabora (si existant)
+      ansible.builtin.command: >
+        k3s kubectl delete helmchart collabora-online
+        -n kube-system --ignore-not-found
+      changed_when: true
+      failed_when: false
+      tags: [nextcloud, nextcloud-collabora]
+
+    # --- Déploiement Collabora via Helm CLI ---
+
+    - name: Ajouter le repo Helm Collabora
+      ansible.builtin.command: helm repo add collabora https://collaboraonline.github.io/online/
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: helm_repo_add
+      changed_when: "'has been added' in helm_repo_add.stdout"
+      failed_when: false
+      tags: [nextcloud, nextcloud-collabora]
+
+    - name: Mettre à jour le repo Helm Collabora
+      ansible.builtin.command: helm repo update collabora
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: true
+      tags: [nextcloud, nextcloud-collabora]
+
+    - name: Écrire les values Collabora
       ansible.builtin.copy:
-        dest: /tmp/collabora-helmchart.yml
+        dest: /tmp/collabora-values.yml
         mode: '0644'
         content: |
-          apiVersion: helm.cattle.io/v1
-          kind: HelmChart
-          metadata:
-            name: collabora-online
-            namespace: kube-system
-          spec:
-            repo: https://collaboraonline.github.io/online/
-            chart: collabora-online
-            targetNamespace: {{ target_namespace }}
-            createNamespace: false
-            valuesContent: |-
-              fullnameOverride: "collabora"
+          fullnameOverride: "collabora"
 
-              replicaCount: 1
+          replicaCount: 1
 
-              collabora:
-                aliasgroups:
-                  - host: "https://{{ external_domains.nextcloud }}:443"
-                extra_params: --o:ssl.enable=false --o:ssl.termination=true
-                server_name: "{{ external_domains.collabora }}"
-                username: "{{ collabora_config.admin_user }}"
-                password: "{{ collabora_config.admin_password }}"
-                env:
-                  - name: dictionaries
-                    value: "fr_FR en_US"
+          collabora:
+            aliasgroups:
+              - host: "https://{{ external_domains.nextcloud }}:443"
+            extra_params: --o:ssl.enable=false --o:ssl.termination=true
+            server_name: "{{ external_domains.collabora }}"
+            username: "{{ collabora_config.admin_user }}"
+            password: "{{ collabora_config.admin_password }}"
+            env:
+              - name: dictionaries
+                value: "fr_FR en_US"
 
-              ingress:
-                enabled: true
-                className: "traefik"
-                annotations:
-                  cert-manager.io/cluster-issuer: "letsencrypt-production"
-                  cert-manager.io/private-key-algorithm: "ECDSA"
-                  cert-manager.io/private-key-size: "256"
-                  traefik.ingress.kubernetes.io/router.entrypoints: "web"
-                  traefik.ingress.kubernetes.io/router.middlewares: "traefik-redirect-to-https@kubernetescrd"
+          ingress:
+            enabled: true
+            className: "traefik"
+            annotations:
+              cert-manager.io/cluster-issuer: "letsencrypt-production"
+              cert-manager.io/private-key-algorithm: "ECDSA"
+              cert-manager.io/private-key-size: "256"
+              traefik.ingress.kubernetes.io/router.entrypoints: "web"
+              traefik.ingress.kubernetes.io/router.middlewares: "traefik-redirect-to-https@kubernetescrd"
+            hosts:
+              - host: "{{ external_domains.collabora }}"
+                paths:
+                  - path: /
+                    pathType: Prefix
+            tls:
+              - secretName: collabora-tls
                 hosts:
-                  - host: "{{ external_domains.collabora }}"
-                    paths:
-                      - path: /
-                        pathType: Prefix
-                tls:
-                  - secretName: collabora-tls
-                    hosts:
-                      - "{{ external_domains.collabora }}"
+                  - "{{ external_domains.collabora }}"
 
-              autoscaling:
-                enabled: false
+          autoscaling:
+            enabled: false
 
-              resources:
-                requests:
-                  cpu: 200m
-                  memory: 512Mi
-                limits:
-                  memory: 2Gi
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              memory: 2Gi
       tags: [nextcloud, nextcloud-collabora]
 
-    - name: Appliquer le HelmChart Collabora Online
-      ansible.builtin.command: k3s kubectl apply -f /tmp/collabora-helmchart.yml
-      register: collabora_helm_apply
-      changed_when: "'configured' in collabora_helm_apply.stdout or 'created' in collabora_helm_apply.stdout"
+    - name: Déployer Collabora Online via Helm
+      ansible.builtin.command: >
+        helm upgrade --install collabora-online collabora/collabora-online
+        --namespace {{ target_namespace }}
+        -f /tmp/collabora-values.yml
+        --wait --timeout 5m
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: collabora_helm_deploy
+      changed_when: true
       tags: [nextcloud, nextcloud-collabora]
 
-    - name: Supprimer le fichier HelmChart temporaire
+    - name: Supprimer le fichier values temporaire
       ansible.builtin.file:
-        path: /tmp/collabora-helmchart.yml
+        path: /tmp/collabora-values.yml
         state: absent
       tags: [nextcloud, nextcloud-collabora]
 
-    - name: Attendre le déploiement Collabora par Helm Controller
-      ansible.builtin.shell: >
-        for i in $(seq 1 36); do
-        k3s kubectl get pods -n {{ target_namespace }}
-        -l app.kubernetes.io/name=collabora-online --no-headers 2>/dev/null
-        | grep -q Running && break || sleep 5;
-        done &&
-        k3s kubectl wait --for=condition=Ready pods
-        -l app.kubernetes.io/name=collabora-online
-        -n {{ target_namespace }}
-        --timeout=120s
-      changed_when: false
+    - name: Résultat déploiement Helm Collabora
+      ansible.builtin.debug:
+        msg: "{{ collabora_helm_deploy.stdout_lines | default(['Collabora déployé']) }}"
       tags: [nextcloud, nextcloud-collabora]
 
     # --- IngressRoute HTTPS Collabora (Traefik websecure) ---
@@ -1072,7 +1101,7 @@
           - "  Ex: jean.dupont / <mot_de_passe_AD>"
           - "  Les groupes AD sont synchronises automatiquement"
           - ""
-          - "  COLLABORA ONLINE (Helm chart) :"
+          - "  COLLABORA ONLINE (Helm CLI) :"
           - "  ────────────────────────────────────────"
           - "  Chart : collabora/collabora-online"
           - "  Repo  : https://collaboraonline.github.io/online/"
