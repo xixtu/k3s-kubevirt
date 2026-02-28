@@ -1,0 +1,789 @@
+==============================================================
+  AUDIT TLS / INGRESS / TRAEFIK / CERT-MANAGER
+  2026-02-28 09:56:52 CET
+==============================================================
+
+==================================================================
+  PRÉREQUIS
+==================================================================
+[0;32m[OK][0m Connexion au cluster OK
+KUBECONFIG : /etc/rancher/k3s/k3s.yaml
+Date audit : 2026-02-28 09:56:52 CET
+Kubectl    : Client Version: v1.30.0+k3s1
+
+==================================================================
+  1. NAMESPACE TRAEFIK - Configuration effective
+==================================================================
+
+--- 1.1 Pods ---
+NAME                       READY   STATUS    RESTARTS   AGE   IP            NODE         NOMINATED NODE   READINESS GATES
+traefik-669f9cc456-dqddf   1/1     Running   0          13h   10.42.2.107   k3s-node-3   <none>           <none>
+
+--- 1.2 Services ---
+NAME      TYPE           CLUSTER-IP      EXTERNAL-IP    PORT(S)                      AGE   SELECTOR
+traefik   LoadBalancer   10.43.156.126   192.168.0.20   80:31647/TCP,443:31223/TCP   8d    app.kubernetes.io/instance=traefik-traefik,app.kubernetes.io/name=traefik
+
+--- 1.3 Déploiements ---
+NAME      READY   UP-TO-DATE   AVAILABLE   AGE   CONTAINERS   IMAGES                     SELECTOR
+traefik   1/1     1            1           8d    traefik      docker.io/traefik:v3.3.2   app.kubernetes.io/instance=traefik-traefik,app.kubernetes.io/name=traefik
+
+--- 1.4 Helm Release Traefik ---
+USER-SUPPLIED VALUES:
+additionalArguments:
+- --entryPoints.websecure.http.middlewares=traefik-security-headers@kubernetescrd
+deployment:
+  replicas: 1
+extraObjects:
+- apiVersion: traefik.io/v1alpha1
+  kind: Middleware
+  metadata:
+    name: security-headers
+  spec:
+    headers:
+      forceSTSHeader: true
+      stsIncludeSubdomains: true
+      stsPreload: true
+      stsSeconds: 63072000
+- apiVersion: traefik.io/v1alpha1
+  kind: Middleware
+  metadata:
+    name: redirect-to-https
+  spec:
+    redirectScheme:
+      permanent: true
+      scheme: https
+ingressClass:
+  enabled: true
+  isDefaultClass: true
+ingressRoute:
+  dashboard:
+    enabled: false
+logs:
+  access:
+    enabled: true
+  general:
+    level: INFO
+ports:
+  web:
+    expose:
+      default: true
+    exposedPort: 80
+    port: 8000
+    protocol: TCP
+  websecure:
+    expose:
+      default: true
+    exposedPort: 443
+    port: 8443
+    protocol: TCP
+    tls:
+      enabled: true
+resources:
+  limits:
+    cpu: 300m
+    memory: 150Mi
+  requests:
+    cpu: 100m
+    memory: 50Mi
+service:
+  annotations:
+    metallb.io/address-pool: traefik-pool
+    metallb.io/loadBalancerIPs: 192.168.0.20
+  spec:
+    loadBalancerIP: 192.168.0.20
+  type: LoadBalancer
+tlsOptions:
+  default:
+    cipherSuites:
+    - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
+    - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+    - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+    - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
+    - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+    - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+    curvePreferences:
+    - X25519
+    - CurveP256
+    - CurveP384
+    minVersion: VersionTLS12
+    sniStrict: true
+
+--- 1.5 Configuration du Pod Traefik (args + env) ---
+Pod: traefik-669f9cc456-dqddf
+
+Arguments de démarrage :
+[
+    "--global.checknewversion",
+    "--global.sendanonymoususage",
+    "--entryPoints.metrics.address=:9100/tcp",
+    "--entryPoints.traefik.address=:8080/tcp",
+    "--entryPoints.web.address=:8000/tcp",
+    "--entryPoints.websecure.address=:8443/tcp",
+    "--api.dashboard=true",
+    "--ping=true",
+    "--metrics.prometheus=true",
+    "--metrics.prometheus.entrypoint=metrics",
+    "--providers.kubernetescrd",
+    "--providers.kubernetescrd.allowEmptyServices=true",
+    "--providers.kubernetesingress",
+    "--providers.kubernetesingress.allowEmptyServices=true",
+    "--providers.kubernetesingress.ingressendpoint.publishedservice=traefik/traefik",
+    "--entryPoints.websecure.http.tls=true",
+    "--log.level=INFO",
+    "--accesslog=true",
+    "--accesslog.fields.defaultmode=keep",
+    "--accesslog.fields.headers.defaultmode=drop",
+    "--entryPoints.websecure.http.middlewares=traefik-security-headers@kubernetescrd",
+    "--entryPoints.websecure.http.tls.options=traefik-secure-pro@kubernetescrd"
+]
+
+Variables d'environnement :
+POD_NAME=
+POD_NAMESPACE=
+GOMAXPROCS=
+GOMEMLIMIT=
+
+Ports exposés :
+  metrics: 9100/TCP
+  traefik: 8080/TCP
+  web: 8000/TCP
+  websecure: 8443/TCP
+
+Resources (requests/limits) :
+{
+    "limits": {
+        "cpu": "300m",
+        "memory": "150Mi"
+    },
+    "requests": {
+        "cpu": "100m",
+        "memory": "50Mi"
+    }
+}
+
+--- 1.6 TLSOption (configuration TLS) ---
+apiVersion: v1
+items: []
+kind: List
+metadata:
+  resourceVersion: ""
+
+--- 1.7 Middlewares Traefik ---
+apiVersion: v1
+items: []
+kind: List
+metadata:
+  resourceVersion: ""
+
+Middlewares dans tous les namespaces :
+
+--- 1.8 IngressClass ---
+NAME      CONTROLLER                      PARAMETERS   AGE
+traefik   traefik.io/ingress-controller   <none>       8d
+
+==================================================================
+  2. NAMESPACE SYS-LETSENCRYPT - cert-manager
+==================================================================
+
+--- 2.1 Pods cert-manager ---
+NAME                                       READY   STATUS    RESTARTS     AGE   IP          NODE         NOMINATED NODE   READINESS GATES
+cert-manager-99cc64658-k2zzc               1/1     Running   1 (8d ago)   8d    10.42.2.4   k3s-node-3   <none>           <none>
+cert-manager-cainjector-58847d64cf-mgb7j   1/1     Running   1 (8d ago)   8d    10.42.0.5   k3s-node-1   <none>           <none>
+cert-manager-webhook-5fcfcd455-w88fp       1/1     Running   0            8d    10.42.1.5   k3s-node-2   <none>           <none>
+
+--- 2.2 Services cert-manager ---
+NAME                   TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
+cert-manager           ClusterIP   10.43.252.51    <none>        9402/TCP   8d
+cert-manager-webhook   ClusterIP   10.43.250.139   <none>        443/TCP    8d
+
+--- 2.3 Déploiements cert-manager ---
+NAME                      READY   UP-TO-DATE   AVAILABLE   AGE   CONTAINERS                IMAGES                                             SELECTOR
+cert-manager              1/1     1            1           8d    cert-manager-controller   quay.io/jetstack/cert-manager-controller:v1.13.0   app.kubernetes.io/component=controller,app.kubernetes.io/instance=cert-manager,app.kubernetes.io/name=cert-manager
+cert-manager-cainjector   1/1     1            1           8d    cert-manager-cainjector   quay.io/jetstack/cert-manager-cainjector:v1.13.0   app.kubernetes.io/component=cainjector,app.kubernetes.io/instance=cert-manager,app.kubernetes.io/name=cainjector
+cert-manager-webhook      1/1     1            1           8d    cert-manager-webhook      quay.io/jetstack/cert-manager-webhook:v1.13.0      app.kubernetes.io/component=webhook,app.kubernetes.io/instance=cert-manager,app.kubernetes.io/name=webhook
+
+--- 2.4 Helm Release cert-manager ---
+USER-SUPPLIED VALUES:
+global:
+  leaderElection:
+    namespace: sys-letsencrypt
+installCRDs: true
+
+--- 2.5 Configuration des Pods cert-manager (args) ---
+
+Pod: cert-manager-99cc64658-k2zzc
+  Arguments :
+    --v=2
+    --cluster-resource-namespace=$(POD_NAMESPACE)
+    --leader-election-namespace=sys-letsencrypt
+    --acme-http01-solver-image=quay.io/jetstack/cert-manager-acmesolver:v1.13.0
+    --max-concurrent-challenges=60
+
+Pod: cert-manager-cainjector-58847d64cf-mgb7j
+  Arguments :
+    --v=2
+    --leader-election-namespace=sys-letsencrypt
+
+Pod: cert-manager-webhook-5fcfcd455-w88fp
+  Arguments :
+    --v=2
+    --secure-port=10250
+    --dynamic-serving-ca-secret-namespace=$(POD_NAMESPACE)
+    --dynamic-serving-ca-secret-name=cert-manager-webhook-ca
+    --dynamic-serving-dns-names=cert-manager-webhook
+    --dynamic-serving-dns-names=cert-manager-webhook.$(POD_NAMESPACE)
+    --dynamic-serving-dns-names=cert-manager-webhook.$(POD_NAMESPACE).svc
+
+--- 2.6 ClusterIssuers ---
+NAME                     READY   STATUS                                                 AGE
+letsencrypt-production   True    The ACME account was registered with the ACME server   8d
+letsencrypt-staging      True    The ACME account was registered with the ACME server   8d
+
+Détails ClusterIssuers :
+
+  === letsencrypt-production ===
+spec:
+  acme:
+    email: admin@xixtu.eu
+    privateKeySecretRef:
+      name: letsencrypt-production-key
+    server: https://acme-v02.api.letsencrypt.org/directory
+    solvers:
+    - http01:
+        ingress:
+          ingressClassName: traefik
+status:
+  acme:
+    lastPrivateKeyHash: /VARxatJBQVlnF2bF31vHrdPpSbEqvXUwCz4pf4xoIk=
+    lastRegisteredEmail: admin@xixtu.eu
+  conditions:
+  - lastTransitionTime: "2026-02-19T21:47:39Z"
+    message: The ACME account was registered with the ACME server
+    observedGeneration: 1
+    reason: ACMEAccountRegistered
+    status: "True"
+    type: Ready
+
+  === letsencrypt-staging ===
+spec:
+  acme:
+    email: admin@xixtu.eu
+    privateKeySecretRef:
+      name: letsencrypt-staging-key
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    solvers:
+    - http01:
+        ingress:
+          ingressClassName: traefik
+status:
+  acme:
+    lastPrivateKeyHash: UUeuajKKwNqHjk1caV2k6HdvGl40oStLINdy+x4f9Mw=
+    lastRegisteredEmail: admin@xixtu.eu
+  conditions:
+  - lastTransitionTime: "2026-02-19T21:47:38Z"
+    message: The ACME account was registered with the ACME server
+    observedGeneration: 1
+    reason: ACMEAccountRegistered
+    status: "True"
+    type: Ready
+
+--- 2.7 Issuers (namespace-scoped) ---
+
+==================================================================
+  3. TOUS LES INGRESS - Configuration TLS
+==================================================================
+
+--- 3.1 Liste de tous les Ingress ---
+NAMESPACE                     NAME                       CLASS     HOSTS                         ADDRESS        PORTS     AGE
+headlamp                      headlamp                   traefik   headlamp.app.xixtu.eu         192.168.0.20   80, 443   8d
+kwaba-kinesiologie-redirect   kwaba-redirect-ingress     traefik   kwaba-kinesiologie.xixtu.eu   192.168.0.20   80, 443   8d
+longhorn-system               longhorn-ingress-tls       traefik   longhorn.app.xixtu.eu         192.168.0.20   80, 443   44h
+mobilizon                     mobilizon-ingress          traefik   mobilizon.app.xixtu.eu        192.168.0.20   80, 443   42h
+monitoring                    alertmanager-ingress-tls   traefik   alertmanager.app.xixtu.eu     192.168.0.20   80, 443   38h
+monitoring                    grafana-ingress-tls        traefik   grafana.app.xixtu.eu          192.168.0.20   80, 443   38h
+monitoring                    prometheus-ingress-tls     traefik   prometheus.app.xixtu.eu       192.168.0.20   80, 443   38h
+nas                           plex-ingress               traefik   plex.app.xixtu.eu             192.168.0.20   80, 443   19h
+paheko                        paheko-ingress             traefik   paheko.app.xixtu.eu           192.168.0.20   80, 443   44h
+
+--- 3.2 Détail de chaque Ingress ---
+
+==================================================================
+  INGRESS: headlamp (namespace: headlamp)
+==================================================================
+
+  Annotations :
+{"cert-manager.io/cluster-issuer":"letsencrypt-production","cert-manager.io/private-key-algorithm":"ECDSA","cert-manager.io/private-key-size":"256","meta.helm.sh/release-name":"headlamp","meta.helm.sh/release-namespace":"headlamp","traefik.ingress.kubernetes.io/router.entrypoints":"web","traefik.ingress.kubernetes.io/router.middlewares":"traefik-redirect-to-https@kubernetescrd"}
+    cert-manager.io/cluster-issuer: letsencrypt-production
+    cert-manager.io/private-key-algorithm: ECDSA
+    cert-manager.io/private-key-size: 256
+    meta.helm.sh/release-name: headlamp
+    meta.helm.sh/release-namespace: headlamp
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+    traefik.ingress.kubernetes.io/router.middlewares: traefik-redirect-to-https@kubernetescrd
+
+  TLS :
+    secretName: headlamp-tls
+    hosts: ['headlamp.app.xixtu.eu']
+
+  Rules :
+    headlamp.app.xixtu.eu/ -> headlamp:4466
+
+  Vérifications sécurité :
+[0;32m[OK][0m cert-manager issuer: letsencrypt-production
+[1;33m[WARN][0m Clé ECDSA P-256 — recommandé : P-384 pour une sécurité renforcée
+[0;32m[OK][0m Middleware redirect-to-https présent
+
+==================================================================
+  INGRESS: kwaba-redirect-ingress (namespace: kwaba-kinesiologie-redirect)
+==================================================================
+
+  Annotations :
+{"cert-manager.io/cluster-issuer":"letsencrypt-production","cert-manager.io/private-key-algorithm":"ECDSA","cert-manager.io/private-key-size":"256","kubernetes.io/ingress.class":"traefik","traefik.ingress.kubernetes.io/router.entrypoints":"web","traefik.ingress.kubernetes.io/router.middlewares":"traefik-redirect-to-https@kubernetescrd"}
+    cert-manager.io/cluster-issuer: letsencrypt-production
+    cert-manager.io/private-key-algorithm: ECDSA
+    cert-manager.io/private-key-size: 256
+    kubernetes.io/ingress.class: traefik
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+    traefik.ingress.kubernetes.io/router.middlewares: traefik-redirect-to-https@kubernetescrd
+
+  TLS :
+    secretName: kwaba-redirect-tls
+    hosts: ['kwaba-kinesiologie.xixtu.eu']
+
+  Rules :
+    kwaba-kinesiologie.xixtu.eu/ -> kwaba-redirect-service:80
+
+  Vérifications sécurité :
+[0;32m[OK][0m cert-manager issuer: letsencrypt-production
+[1;33m[WARN][0m Clé ECDSA P-256 — recommandé : P-384 pour une sécurité renforcée
+[0;32m[OK][0m Middleware redirect-to-https présent
+
+==================================================================
+  INGRESS: longhorn-ingress-tls (namespace: longhorn-system)
+==================================================================
+
+  Annotations :
+{"cert-manager.io/cluster-issuer":"letsencrypt-production","cert-manager.io/private-key-algorithm":"ECDSA","cert-manager.io/private-key-size":"256","traefik.ingress.kubernetes.io/router.entrypoints":"web","traefik.ingress.kubernetes.io/router.middlewares":"traefik-redirect-to-https@kubernetescrd"}
+    cert-manager.io/cluster-issuer: letsencrypt-production
+    cert-manager.io/private-key-algorithm: ECDSA
+    cert-manager.io/private-key-size: 256
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+    traefik.ingress.kubernetes.io/router.middlewares: traefik-redirect-to-https@kubernetescrd
+
+  TLS :
+    secretName: longhorn-tls
+    hosts: ['longhorn.app.xixtu.eu']
+
+  Rules :
+    longhorn.app.xixtu.eu/ -> longhorn-frontend:80
+
+  Vérifications sécurité :
+[0;32m[OK][0m cert-manager issuer: letsencrypt-production
+[1;33m[WARN][0m Clé ECDSA P-256 — recommandé : P-384 pour une sécurité renforcée
+[0;32m[OK][0m Middleware redirect-to-https présent
+
+==================================================================
+  INGRESS: mobilizon-ingress (namespace: mobilizon)
+==================================================================
+
+  Annotations :
+{"cert-manager.io/cluster-issuer":"letsencrypt-production","cert-manager.io/private-key-algorithm":"ECDSA","cert-manager.io/private-key-size":"256","kubectl.kubernetes.io/last-applied-configuration":"{\"apiVersion\":\"networking.k8s.io/v1\",\"kind\":\"Ingress\",\"metadata\":{\"annotations\":{\"cert-manager.io/cluster-issuer\":\"letsencrypt-production\",\"cert-manager.io/private-key-algorithm\":\"ECDSA\",\"cert-manager.io/private-key-size\":\"256\",\"traefik.ingress.kubernetes.io/router.entrypoints\":\"web\",\"traefik.ingress.kubernetes.io/router.middlewares\":\"traefik-redirect-to-https@kubernetescrd\"},\"name\":\"mobilizon-ingress\",\"namespace\":\"mobilizon\"},\"spec\":{\"ingressClassName\":\"traefik\",\"rules\":[{\"host\":\"mobilizon.app.xixtu.eu\",\"http\":{\"paths\":[{\"backend\":{\"service\":{\"name\":\"mobilizon-service\",\"port\":{\"number\":80}}},\"path\":\"/\",\"pathType\":\"Prefix\"}]}}],\"tls\":[{\"hosts\":[\"mobilizon.app.xixtu.eu\"],\"secretName\":\"mobilizon-tls\"}]}}\n","traefik.ingress.kubernetes.io/router.entrypoints":"web","traefik.ingress.kubernetes.io/router.middlewares":"traefik-redirect-to-https@kubernetescrd"}
+    cert-manager.io/cluster-issuer: letsencrypt-production
+    cert-manager.io/private-key-algorithm: ECDSA
+    cert-manager.io/private-key-size: 256
+    kubectl.kubernetes.io/last-applied-configuration: {"apiVersion":"networking.k8s.io/v1","kind":"Ingress","metadata":{"annotations":{"cert-manager.io/cluster-issuer":"letsencrypt-production","cert-manager.io/private-key-algorithm":"ECDSA","cert-manager.io/private-key-size":"256","traefik.ingress.kubernetes.io/router.entrypoints":"web","traefik.ingress.kubernetes.io/router.middlewares":"traefik-redirect-to-https@kubernetescrd"},"name":"mobilizon-ingress","namespace":"mobilizon"},"spec":{"ingressClassName":"traefik","rules":[{"host":"mobilizon.app.xixtu.eu","http":{"paths":[{"backend":{"service":{"name":"mobilizon-service","port":{"number":80}}},"path":"/","pathType":"Prefix"}]}}],"tls":[{"hosts":["mobilizon.app.xixtu.eu"],"secretName":"mobilizon-tls"}]}}
+
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+    traefik.ingress.kubernetes.io/router.middlewares: traefik-redirect-to-https@kubernetescrd
+
+  TLS :
+    secretName: mobilizon-tls
+    hosts: ['mobilizon.app.xixtu.eu']
+
+  Rules :
+    mobilizon.app.xixtu.eu/ -> mobilizon-service:80
+
+  Vérifications sécurité :
+[0;32m[OK][0m cert-manager issuer: letsencrypt-production
+[1;33m[WARN][0m Clé ECDSA P-256 — recommandé : P-384 pour une sécurité renforcée
+[0;32m[OK][0m Middleware redirect-to-https présent
+
+==================================================================
+  INGRESS: alertmanager-ingress-tls (namespace: monitoring)
+==================================================================
+
+  Annotations :
+{"cert-manager.io/cluster-issuer":"letsencrypt-production","cert-manager.io/private-key-algorithm":"ECDSA","cert-manager.io/private-key-size":"256","kubectl.kubernetes.io/last-applied-configuration":"{\"apiVersion\":\"networking.k8s.io/v1\",\"kind\":\"Ingress\",\"metadata\":{\"annotations\":{\"cert-manager.io/cluster-issuer\":\"letsencrypt-production\",\"cert-manager.io/private-key-algorithm\":\"ECDSA\",\"cert-manager.io/private-key-size\":\"256\",\"traefik.ingress.kubernetes.io/router.entrypoints\":\"web\",\"traefik.ingress.kubernetes.io/router.middlewares\":\"traefik-redirect-to-https@kubernetescrd\"},\"name\":\"alertmanager-ingress-tls\",\"namespace\":\"monitoring\"},\"spec\":{\"ingressClassName\":\"traefik\",\"rules\":[{\"host\":\"alertmanager.app.xixtu.eu\",\"http\":{\"paths\":[{\"backend\":{\"service\":{\"name\":\"kube-prometheus-stack-alertmanager\",\"port\":{\"number\":9093}}},\"path\":\"/\",\"pathType\":\"Prefix\"}]}}],\"tls\":[{\"hosts\":[\"alertmanager.app.xixtu.eu\"],\"secretName\":\"alertmanager-tls\"}]}}\n","traefik.ingress.kubernetes.io/router.entrypoints":"web","traefik.ingress.kubernetes.io/router.middlewares":"traefik-redirect-to-https@kubernetescrd"}
+    cert-manager.io/cluster-issuer: letsencrypt-production
+    cert-manager.io/private-key-algorithm: ECDSA
+    cert-manager.io/private-key-size: 256
+    kubectl.kubernetes.io/last-applied-configuration: {"apiVersion":"networking.k8s.io/v1","kind":"Ingress","metadata":{"annotations":{"cert-manager.io/cluster-issuer":"letsencrypt-production","cert-manager.io/private-key-algorithm":"ECDSA","cert-manager.io/private-key-size":"256","traefik.ingress.kubernetes.io/router.entrypoints":"web","traefik.ingress.kubernetes.io/router.middlewares":"traefik-redirect-to-https@kubernetescrd"},"name":"alertmanager-ingress-tls","namespace":"monitoring"},"spec":{"ingressClassName":"traefik","rules":[{"host":"alertmanager.app.xixtu.eu","http":{"paths":[{"backend":{"service":{"name":"kube-prometheus-stack-alertmanager","port":{"number":9093}}},"path":"/","pathType":"Prefix"}]}}],"tls":[{"hosts":["alertmanager.app.xixtu.eu"],"secretName":"alertmanager-tls"}]}}
+
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+    traefik.ingress.kubernetes.io/router.middlewares: traefik-redirect-to-https@kubernetescrd
+
+  TLS :
+    secretName: alertmanager-tls
+    hosts: ['alertmanager.app.xixtu.eu']
+
+  Rules :
+    alertmanager.app.xixtu.eu/ -> kube-prometheus-stack-alertmanager:9093
+
+  Vérifications sécurité :
+[0;32m[OK][0m cert-manager issuer: letsencrypt-production
+[1;33m[WARN][0m Clé ECDSA P-256 — recommandé : P-384 pour une sécurité renforcée
+[0;32m[OK][0m Middleware redirect-to-https présent
+
+==================================================================
+  INGRESS: grafana-ingress-tls (namespace: monitoring)
+==================================================================
+
+  Annotations :
+{"cert-manager.io/cluster-issuer":"letsencrypt-production","cert-manager.io/private-key-algorithm":"ECDSA","cert-manager.io/private-key-size":"256","kubectl.kubernetes.io/last-applied-configuration":"{\"apiVersion\":\"networking.k8s.io/v1\",\"kind\":\"Ingress\",\"metadata\":{\"annotations\":{\"cert-manager.io/cluster-issuer\":\"letsencrypt-production\",\"cert-manager.io/private-key-algorithm\":\"ECDSA\",\"cert-manager.io/private-key-size\":\"256\",\"traefik.ingress.kubernetes.io/router.entrypoints\":\"web\",\"traefik.ingress.kubernetes.io/router.middlewares\":\"traefik-redirect-to-https@kubernetescrd\"},\"name\":\"grafana-ingress-tls\",\"namespace\":\"monitoring\"},\"spec\":{\"ingressClassName\":\"traefik\",\"rules\":[{\"host\":\"grafana.app.xixtu.eu\",\"http\":{\"paths\":[{\"backend\":{\"service\":{\"name\":\"kube-prometheus-stack-grafana\",\"port\":{\"number\":80}}},\"path\":\"/\",\"pathType\":\"Prefix\"}]}}],\"tls\":[{\"hosts\":[\"grafana.app.xixtu.eu\"],\"secretName\":\"grafana-tls\"}]}}\n","traefik.ingress.kubernetes.io/router.entrypoints":"web","traefik.ingress.kubernetes.io/router.middlewares":"traefik-redirect-to-https@kubernetescrd"}
+    cert-manager.io/cluster-issuer: letsencrypt-production
+    cert-manager.io/private-key-algorithm: ECDSA
+    cert-manager.io/private-key-size: 256
+    kubectl.kubernetes.io/last-applied-configuration: {"apiVersion":"networking.k8s.io/v1","kind":"Ingress","metadata":{"annotations":{"cert-manager.io/cluster-issuer":"letsencrypt-production","cert-manager.io/private-key-algorithm":"ECDSA","cert-manager.io/private-key-size":"256","traefik.ingress.kubernetes.io/router.entrypoints":"web","traefik.ingress.kubernetes.io/router.middlewares":"traefik-redirect-to-https@kubernetescrd"},"name":"grafana-ingress-tls","namespace":"monitoring"},"spec":{"ingressClassName":"traefik","rules":[{"host":"grafana.app.xixtu.eu","http":{"paths":[{"backend":{"service":{"name":"kube-prometheus-stack-grafana","port":{"number":80}}},"path":"/","pathType":"Prefix"}]}}],"tls":[{"hosts":["grafana.app.xixtu.eu"],"secretName":"grafana-tls"}]}}
+
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+    traefik.ingress.kubernetes.io/router.middlewares: traefik-redirect-to-https@kubernetescrd
+
+  TLS :
+    secretName: grafana-tls
+    hosts: ['grafana.app.xixtu.eu']
+
+  Rules :
+    grafana.app.xixtu.eu/ -> kube-prometheus-stack-grafana:80
+
+  Vérifications sécurité :
+[0;32m[OK][0m cert-manager issuer: letsencrypt-production
+[1;33m[WARN][0m Clé ECDSA P-256 — recommandé : P-384 pour une sécurité renforcée
+[0;32m[OK][0m Middleware redirect-to-https présent
+
+==================================================================
+  INGRESS: prometheus-ingress-tls (namespace: monitoring)
+==================================================================
+
+  Annotations :
+{"cert-manager.io/cluster-issuer":"letsencrypt-production","cert-manager.io/private-key-algorithm":"ECDSA","cert-manager.io/private-key-size":"256","kubectl.kubernetes.io/last-applied-configuration":"{\"apiVersion\":\"networking.k8s.io/v1\",\"kind\":\"Ingress\",\"metadata\":{\"annotations\":{\"cert-manager.io/cluster-issuer\":\"letsencrypt-production\",\"cert-manager.io/private-key-algorithm\":\"ECDSA\",\"cert-manager.io/private-key-size\":\"256\",\"traefik.ingress.kubernetes.io/router.entrypoints\":\"web\",\"traefik.ingress.kubernetes.io/router.middlewares\":\"traefik-redirect-to-https@kubernetescrd\"},\"name\":\"prometheus-ingress-tls\",\"namespace\":\"monitoring\"},\"spec\":{\"ingressClassName\":\"traefik\",\"rules\":[{\"host\":\"prometheus.app.xixtu.eu\",\"http\":{\"paths\":[{\"backend\":{\"service\":{\"name\":\"kube-prometheus-stack-prometheus\",\"port\":{\"number\":9090}}},\"path\":\"/\",\"pathType\":\"Prefix\"}]}}],\"tls\":[{\"hosts\":[\"prometheus.app.xixtu.eu\"],\"secretName\":\"prometheus-tls\"}]}}\n","traefik.ingress.kubernetes.io/router.entrypoints":"web","traefik.ingress.kubernetes.io/router.middlewares":"traefik-redirect-to-https@kubernetescrd"}
+    cert-manager.io/cluster-issuer: letsencrypt-production
+    cert-manager.io/private-key-algorithm: ECDSA
+    cert-manager.io/private-key-size: 256
+    kubectl.kubernetes.io/last-applied-configuration: {"apiVersion":"networking.k8s.io/v1","kind":"Ingress","metadata":{"annotations":{"cert-manager.io/cluster-issuer":"letsencrypt-production","cert-manager.io/private-key-algorithm":"ECDSA","cert-manager.io/private-key-size":"256","traefik.ingress.kubernetes.io/router.entrypoints":"web","traefik.ingress.kubernetes.io/router.middlewares":"traefik-redirect-to-https@kubernetescrd"},"name":"prometheus-ingress-tls","namespace":"monitoring"},"spec":{"ingressClassName":"traefik","rules":[{"host":"prometheus.app.xixtu.eu","http":{"paths":[{"backend":{"service":{"name":"kube-prometheus-stack-prometheus","port":{"number":9090}}},"path":"/","pathType":"Prefix"}]}}],"tls":[{"hosts":["prometheus.app.xixtu.eu"],"secretName":"prometheus-tls"}]}}
+
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+    traefik.ingress.kubernetes.io/router.middlewares: traefik-redirect-to-https@kubernetescrd
+
+  TLS :
+    secretName: prometheus-tls
+    hosts: ['prometheus.app.xixtu.eu']
+
+  Rules :
+    prometheus.app.xixtu.eu/ -> kube-prometheus-stack-prometheus:9090
+
+  Vérifications sécurité :
+[0;32m[OK][0m cert-manager issuer: letsencrypt-production
+[1;33m[WARN][0m Clé ECDSA P-256 — recommandé : P-384 pour une sécurité renforcée
+[0;32m[OK][0m Middleware redirect-to-https présent
+
+==================================================================
+  INGRESS: plex-ingress (namespace: nas)
+==================================================================
+
+  Annotations :
+{"cert-manager.io/cluster-issuer":"letsencrypt-production","cert-manager.io/private-key-algorithm":"ECDSA","cert-manager.io/private-key-size":"256","kubectl.kubernetes.io/last-applied-configuration":"{\"apiVersion\":\"networking.k8s.io/v1\",\"kind\":\"Ingress\",\"metadata\":{\"annotations\":{\"cert-manager.io/cluster-issuer\":\"letsencrypt-production\",\"cert-manager.io/private-key-algorithm\":\"ECDSA\",\"cert-manager.io/private-key-size\":\"256\",\"traefik.ingress.kubernetes.io/router.entrypoints\":\"web\",\"traefik.ingress.kubernetes.io/router.middlewares\":\"traefik-redirect-to-https@kubernetescrd\"},\"name\":\"plex-ingress\",\"namespace\":\"nas\"},\"spec\":{\"ingressClassName\":\"traefik\",\"rules\":[{\"host\":\"plex.app.xixtu.eu\",\"http\":{\"paths\":[{\"backend\":{\"service\":{\"name\":\"plex-service\",\"port\":{\"number\":32400}}},\"path\":\"/\",\"pathType\":\"Prefix\"}]}}],\"tls\":[{\"hosts\":[\"plex.app.xixtu.eu\"],\"secretName\":\"plex-tls\"}]}}\n","traefik.ingress.kubernetes.io/router.entrypoints":"web","traefik.ingress.kubernetes.io/router.middlewares":"traefik-redirect-to-https@kubernetescrd"}
+    cert-manager.io/cluster-issuer: letsencrypt-production
+    cert-manager.io/private-key-algorithm: ECDSA
+    cert-manager.io/private-key-size: 256
+    kubectl.kubernetes.io/last-applied-configuration: {"apiVersion":"networking.k8s.io/v1","kind":"Ingress","metadata":{"annotations":{"cert-manager.io/cluster-issuer":"letsencrypt-production","cert-manager.io/private-key-algorithm":"ECDSA","cert-manager.io/private-key-size":"256","traefik.ingress.kubernetes.io/router.entrypoints":"web","traefik.ingress.kubernetes.io/router.middlewares":"traefik-redirect-to-https@kubernetescrd"},"name":"plex-ingress","namespace":"nas"},"spec":{"ingressClassName":"traefik","rules":[{"host":"plex.app.xixtu.eu","http":{"paths":[{"backend":{"service":{"name":"plex-service","port":{"number":32400}}},"path":"/","pathType":"Prefix"}]}}],"tls":[{"hosts":["plex.app.xixtu.eu"],"secretName":"plex-tls"}]}}
+
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+    traefik.ingress.kubernetes.io/router.middlewares: traefik-redirect-to-https@kubernetescrd
+
+  TLS :
+    secretName: plex-tls
+    hosts: ['plex.app.xixtu.eu']
+
+  Rules :
+    plex.app.xixtu.eu/ -> plex-service:32400
+
+  Vérifications sécurité :
+[0;32m[OK][0m cert-manager issuer: letsencrypt-production
+[1;33m[WARN][0m Clé ECDSA P-256 — recommandé : P-384 pour une sécurité renforcée
+[0;32m[OK][0m Middleware redirect-to-https présent
+
+==================================================================
+  INGRESS: paheko-ingress (namespace: paheko)
+==================================================================
+
+  Annotations :
+{"cert-manager.io/cluster-issuer":"letsencrypt-production","cert-manager.io/private-key-algorithm":"ECDSA","cert-manager.io/private-key-size":"256","kubectl.kubernetes.io/last-applied-configuration":"{\"apiVersion\":\"networking.k8s.io/v1\",\"kind\":\"Ingress\",\"metadata\":{\"annotations\":{\"cert-manager.io/cluster-issuer\":\"letsencrypt-production\",\"cert-manager.io/private-key-algorithm\":\"ECDSA\",\"cert-manager.io/private-key-size\":\"256\",\"traefik.ingress.kubernetes.io/router.entrypoints\":\"web\",\"traefik.ingress.kubernetes.io/router.middlewares\":\"traefik-redirect-to-https@kubernetescrd\"},\"name\":\"paheko-ingress\",\"namespace\":\"paheko\"},\"spec\":{\"ingressClassName\":\"traefik\",\"rules\":[{\"host\":\"paheko.app.xixtu.eu\",\"http\":{\"paths\":[{\"backend\":{\"service\":{\"name\":\"paheko-service\",\"port\":{\"number\":80}}},\"path\":\"/\",\"pathType\":\"Prefix\"}]}}],\"tls\":[{\"hosts\":[\"paheko.app.xixtu.eu\"],\"secretName\":\"paheko-tls\"}]}}\n","traefik.ingress.kubernetes.io/router.entrypoints":"web","traefik.ingress.kubernetes.io/router.middlewares":"traefik-redirect-to-https@kubernetescrd"}
+    cert-manager.io/cluster-issuer: letsencrypt-production
+    cert-manager.io/private-key-algorithm: ECDSA
+    cert-manager.io/private-key-size: 256
+    kubectl.kubernetes.io/last-applied-configuration: {"apiVersion":"networking.k8s.io/v1","kind":"Ingress","metadata":{"annotations":{"cert-manager.io/cluster-issuer":"letsencrypt-production","cert-manager.io/private-key-algorithm":"ECDSA","cert-manager.io/private-key-size":"256","traefik.ingress.kubernetes.io/router.entrypoints":"web","traefik.ingress.kubernetes.io/router.middlewares":"traefik-redirect-to-https@kubernetescrd"},"name":"paheko-ingress","namespace":"paheko"},"spec":{"ingressClassName":"traefik","rules":[{"host":"paheko.app.xixtu.eu","http":{"paths":[{"backend":{"service":{"name":"paheko-service","port":{"number":80}}},"path":"/","pathType":"Prefix"}]}}],"tls":[{"hosts":["paheko.app.xixtu.eu"],"secretName":"paheko-tls"}]}}
+
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+    traefik.ingress.kubernetes.io/router.middlewares: traefik-redirect-to-https@kubernetescrd
+
+  TLS :
+    secretName: paheko-tls
+    hosts: ['paheko.app.xixtu.eu']
+
+  Rules :
+    paheko.app.xixtu.eu/ -> paheko-service:80
+
+  Vérifications sécurité :
+[0;32m[OK][0m cert-manager issuer: letsencrypt-production
+[1;33m[WARN][0m Clé ECDSA P-256 — recommandé : P-384 pour une sécurité renforcée
+[0;32m[OK][0m Middleware redirect-to-https présent
+
+==================================================================
+  4. INGRESSROUTES TRAEFIK (CRD)
+==================================================================
+
+--- 4.1 Liste de tous les IngressRoute ---
+
+--- 4.2 Détail de chaque IngressRoute ---
+
+==================================================================
+  5. CERTIFICATS cert-manager
+==================================================================
+
+--- 5.1 Tous les Certificate ---
+NAMESPACE                     NAME                 READY   SECRET               ISSUER                   STATUS                                                                         AGE
+headlamp                      headlamp-tls         False   headlamp-tls         letsencrypt-production   Existing private key is not up to date for spec: [spec.privateKey.algorithm]   8d
+kwaba-kinesiologie-redirect   kwaba-redirect-tls   False   kwaba-redirect-tls   letsencrypt-production   Existing private key is not up to date for spec: [spec.privateKey.algorithm]   8d
+longhorn-system               longhorn-tls         True    longhorn-tls         letsencrypt-production   Certificate is up to date and has not expired                                  44h
+mobilizon                     mobilizon-tls        True    mobilizon-tls        letsencrypt-production   Certificate is up to date and has not expired                                  42h
+monitoring                    alertmanager-tls     True    alertmanager-tls     letsencrypt-production   Certificate is up to date and has not expired                                  38h
+monitoring                    grafana-tls          True    grafana-tls          letsencrypt-production   Certificate is up to date and has not expired                                  38h
+monitoring                    prometheus-tls       True    prometheus-tls       letsencrypt-production   Certificate is up to date and has not expired                                  38h
+nas                           plex-tls             True    plex-tls             letsencrypt-production   Certificate is up to date and has not expired                                  19h
+paheko                        paheko-tls           True    paheko-tls           letsencrypt-production   Certificate is up to date and has not expired                                  44h
+
+--- 5.2 Tous les CertificateRequest ---
+NAMESPACE                     NAME                   APPROVED   DENIED   READY   ISSUER                   REQUESTOR                                            AGE
+headlamp                      headlamp-tls-1         True                True    letsencrypt-production   system:serviceaccount:sys-letsencrypt:cert-manager   8d
+kwaba-kinesiologie-redirect   kwaba-redirect-tls-1   True                True    letsencrypt-production   system:serviceaccount:sys-letsencrypt:cert-manager   8d
+longhorn-system               longhorn-tls-1         True                True    letsencrypt-production   system:serviceaccount:sys-letsencrypt:cert-manager   44h
+mobilizon                     mobilizon-tls-1        True                True    letsencrypt-production   system:serviceaccount:sys-letsencrypt:cert-manager   42h
+monitoring                    alertmanager-tls-1     True                True    letsencrypt-production   system:serviceaccount:sys-letsencrypt:cert-manager   38h
+monitoring                    grafana-tls-1          True                True    letsencrypt-production   system:serviceaccount:sys-letsencrypt:cert-manager   38h
+monitoring                    prometheus-tls-1       True                True    letsencrypt-production   system:serviceaccount:sys-letsencrypt:cert-manager   38h
+nas                           plex-tls-1             True                True    letsencrypt-production   system:serviceaccount:sys-letsencrypt:cert-manager   19h
+paheko                        paheko-tls-1           True                True    letsencrypt-production   system:serviceaccount:sys-letsencrypt:cert-manager   44h
+
+--- 5.3 Détail des Certificate ---
+
+  === Certificate: headlamp-tls (namespace: headlamp) ===
+    secretName: headlamp-tls
+    issuerRef: {'group': 'cert-manager.io', 'kind': 'ClusterIssuer', 'name': 'letsencrypt-production'}
+    privateKey.algorithm: ECDSA
+    privateKey.size: 256
+    dnsNames: ['headlamp.app.xixtu.eu']
+    status: Ready: False (SecretMismatch)
+    status: Issuing: True (SecretMismatch)
+    notAfter: 2026-05-20T20:50:18Z
+    renewalTime: 2026-04-20T20:50:18Z
+
+  === Certificate: kwaba-redirect-tls (namespace: kwaba-kinesiologie-redirect) ===
+    secretName: kwaba-redirect-tls
+    issuerRef: {'group': 'cert-manager.io', 'kind': 'ClusterIssuer', 'name': 'letsencrypt-production'}
+    privateKey.algorithm: ECDSA
+    privateKey.size: 256
+    dnsNames: ['kwaba-kinesiologie.xixtu.eu']
+    status: Ready: False (SecretMismatch)
+    status: Issuing: True (SecretMismatch)
+    notAfter: 2026-05-20T20:50:53Z
+    renewalTime: 2026-04-20T20:50:53Z
+
+  === Certificate: longhorn-tls (namespace: longhorn-system) ===
+    secretName: longhorn-tls
+    issuerRef: {'group': 'cert-manager.io', 'kind': 'ClusterIssuer', 'name': 'letsencrypt-production'}
+    privateKey.algorithm: ECDSA
+    privateKey.size: 256
+    dnsNames: ['longhorn.app.xixtu.eu']
+    status: Ready: True (Ready)
+    notAfter: 2026-05-27T11:30:37Z
+    renewalTime: 2026-04-27T11:30:37Z
+
+  === Certificate: mobilizon-tls (namespace: mobilizon) ===
+    secretName: mobilizon-tls
+    issuerRef: {'group': 'cert-manager.io', 'kind': 'ClusterIssuer', 'name': 'letsencrypt-production'}
+    privateKey.algorithm: ECDSA
+    privateKey.size: 256
+    dnsNames: ['mobilizon.app.xixtu.eu']
+    status: Ready: True (Ready)
+    notAfter: 2026-05-27T13:16:23Z
+    renewalTime: 2026-04-27T13:16:23Z
+
+  === Certificate: alertmanager-tls (namespace: monitoring) ===
+    secretName: alertmanager-tls
+    issuerRef: {'group': 'cert-manager.io', 'kind': 'ClusterIssuer', 'name': 'letsencrypt-production'}
+    privateKey.algorithm: ECDSA
+    privateKey.size: 256
+    dnsNames: ['alertmanager.app.xixtu.eu']
+    status: Ready: True (Ready)
+    notAfter: 2026-05-27T17:07:15Z
+    renewalTime: 2026-04-27T17:07:15Z
+
+  === Certificate: grafana-tls (namespace: monitoring) ===
+    secretName: grafana-tls
+    issuerRef: {'group': 'cert-manager.io', 'kind': 'ClusterIssuer', 'name': 'letsencrypt-production'}
+    privateKey.algorithm: ECDSA
+    privateKey.size: 256
+    dnsNames: ['grafana.app.xixtu.eu']
+    status: Ready: True (Ready)
+    notAfter: 2026-05-27T17:07:09Z
+    renewalTime: 2026-04-27T17:07:09Z
+
+  === Certificate: prometheus-tls (namespace: monitoring) ===
+    secretName: prometheus-tls
+    issuerRef: {'group': 'cert-manager.io', 'kind': 'ClusterIssuer', 'name': 'letsencrypt-production'}
+    privateKey.algorithm: ECDSA
+    privateKey.size: 256
+    dnsNames: ['prometheus.app.xixtu.eu']
+    status: Ready: True (Ready)
+    notAfter: 2026-05-27T17:07:12Z
+    renewalTime: 2026-04-27T17:07:12Z
+
+  === Certificate: plex-tls (namespace: nas) ===
+    secretName: plex-tls
+    issuerRef: {'group': 'cert-manager.io', 'kind': 'ClusterIssuer', 'name': 'letsencrypt-production'}
+    privateKey.algorithm: ECDSA
+    privateKey.size: 256
+    dnsNames: ['plex.app.xixtu.eu']
+    status: Ready: True (Ready)
+    notAfter: 2026-05-28T12:16:39Z
+    renewalTime: 2026-04-28T12:16:39Z
+
+  === Certificate: paheko-tls (namespace: paheko) ===
+    secretName: paheko-tls
+    issuerRef: {'group': 'cert-manager.io', 'kind': 'ClusterIssuer', 'name': 'letsencrypt-production'}
+    privateKey.algorithm: ECDSA
+    privateKey.size: 256
+    dnsNames: ['paheko.app.xixtu.eu']
+    status: Ready: True (Ready)
+    notAfter: 2026-05-27T11:52:08Z
+    renewalTime: 2026-04-27T11:52:08Z
+
+==================================================================
+  6. SECRETS TLS - Analyse des clés
+==================================================================
+
+Recherche de tous les secrets de type kubernetes.io/tls...
+
+  === Secret: headlamp-tls (namespace: headlamp) ===
+[0;36m[INFO][0m Type: Private-Key: (2048 bit, 2 primes)
+    subject=CN=headlamp.app.xixtu.eu
+    issuer=C=US, O=Let's Encrypt, CN=R12
+    notBefore=Feb 19 20:50:19 2026 GMT
+    notAfter=May 20 20:50:18 2026 GMT
+    X509v3 Subject Alternative Name: 
+        DNS:headlamp.app.xixtu.eu
+
+  === Secret: k3s-serving (namespace: kube-system) ===
+[0;36m[INFO][0m Type: Private-Key: (256 bit)
+    subject=O=k3s, CN=k3s
+    issuer=CN=k3s-server-ca@1771525715
+    notBefore=Feb 19 18:28:35 2026 GMT
+    notAfter=Feb 19 18:48:51 2027 GMT
+    X509v3 Subject Alternative Name: 
+        DNS:k3s-node-1, DNS:k3s-node-2, DNS:k3s-node-3, DNS:kubernetes, DNS:kubernetes.default, DNS:kubernetes.default.svc, DNS:kubernetes.default.svc.cluster.local, DNS:localhost, IP Address:10.43.0.1, IP Address:127.0.0.1, IP Address:192.168.0.11, IP Address:192.168.0.12, IP Address:192.168.0.13, IP Address:0:0:0:0:0:0:0:1
+
+  === Secret: kwaba-redirect-tls (namespace: kwaba-kinesiologie-redirect) ===
+[0;36m[INFO][0m Type: Private-Key: (2048 bit, 2 primes)
+    subject=CN=kwaba-kinesiologie.xixtu.eu
+    issuer=C=US, O=Let's Encrypt, CN=R12
+    notBefore=Feb 19 20:50:54 2026 GMT
+    notAfter=May 20 20:50:53 2026 GMT
+    X509v3 Subject Alternative Name: 
+        DNS:kwaba-kinesiologie.xixtu.eu
+
+  === Secret: longhorn-tls (namespace: longhorn-system) ===
+[0;36m[INFO][0m Type: Private-Key: (256 bit)
+    subject=CN=longhorn.app.xixtu.eu
+    issuer=C=US, O=Let's Encrypt, CN=E7
+    notBefore=Feb 26 11:30:38 2026 GMT
+    notAfter=May 27 11:30:37 2026 GMT
+    X509v3 Subject Alternative Name: 
+        DNS:longhorn.app.xixtu.eu
+
+  === Secret: longhorn-webhook-ca (namespace: longhorn-system) ===
+[0;36m[INFO][0m Type: Private-Key: (256 bit)
+    subject=O=dynamiclistener-org, CN=dynamiclistener-ca@1772098551
+    issuer=O=dynamiclistener-org, CN=dynamiclistener-ca@1772098551
+    notBefore=Feb 26 09:35:51 2026 GMT
+    notAfter=Feb 24 09:35:51 2036 GMT
+
+  === Secret: longhorn-webhook-tls (namespace: longhorn-system) ===
+[0;36m[INFO][0m Type: Private-Key: (256 bit)
+    subject=O=dynamic, CN=dynamic
+    issuer=O=dynamiclistener-org, CN=dynamiclistener-ca@1772098551
+    notBefore=Feb 26 09:35:51 2026 GMT
+    notAfter=Feb 26 09:35:53 2027 GMT
+    X509v3 Subject Alternative Name: 
+        DNS:longhorn-admission-webhook.longhorn-system.svc, DNS:longhorn-conversion-webhook.longhorn-system.svc
+
+  === Secret: mobilizon-tls (namespace: mobilizon) ===
+[0;36m[INFO][0m Type: Private-Key: (256 bit)
+    subject=CN=mobilizon.app.xixtu.eu
+    issuer=C=US, O=Let's Encrypt, CN=E8
+    notBefore=Feb 26 13:16:24 2026 GMT
+    notAfter=May 27 13:16:23 2026 GMT
+    X509v3 Subject Alternative Name: 
+        DNS:mobilizon.app.xixtu.eu
+
+  === Secret: alertmanager-tls (namespace: monitoring) ===
+[0;36m[INFO][0m Type: Private-Key: (256 bit)
+    subject=CN=alertmanager.app.xixtu.eu
+    issuer=C=US, O=Let's Encrypt, CN=E7
+    notBefore=Feb 26 17:07:16 2026 GMT
+    notAfter=May 27 17:07:15 2026 GMT
+    X509v3 Subject Alternative Name: 
+        DNS:alertmanager.app.xixtu.eu
+
+  === Secret: grafana-tls (namespace: monitoring) ===
+[0;36m[INFO][0m Type: Private-Key: (256 bit)
+    subject=CN=grafana.app.xixtu.eu
+    issuer=C=US, O=Let's Encrypt, CN=E8
+    notBefore=Feb 26 17:07:10 2026 GMT
+    notAfter=May 27 17:07:09 2026 GMT
+    X509v3 Subject Alternative Name: 
+        DNS:grafana.app.xixtu.eu
+
+  === Secret: prometheus-tls (namespace: monitoring) ===
+[0;36m[INFO][0m Type: Private-Key: (256 bit)
+    subject=CN=prometheus.app.xixtu.eu
+    issuer=C=US, O=Let's Encrypt, CN=E8
+    notBefore=Feb 26 17:07:13 2026 GMT
+    notAfter=May 27 17:07:12 2026 GMT
+    X509v3 Subject Alternative Name: 
+        DNS:prometheus.app.xixtu.eu
+
+  === Secret: plex-tls (namespace: nas) ===
+[0;36m[INFO][0m Type: Private-Key: (256 bit)
+    subject=CN=plex.app.xixtu.eu
+    issuer=C=US, O=Let's Encrypt, CN=E7
+    notBefore=Feb 27 12:16:40 2026 GMT
+    notAfter=May 28 12:16:39 2026 GMT
+    X509v3 Subject Alternative Name: 
+        DNS:plex.app.xixtu.eu
+
+  === Secret: paheko-tls (namespace: paheko) ===
+[0;32m[OK][0m Type: ECDSA | ASN1 OID: prime256v1
+    subject=CN=paheko.app.xixtu.eu
+    issuer=C=US, O=Let's Encrypt, CN=E7
+    notBefore=Feb 26 11:52:09 2026 GMT
+    notAfter=May 27 11:52:08 2026 GMT
+    X509v3 Subject Alternative Name: 
+        DNS:paheko.app.xixtu.eu
+
+
+==================================================================
+  7. RÉSUMÉ ET RECOMMANDATIONS SÉCURITÉ
+==================================================================
+
+--- 7.1 Vérifications globales ---
+
