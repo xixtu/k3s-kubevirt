@@ -1,6 +1,6 @@
 ==============================================================
   AUDIT TLS / INGRESS / TRAEFIK / CERT-MANAGER
-  2026-02-28 09:56:52 CET
+  2026-02-28 10:13:04 CET
 ==============================================================
 
 ==================================================================
@@ -8,7 +8,7 @@
 ==================================================================
 [0;32m[OK][0m Connexion au cluster OK
 KUBECONFIG : /etc/rancher/k3s/k3s.yaml
-Date audit : 2026-02-28 09:56:52 CET
+Date audit : 2026-02-28 10:13:04 CET
 Kubectl    : Client Version: v1.30.0+k3s1
 
 ==================================================================
@@ -16,8 +16,8 @@ Kubectl    : Client Version: v1.30.0+k3s1
 ==================================================================
 
 --- 1.1 Pods ---
-NAME                       READY   STATUS    RESTARTS   AGE   IP            NODE         NOMINATED NODE   READINESS GATES
-traefik-669f9cc456-dqddf   1/1     Running   0          13h   10.42.2.107   k3s-node-3   <none>           <none>
+NAME                       READY   STATUS    RESTARTS   AGE     IP            NODE         NOMINATED NODE   READINESS GATES
+traefik-7b54bd6755-gkglm   1/1     Running   0          9m38s   10.42.1.124   k3s-node-2   <none>           <none>
 
 --- 1.2 Services ---
 NAME      TYPE           CLUSTER-IP      EXTERNAL-IP    PORT(S)                      AGE   SELECTOR
@@ -103,13 +103,13 @@ tlsOptions:
     - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
     curvePreferences:
     - X25519
-    - CurveP256
     - CurveP384
+    - CurveP256
     minVersion: VersionTLS12
     sniStrict: true
 
 --- 1.5 Configuration du Pod Traefik (args + env) ---
-Pod: traefik-669f9cc456-dqddf
+Pod: traefik-7b54bd6755-gkglm
 
 Arguments de démarrage :
 [
@@ -133,8 +133,7 @@ Arguments de démarrage :
     "--accesslog=true",
     "--accesslog.fields.defaultmode=keep",
     "--accesslog.fields.headers.defaultmode=drop",
-    "--entryPoints.websecure.http.middlewares=traefik-security-headers@kubernetescrd",
-    "--entryPoints.websecure.http.tls.options=traefik-secure-pro@kubernetescrd"
+    "--entryPoints.websecure.http.middlewares=traefik-security-headers@kubernetescrd"
 ]
 
 Variables d'environnement :
@@ -299,9 +298,9 @@ headlamp                      headlamp                   traefik   headlamp.app.
 kwaba-kinesiologie-redirect   kwaba-redirect-ingress     traefik   kwaba-kinesiologie.xixtu.eu   192.168.0.20   80, 443   8d
 longhorn-system               longhorn-ingress-tls       traefik   longhorn.app.xixtu.eu         192.168.0.20   80, 443   44h
 mobilizon                     mobilizon-ingress          traefik   mobilizon.app.xixtu.eu        192.168.0.20   80, 443   42h
-monitoring                    alertmanager-ingress-tls   traefik   alertmanager.app.xixtu.eu     192.168.0.20   80, 443   38h
-monitoring                    grafana-ingress-tls        traefik   grafana.app.xixtu.eu          192.168.0.20   80, 443   38h
-monitoring                    prometheus-ingress-tls     traefik   prometheus.app.xixtu.eu       192.168.0.20   80, 443   38h
+monitoring                    alertmanager-ingress-tls   traefik   alertmanager.app.xixtu.eu     192.168.0.20   80, 443   39h
+monitoring                    grafana-ingress-tls        traefik   grafana.app.xixtu.eu          192.168.0.20   80, 443   39h
+monitoring                    prometheus-ingress-tls     traefik   prometheus.app.xixtu.eu       192.168.0.20   80, 443   39h
 nas                           plex-ingress               traefik   plex.app.xixtu.eu             192.168.0.20   80, 443   19h
 paheko                        paheko-ingress             traefik   paheko.app.xixtu.eu           192.168.0.20   80, 443   44h
 
@@ -387,11 +386,11 @@ paheko                        paheko-ingress             traefik   paheko.app.xi
 ==================================================================
 
   Annotations :
-{"cert-manager.io/cluster-issuer":"letsencrypt-production","cert-manager.io/private-key-algorithm":"ECDSA","cert-manager.io/private-key-size":"256","kubectl.kubernetes.io/last-applied-configuration":"{\"apiVersion\":\"networking.k8s.io/v1\",\"kind\":\"Ingress\",\"metadata\":{\"annotations\":{\"cert-manager.io/cluster-issuer\":\"letsencrypt-production\",\"cert-manager.io/private-key-algorithm\":\"ECDSA\",\"cert-manager.io/private-key-size\":\"256\",\"traefik.ingress.kubernetes.io/router.entrypoints\":\"web\",\"traefik.ingress.kubernetes.io/router.middlewares\":\"traefik-redirect-to-https@kubernetescrd\"},\"name\":\"mobilizon-ingress\",\"namespace\":\"mobilizon\"},\"spec\":{\"ingressClassName\":\"traefik\",\"rules\":[{\"host\":\"mobilizon.app.xixtu.eu\",\"http\":{\"paths\":[{\"backend\":{\"service\":{\"name\":\"mobilizon-service\",\"port\":{\"number\":80}}},\"path\":\"/\",\"pathType\":\"Prefix\"}]}}],\"tls\":[{\"hosts\":[\"mobilizon.app.xixtu.eu\"],\"secretName\":\"mobilizon-tls\"}]}}\n","traefik.ingress.kubernetes.io/router.entrypoints":"web","traefik.ingress.kubernetes.io/router.middlewares":"traefik-redirect-to-https@kubernetescrd"}
+{"cert-manager.io/cluster-issuer":"letsencrypt-production","cert-manager.io/private-key-algorithm":"ECDSA","cert-manager.io/private-key-size":"384","kubectl.kubernetes.io/last-applied-configuration":"{\"apiVersion\":\"networking.k8s.io/v1\",\"kind\":\"Ingress\",\"metadata\":{\"annotations\":{\"cert-manager.io/cluster-issuer\":\"letsencrypt-production\",\"cert-manager.io/private-key-algorithm\":\"ECDSA\",\"cert-manager.io/private-key-size\":\"384\",\"traefik.ingress.kubernetes.io/router.entrypoints\":\"web\",\"traefik.ingress.kubernetes.io/router.middlewares\":\"traefik-redirect-to-https@kubernetescrd\"},\"name\":\"mobilizon-ingress\",\"namespace\":\"mobilizon\"},\"spec\":{\"ingressClassName\":\"traefik\",\"rules\":[{\"host\":\"mobilizon.app.xixtu.eu\",\"http\":{\"paths\":[{\"backend\":{\"service\":{\"name\":\"mobilizon-service\",\"port\":{\"number\":80}}},\"path\":\"/\",\"pathType\":\"Prefix\"}]}}],\"tls\":[{\"hosts\":[\"mobilizon.app.xixtu.eu\"],\"secretName\":\"mobilizon-tls\"}]}}\n","traefik.ingress.kubernetes.io/router.entrypoints":"web","traefik.ingress.kubernetes.io/router.middlewares":"traefik-redirect-to-https@kubernetescrd"}
     cert-manager.io/cluster-issuer: letsencrypt-production
     cert-manager.io/private-key-algorithm: ECDSA
-    cert-manager.io/private-key-size: 256
-    kubectl.kubernetes.io/last-applied-configuration: {"apiVersion":"networking.k8s.io/v1","kind":"Ingress","metadata":{"annotations":{"cert-manager.io/cluster-issuer":"letsencrypt-production","cert-manager.io/private-key-algorithm":"ECDSA","cert-manager.io/private-key-size":"256","traefik.ingress.kubernetes.io/router.entrypoints":"web","traefik.ingress.kubernetes.io/router.middlewares":"traefik-redirect-to-https@kubernetescrd"},"name":"mobilizon-ingress","namespace":"mobilizon"},"spec":{"ingressClassName":"traefik","rules":[{"host":"mobilizon.app.xixtu.eu","http":{"paths":[{"backend":{"service":{"name":"mobilizon-service","port":{"number":80}}},"path":"/","pathType":"Prefix"}]}}],"tls":[{"hosts":["mobilizon.app.xixtu.eu"],"secretName":"mobilizon-tls"}]}}
+    cert-manager.io/private-key-size: 384
+    kubectl.kubernetes.io/last-applied-configuration: {"apiVersion":"networking.k8s.io/v1","kind":"Ingress","metadata":{"annotations":{"cert-manager.io/cluster-issuer":"letsencrypt-production","cert-manager.io/private-key-algorithm":"ECDSA","cert-manager.io/private-key-size":"384","traefik.ingress.kubernetes.io/router.entrypoints":"web","traefik.ingress.kubernetes.io/router.middlewares":"traefik-redirect-to-https@kubernetescrd"},"name":"mobilizon-ingress","namespace":"mobilizon"},"spec":{"ingressClassName":"traefik","rules":[{"host":"mobilizon.app.xixtu.eu","http":{"paths":[{"backend":{"service":{"name":"mobilizon-service","port":{"number":80}}},"path":"/","pathType":"Prefix"}]}}],"tls":[{"hosts":["mobilizon.app.xixtu.eu"],"secretName":"mobilizon-tls"}]}}
 
     traefik.ingress.kubernetes.io/router.entrypoints: web
     traefik.ingress.kubernetes.io/router.middlewares: traefik-redirect-to-https@kubernetescrd
@@ -405,7 +404,7 @@ paheko                        paheko-ingress             traefik   paheko.app.xi
 
   Vérifications sécurité :
 [0;32m[OK][0m cert-manager issuer: letsencrypt-production
-[1;33m[WARN][0m Clé ECDSA P-256 — recommandé : P-384 pour une sécurité renforcée
+[0;32m[OK][0m Clé ECDSA P-384
 [0;32m[OK][0m Middleware redirect-to-https présent
 
 ==================================================================
@@ -555,10 +554,10 @@ NAMESPACE                     NAME                 READY   SECRET               
 headlamp                      headlamp-tls         False   headlamp-tls         letsencrypt-production   Existing private key is not up to date for spec: [spec.privateKey.algorithm]   8d
 kwaba-kinesiologie-redirect   kwaba-redirect-tls   False   kwaba-redirect-tls   letsencrypt-production   Existing private key is not up to date for spec: [spec.privateKey.algorithm]   8d
 longhorn-system               longhorn-tls         True    longhorn-tls         letsencrypt-production   Certificate is up to date and has not expired                                  44h
-mobilizon                     mobilizon-tls        True    mobilizon-tls        letsencrypt-production   Certificate is up to date and has not expired                                  42h
-monitoring                    alertmanager-tls     True    alertmanager-tls     letsencrypt-production   Certificate is up to date and has not expired                                  38h
-monitoring                    grafana-tls          True    grafana-tls          letsencrypt-production   Certificate is up to date and has not expired                                  38h
-monitoring                    prometheus-tls       True    prometheus-tls       letsencrypt-production   Certificate is up to date and has not expired                                  38h
+mobilizon                     mobilizon-tls        False   mobilizon-tls        letsencrypt-production   Existing private key is not up to date for spec: [spec.privateKey.size]        9m5s
+monitoring                    alertmanager-tls     True    alertmanager-tls     letsencrypt-production   Certificate is up to date and has not expired                                  39h
+monitoring                    grafana-tls          True    grafana-tls          letsencrypt-production   Certificate is up to date and has not expired                                  39h
+monitoring                    prometheus-tls       True    prometheus-tls       letsencrypt-production   Certificate is up to date and has not expired                                  39h
 nas                           plex-tls             True    plex-tls             letsencrypt-production   Certificate is up to date and has not expired                                  19h
 paheko                        paheko-tls           True    paheko-tls           letsencrypt-production   Certificate is up to date and has not expired                                  44h
 
@@ -567,10 +566,10 @@ NAMESPACE                     NAME                   APPROVED   DENIED   READY  
 headlamp                      headlamp-tls-1         True                True    letsencrypt-production   system:serviceaccount:sys-letsencrypt:cert-manager   8d
 kwaba-kinesiologie-redirect   kwaba-redirect-tls-1   True                True    letsencrypt-production   system:serviceaccount:sys-letsencrypt:cert-manager   8d
 longhorn-system               longhorn-tls-1         True                True    letsencrypt-production   system:serviceaccount:sys-letsencrypt:cert-manager   44h
-mobilizon                     mobilizon-tls-1        True                True    letsencrypt-production   system:serviceaccount:sys-letsencrypt:cert-manager   42h
-monitoring                    alertmanager-tls-1     True                True    letsencrypt-production   system:serviceaccount:sys-letsencrypt:cert-manager   38h
-monitoring                    grafana-tls-1          True                True    letsencrypt-production   system:serviceaccount:sys-letsencrypt:cert-manager   38h
-monitoring                    prometheus-tls-1       True                True    letsencrypt-production   system:serviceaccount:sys-letsencrypt:cert-manager   38h
+mobilizon                     mobilizon-tls-1        True                True    letsencrypt-production   system:serviceaccount:sys-letsencrypt:cert-manager   8m53s
+monitoring                    alertmanager-tls-1     True                True    letsencrypt-production   system:serviceaccount:sys-letsencrypt:cert-manager   39h
+monitoring                    grafana-tls-1          True                True    letsencrypt-production   system:serviceaccount:sys-letsencrypt:cert-manager   39h
+monitoring                    prometheus-tls-1       True                True    letsencrypt-production   system:serviceaccount:sys-letsencrypt:cert-manager   39h
 nas                           plex-tls-1             True                True    letsencrypt-production   system:serviceaccount:sys-letsencrypt:cert-manager   19h
 paheko                        paheko-tls-1           True                True    letsencrypt-production   system:serviceaccount:sys-letsencrypt:cert-manager   44h
 
@@ -612,11 +611,12 @@ paheko                        paheko-tls-1           True                True   
     secretName: mobilizon-tls
     issuerRef: {'group': 'cert-manager.io', 'kind': 'ClusterIssuer', 'name': 'letsencrypt-production'}
     privateKey.algorithm: ECDSA
-    privateKey.size: 256
+    privateKey.size: 384
     dnsNames: ['mobilizon.app.xixtu.eu']
-    status: Ready: True (Ready)
-    notAfter: 2026-05-27T13:16:23Z
-    renewalTime: 2026-04-27T13:16:23Z
+    status: Ready: False (SecretMismatch)
+    status: Issuing: True (SecretMismatch)
+    notAfter: 2026-05-29T08:06:01Z
+    renewalTime: 2026-04-29T08:06:01Z
 
   === Certificate: alertmanager-tls (namespace: monitoring) ===
     secretName: alertmanager-tls
@@ -729,9 +729,9 @@ Recherche de tous les secrets de type kubernetes.io/tls...
   === Secret: mobilizon-tls (namespace: mobilizon) ===
 [0;36m[INFO][0m Type: Private-Key: (256 bit)
     subject=CN=mobilizon.app.xixtu.eu
-    issuer=C=US, O=Let's Encrypt, CN=E8
-    notBefore=Feb 26 13:16:24 2026 GMT
-    notAfter=May 27 13:16:23 2026 GMT
+    issuer=C=US, O=Let's Encrypt, CN=E7
+    notBefore=Feb 28 08:06:02 2026 GMT
+    notAfter=May 29 08:06:01 2026 GMT
     X509v3 Subject Alternative Name: 
         DNS:mobilizon.app.xixtu.eu
 
