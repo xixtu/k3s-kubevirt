@@ -104,7 +104,7 @@
           #   2. Activation HSTS (Strict Transport Security)
           #   3. sniStrict pour masquer le certificat par défaut Traefik
           #   4. TLS activé au niveau entrypoint websecure
-          #   5. Courbe secp384r1 uniquement (Key Exchange 100)
+          #   5. Courbes secp521r1 + secp384r1 (Key Exchange 100)
           #   6. Certificats ECDSA P-384 (sécurité 192 bits)
           #   7. Ciphers 256 bits uniquement en TLS 1.2 (AES_128 supprimé)
           #
@@ -116,7 +116,7 @@
           # TLS Options - appliqué à tous les routers HTTPS
           # TLS 1.2 : 256 bits uniquement (AES_256_GCM + CHACHA20)
           # TLS 1.3 : cipher suites non configurable (Go crypto/tls)
-          # Key Exchange : secp384r1 uniquement (192 bits, score 100)
+          # Key Exchange : secp521r1 + secp384r1 (score 100)
           # Note : TLS 1.3 clients envoyant x25519 recevront un HelloRetryRequest
           tlsOptions:
             secure-pro:
@@ -129,6 +129,7 @@
                 - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
                 - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
               curvePreferences:
+                - CurveP521
                 - CurveP384
               sniStrict: true
 
@@ -165,10 +166,21 @@
                 name: security-headers
               spec:
                 headers:
+                  # HSTS - Strict Transport Security (2 ans)
                   stsSeconds: 63072000
                   stsIncludeSubdomains: true
                   stsPreload: true
                   forceSTSHeader: true
+                  # Security headers (Khroners A+ SSL Labs config)
+                  frameDeny: true
+                  browserXssFilter: true
+                  contentTypeNosniff: true
+                  sslRedirect: true
+                  referrerPolicy: same-origin
+                  # Custom response headers
+                  customResponseHeaders:
+                    Permissions-Policy: "geolocation=(self), midi=(self), notifications=(self), push=(self), microphone=(), camera=(), magnetometer=(), gyroscope=(), speaker=(self), fullscreen=(self), payment=()"
+                    X-Permitted-Cross-Domain-Policies: "none"
             # Redirect HTTP→HTTPS (appliqué par Ingress, pas globalement)
             # Cela permet à cert-manager HTTP-01 solver de fonctionner
             # car son Ingress temporaire n'a pas ce middleware.
@@ -186,21 +198,14 @@
     # INSTALLATION TRAEFIK
     # ==========================================================
 
-    # Adopter la TLSOption secure-pro si elle existe sans labels Helm
-    # (cas d'une création manuelle antérieure)
-    - name: Vérifier si TLSOption secure-pro existe sans labels Helm
-      ansible.builtin.shell: >
-        k3s kubectl get tlsoption secure-pro -n traefik -o jsonpath='{.metadata.labels.app\.kubernetes\.io/managed-by}' 2>/dev/null || echo "NOT_FOUND"
-      register: tlsoption_managed_by
-      changed_when: false
-      failed_when: false
-      tags: [traefik, traefik-install]
-
-    - name: Supprimer TLSOption secure-pro orpheline (non gérée par Helm)
+    # Toujours supprimer la TLSOption secure-pro avant helm upgrade.
+    # Helm la recréera avec les bons labels de ownership.
+    # Cela résout l'erreur "invalid ownership metadata" qui survient
+    # quand la TLSOption existe sans labels Helm.
+    - name: Supprimer TLSOption secure-pro existante (Helm la recréera)
       ansible.builtin.command: >
         k3s kubectl delete tlsoption secure-pro -n traefik --ignore-not-found
-      when: tlsoption_managed_by.stdout != "Helm" and tlsoption_managed_by.stdout != "NOT_FOUND"
-      changed_when: true
+      changed_when: false
       tags: [traefik, traefik-install]
 
     - name: Installer / Mettre à jour Traefik via Helm
