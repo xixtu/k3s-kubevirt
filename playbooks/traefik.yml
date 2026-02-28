@@ -104,34 +104,32 @@
           #   2. Activation HSTS (Strict Transport Security)
           #   3. sniStrict pour masquer le certificat par défaut Traefik
           #   4. TLS activé au niveau entrypoint websecure
-          #   5. Préférence courbes elliptiques fortes
-          #   6. Certificats ECDSA P-384 (Key Exchange 100, sécurité 192 bits)
-          #   7. Ciphers GCM + CHACHA20 uniquement (CBC supprimé)
+          #   5. Courbe secp384r1 uniquement (Key Exchange 100)
+          #   6. Certificats ECDSA P-384 (sécurité 192 bits)
+          #   7. Ciphers 256 bits uniquement en TLS 1.2 (AES_128 supprimé)
           #
           # Non corrigeable côté Traefik :
           #   - OCSP Stapling (non supporté par Traefik v3)
           #   - DNS CAA (à configurer chez le registrar DNS : CAA 0 issue "letsencrypt.org")
           #   - Cipher Strength plafonné à 90 (TLS 1.3 impose AES_128_GCM via Go crypto/tls)
 
-          # TLS Options par défaut - appliqué à tous les routers HTTPS
-          # TLS 1.2 : ECDSA prioritaire, RSA fallback, GCM + CHACHA20 uniquement
-          # TLS 1.3 : cipher suites non configurable dans Traefik (Go crypto/tls)
+          # TLS Options - appliqué à tous les routers HTTPS
+          # TLS 1.2 : 256 bits uniquement (AES_256_GCM + CHACHA20)
+          # TLS 1.3 : cipher suites non configurable (Go crypto/tls)
+          # Key Exchange : secp384r1 uniquement (192 bits, score 100)
+          # Note : TLS 1.3 clients envoyant x25519 recevront un HelloRetryRequest
           tlsOptions:
-            default:
+            secure-pro:
               minVersion: VersionTLS12
               cipherSuites:
-                # ECDSA (prioritaire - utilisé avec certificats ECDSA P-384)
+                # 256 bits uniquement - AES_128 supprimé pour TLS 1.2
                 - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
                 - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
-                - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
-                # RSA (fallback - compatibilité)
+                # RSA fallback (256 bits uniquement)
                 - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
                 - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
-                - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
               curvePreferences:
-                - X25519
                 - CurveP384
-                - CurveP256
               sniStrict: true
 
           # Appliquer le middleware security-headers sur tout le trafic HTTPS
@@ -281,7 +279,7 @@
           - "  SSL/TLS Hardening"
           - "================================================"
           - "TLS min      : 1.2 (TLS 1.3 supporté)"
-          - "Ciphers TLS12: ECDSA+RSA, GCM+CHACHA20 (CBC supprimé)"
+          - "Ciphers TLS12: ECDSA+RSA, 256 bits uniquement (AES_128 supprimé)"
           - "SNI Strict   : Oui (certificat par défaut masqué)"
           - "HSTS         : 2 ans, includeSubdomains, preload"
           - "TLSOption    : {{ traefik_tlsoption.stdout_lines | default(['Non vérifié']) }}"
