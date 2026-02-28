@@ -1,0 +1,444 @@
+---
+# =============================================================
+# PLAYBOOK : Audit Pod Security Admission (PSA) - Profil restricted
+# =============================================================
+# Usage : ansible-playbook -i inventory/hosts.yml playbooks/audit-psa.yml
+# Tags :
+#   audit-psa → Audit complet PSA restricted
+# But : Identifier TOUS les pods qui ne respectent pas le profil
+#       PSA "restricted" AVANT d'activer l'enforcement.
+#       Permet de corriger les problèmes sans casser le cluster.
+# Ref : https://kubernetes.io/docs/concepts/security/pod-security-standards/
+# =============================================================
+
+- name: "Audit PSA - Profil restricted"
+  hosts: k3s-node-1
+  become: true
+  gather_facts: false
+
+  tasks:
+
+    # ==========================================================
+    # COLLECTE DES DONNÉES (écriture en fichiers temporaires)
+    # ==========================================================
+
+    - name: Exporter tous les pods du cluster en JSON
+      ansible.builtin.shell: k3s kubectl get pods -A -o json > /tmp/audit-psa-pods.json
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [audit-psa]
+
+    - name: Exporter les namespaces en JSON
+      ansible.builtin.shell: k3s kubectl get namespaces -o json > /tmp/audit-psa-ns.json
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [audit-psa]
+
+    # ==========================================================
+    # AUDIT PSA : ANALYSE DES NAMESPACES
+    # ==========================================================
+
+    - name: "Audit PSA - Labels actuels des namespaces"
+      ansible.builtin.shell: |
+        jq -r '
+          .items[] |
+          {
+            namespace: .metadata.name,
+            enforce: (.metadata.labels["pod-security.kubernetes.io/enforce"] // "non défini"),
+            audit: (.metadata.labels["pod-security.kubernetes.io/audit"] // "non défini"),
+            warn: (.metadata.labels["pod-security.kubernetes.io/warn"] // "non défini")
+          } |
+          "\(.namespace) | enforce=\(.enforce) | audit=\(.audit) | warn=\(.warn)"
+        ' /tmp/audit-psa-ns.json
+      register: ns_psa_labels
+      changed_when: false
+      tags: [audit-psa]
+
+    - name: Afficher les labels PSA des namespaces
+      ansible.builtin.debug:
+        msg: "{{ ['', '══════════════════════════════════════════════════════',
+                  '  LABELS PSA ACTUELS DES NAMESPACES',
+                  '══════════════════════════════════════════════════════'] +
+                 ns_psa_labels.stdout_lines +
+                 ['══════════════════════════════════════════════════════', ''] }}"
+      tags: [audit-psa]
+
+    # ==========================================================
+    # AUDIT PSA : VIOLATIONS DU PROFIL RESTRICTED
+    # ==========================================================
+    # Critères PSA restricted (Kubernetes 1.25+) :
+    #   1. runAsNonRoot: true (pod ou container level)
+    #   2. runAsUser != 0 (si défini)
+    #   3. allowPrivilegeEscalation: false
+    #   4. privileged: false (ou absent)
+    #   5. capabilities.drop contient ALL
+    #   6. capabilities.add ne contient que NET_BIND_SERVICE
+    #   7. seccompProfile.type = RuntimeDefault ou Localhost
+    #   8. Pas de hostNetwork, hostPID, hostIPC
+    #   9. Pas de volumes hostPath
+    # ==========================================================
+
+    - name: "Audit PSA - Écrire le script d'analyse jq"
+      ansible.builtin.copy:
+        dest: /tmp/audit-psa-check.jq
+        mode: '0644'
+        content: |
+          # Script jq : Audit PSA restricted profile
+          # Analyse chaque pod et ses containers pour détecter les violations
+
+          def check_container($pod_ns; $pod_name; $pod_sc; $container_type):
+            .name as $cname |
+            .securityContext // {} |
+
+            # --- runAsNonRoot ---
+            (
+              if .runAsNonRoot == true then null
+              elif ($pod_sc.runAsNonRoot // false) == true then null
+              else "\($pod_ns)/\($pod_name) [\($container_type): \($cname)] runAsNonRoot non défini ou false"
+              end
+            ),
+
+            # --- runAsUser == 0 ---
+            (
+              if .runAsUser == 0 then
+                "\($pod_ns)/\($pod_name) [\($container_type): \($cname)] runAsUser=0 (ROOT explicite)"
+              elif ($pod_sc.runAsUser // -1) == 0 then
+                "\($pod_ns)/\($pod_name) [\($container_type): \($cname)] pod.runAsUser=0 (ROOT explicite)"
+              else null
+              end
+            ),
+
+            # --- allowPrivilegeEscalation ---
+            (
+              if .allowPrivilegeEscalation == false then null
+              else "\($pod_ns)/\($pod_name) [\($container_type): \($cname)] allowPrivilegeEscalation non défini ou true"
+              end
+            ),
+
+            # --- privileged ---
+            (
+              if .privileged == true then
+                "\($pod_ns)/\($pod_name) [\($container_type): \($cname)] PRIVILEGED=true (critique!)"
+              else null
+              end
+            ),
+
+            # --- capabilities.drop ALL ---
+            (
+              if (.capabilities.drop // []) | map(ascii_downcase) | index("all") then null
+              else "\($pod_ns)/\($pod_name) [\($container_type): \($cname)] capabilities.drop ne contient pas ALL"
+              end
+            ),
+
+            # --- capabilities.add (seul NET_BIND_SERVICE autorisé) ---
+            (
+              (.capabilities.add // []) |
+              map(select(ascii_downcase != "net_bind_service")) |
+              if length == 0 then null
+              else "\($pod_ns)/\($pod_name) [\($container_type): \($cname)] capabilities.add non autorisées: \(join(", "))"
+              end
+            ),
+
+            # --- seccompProfile ---
+            (
+              ((.seccompProfile.type // null) // ($pod_sc.seccompProfile.type // null)) as $seccomp |
+              if $seccomp == "RuntimeDefault" or $seccomp == "Localhost" then null
+              else "\($pod_ns)/\($pod_name) [\($container_type): \($cname)] seccompProfile absent ou invalide (actuel: \($seccomp // "non défini"))"
+              end
+            )
+          ;
+
+          .items[] |
+          .metadata.namespace as $ns |
+          .metadata.name as $pname |
+          .spec as $spec |
+          ($spec.securityContext // {}) as $pod_sc |
+
+          # --- hostNetwork / hostPID / hostIPC ---
+          (if $spec.hostNetwork == true then
+            "\($ns)/\($pname) [pod] hostNetwork=true"
+          else null end),
+
+          (if $spec.hostPID == true then
+            "\($ns)/\($pname) [pod] hostPID=true"
+          else null end),
+
+          (if $spec.hostIPC == true then
+            "\($ns)/\($pname) [pod] hostIPC=true"
+          else null end),
+
+          # --- hostPath volumes ---
+          (($spec.volumes // []) | map(select(.hostPath != null)) |
+          if length > 0 then
+            "\($ns)/\($pname) [pod] volumes hostPath: \(map(.name) | join(", "))"
+          else null end),
+
+          # --- Containers ---
+          (($spec.containers // [])[] | check_container($ns; $pname; $pod_sc; "container")),
+
+          # --- Init containers ---
+          (($spec.initContainers // [])[] | check_container($ns; $pname; $pod_sc; "init"))
+
+          | select(. != null)
+      tags: [audit-psa]
+
+    - name: "Audit PSA - Exécuter l'analyse des violations"
+      ansible.builtin.shell: jq -r -f /tmp/audit-psa-check.jq /tmp/audit-psa-pods.json | sort
+      register: psa_violations_raw
+      changed_when: false
+      tags: [audit-psa]
+
+    # ==========================================================
+    # AUDIT PSA : RAPPORT PAR NAMESPACE
+    # ==========================================================
+
+    - name: "Audit PSA - Générer le rapport par namespace"
+      ansible.builtin.shell: |
+        jq -r -f /tmp/audit-psa-check.jq /tmp/audit-psa-pods.json | sort | awk '
+        BEGIN {
+          current_ns = ""
+          ns_count = 0
+          total = 0
+        }
+        {
+          total++
+          # Extraire le namespace (tout avant le premier /)
+          match($0, /^([^/]+)\//, arr)
+          ns = arr[1]
+          if (ns != current_ns) {
+            if (current_ns != "") {
+              printf "  └─ %d violation(s) dans %s\n\n", ns_count, current_ns
+            }
+            current_ns = ns
+            ns_count = 0
+            printf "  ┌─ Namespace: %s\n", ns
+          }
+          ns_count++
+          # Enlever le namespace du début pour afficher proprement
+          sub(/^[^/]+\//, "", $0)
+          printf "  │  ⚠ %s\n", $0
+        }
+        END {
+          if (current_ns != "") {
+            printf "  └─ %d violation(s) dans %s\n\n", ns_count, current_ns
+          }
+          printf "══════════════════════════════════════════════════════\n"
+          printf "  TOTAL : %d violation(s) détectée(s)\n", total
+          printf "══════════════════════════════════════════════════════\n"
+        }'
+      register: psa_report
+      changed_when: false
+      tags: [audit-psa]
+
+    - name: "RAPPORT PSA - Violations du profil restricted"
+      ansible.builtin.debug:
+        msg: "{{ ['',
+                  '══════════════════════════════════════════════════════',
+                  '  AUDIT PSA : VIOLATIONS DU PROFIL RESTRICTED',
+                  '══════════════════════════════════════════════════════',
+                  '  Profil: restricted (le plus sécurisé)',
+                  '  Scope : tous les pods de tous les namespaces',
+                  '══════════════════════════════════════════════════════',
+                  ''] +
+                 psa_report.stdout_lines +
+                 [''] }}"
+      tags: [audit-psa]
+
+    # ==========================================================
+    # AUDIT PSA : RÉSUMÉ PAR NAMESPACE (compteurs)
+    # ==========================================================
+
+    - name: "Audit PSA - Résumé par namespace"
+      ansible.builtin.shell: |
+        jq -r -f /tmp/audit-psa-check.jq /tmp/audit-psa-pods.json | \
+        grep -oP '^[^/]+' | sort | uniq -c | sort -rn | \
+        awk '{printf "  %-30s %d violation(s)\n", $2, $1}'
+      register: psa_summary
+      changed_when: false
+      tags: [audit-psa]
+
+    - name: "RÉSUMÉ - Violations par namespace"
+      ansible.builtin.debug:
+        msg: "{{ ['',
+                  '══════════════════════════════════════════════════════',
+                  '  RÉSUMÉ PAR NAMESPACE',
+                  '══════════════════════════════════════════════════════'] +
+                 psa_summary.stdout_lines +
+                 ['══════════════════════════════════════════════════════', ''] }}"
+      tags: [audit-psa]
+
+    # ==========================================================
+    # AUDIT PSA : PODS PRIVILÉGIÉS (CRITIQUE)
+    # ==========================================================
+
+    - name: "Audit PSA - Pods privilégiés (risque critique)"
+      ansible.builtin.shell: |
+        jq -r '
+          .items[] |
+          .metadata.namespace as $ns |
+          .metadata.name as $pname |
+          .spec as $spec |
+          (
+            # Containers privilégiés
+            (($spec.containers // [])[] |
+              select(.securityContext.privileged == true) |
+              "\($ns)/\($pname) container=\(.name) PRIVILEGED"),
+            # hostNetwork
+            (select($spec.hostNetwork == true) |
+              "\($ns)/\($pname) hostNetwork=true"),
+            # hostPID
+            (select($spec.hostPID == true) |
+              "\($ns)/\($pname) hostPID=true"),
+            # runAsUser=0
+            (($spec.containers // [])[] |
+              select(.securityContext.runAsUser == 0 or ($spec.securityContext.runAsUser // -1) == 0) |
+              "\($ns)/\($pname) container=\(.name) runAsUser=0")
+          )
+        ' /tmp/audit-psa-pods.json | sort
+      register: psa_critical
+      changed_when: false
+      tags: [audit-psa]
+
+    - name: "CRITIQUE - Pods à risque élevé"
+      ansible.builtin.debug:
+        msg: "{{ ['',
+                  '══════════════════════════════════════════════════════',
+                  '  PODS À RISQUE ÉLEVÉ (privileged/host/root)',
+                  '══════════════════════════════════════════════════════'] +
+                 (psa_critical.stdout_lines if psa_critical.stdout_lines | length > 0
+                  else ['  Aucun pod à risque critique détecté.']) +
+                 ['══════════════════════════════════════════════════════', ''] }}"
+      tags: [audit-psa]
+
+    # ==========================================================
+    # AUDIT PSA : IMAGES CONCERNÉES (pour savoir quoi corriger)
+    # ==========================================================
+
+    - name: "Audit PSA - Pods non conformes avec leurs images"
+      ansible.builtin.shell: |
+        jq -r '
+          [.items[] |
+          .metadata.namespace as $ns |
+          .metadata.name as $pname |
+          (.metadata.ownerReferences // [] | map(select(.controller == true)) | first // null) as $owner |
+          .spec as $spec |
+          ($spec.securityContext // {}) as $pod_sc |
+          ($spec.containers // [])[] |
+          . as $c |
+          ($c.securityContext // {}) as $csc |
+
+          # Détecter si le container a au moins une violation
+          select(
+            ($csc.runAsNonRoot != true and ($pod_sc.runAsNonRoot // false) != true) or
+            ($csc.allowPrivilegeEscalation != false) or
+            ($csc.privileged == true) or
+            (($csc.capabilities.drop // []) | map(ascii_downcase) | index("all") | not) or
+            (
+              (($csc.seccompProfile.type // null) // ($pod_sc.seccompProfile.type // null)) as $sp |
+              ($sp != "RuntimeDefault" and $sp != "Localhost")
+            )
+          ) |
+          {
+            namespace: $ns,
+            pod: $pname,
+            container: $c.name,
+            image: $c.image,
+            controller: (if $owner then "\($owner.kind)/\($owner.name)" else "standalone" end)
+          }] |
+          group_by(.namespace)[] |
+          .[0].namespace as $gns |
+          "Namespace: \($gns)",
+          (group_by(.controller)[] |
+            .[0].controller as $ctrl |
+            "  Controller: \($ctrl)",
+            (unique_by(.image)[] |
+              "    Image: \(.image)"
+            )
+          ),
+          ""
+        ' /tmp/audit-psa-pods.json
+      register: psa_images
+      changed_when: false
+      tags: [audit-psa]
+
+    - name: "IMAGES - Pods non conformes par controller"
+      ansible.builtin.debug:
+        msg: "{{ ['',
+                  '══════════════════════════════════════════════════════',
+                  '  IMAGES DES PODS NON CONFORMES (par controller)',
+                  '══════════════════════════════════════════════════════'] +
+                 psa_images.stdout_lines +
+                 ['══════════════════════════════════════════════════════', ''] }}"
+      tags: [audit-psa]
+
+    # ==========================================================
+    # AUDIT PSA : EXEMPTIONS RECOMMANDÉES
+    # ==========================================================
+
+    - name: "Audit PSA - Recommandations d'exemptions"
+      ansible.builtin.shell: |
+        jq -r -f /tmp/audit-psa-check.jq /tmp/audit-psa-pods.json | \
+        grep -oP '^[^/]+' | sort -u | while read ns; do
+          case "$ns" in
+            kube-system)
+              echo "  $ns → EXEMPTER (composants système K3s, ne pas toucher)"
+              ;;
+            longhorn-system)
+              echo "  $ns → EXEMPTER (Longhorn a besoin de privileged + hostPath pour le stockage)"
+              ;;
+            metallb-system)
+              echo "  $ns → À VÉRIFIER (MetalLB speaker a besoin de NET_RAW, peut nécessiter baseline)"
+              ;;
+            traefik)
+              echo "  $ns → CORRIGER (Helm values: securityContext configurable)"
+              ;;
+            monitoring)
+              echo "  $ns → CORRIGER (Helm values: securityContext configurable pour prometheus/grafana)"
+              ;;
+            sys-letsencrypt)
+              echo "  $ns → CORRIGER (cert-manager Helm values: securityContext configurable)"
+              ;;
+            headlamp)
+              echo "  $ns → CORRIGER (Helm values: securityContext configurable)"
+              ;;
+            paheko|mobilizon|kwaba-kinesiologie-redirect|adguard)
+              echo "  $ns → CORRIGER (manifestes applicatifs à modifier)"
+              ;;
+            *)
+              echo "  $ns → À ANALYSER (vérifier manuellement)"
+              ;;
+          esac
+        done
+      register: psa_recommendations
+      changed_when: false
+      tags: [audit-psa]
+
+    - name: "RECOMMANDATIONS - Actions par namespace"
+      ansible.builtin.debug:
+        msg: "{{ ['',
+                  '══════════════════════════════════════════════════════',
+                  '  RECOMMANDATIONS PAR NAMESPACE',
+                  '══════════════════════════════════════════════════════',
+                  '  EXEMPTER = ajouter dans exemptions PSA (ne pas corriger)',
+                  '  CORRIGER = modifier les securityContext des pods',
+                  '  BASELINE = appliquer le profil baseline (moins strict)',
+                  '══════════════════════════════════════════════════════'] +
+                 psa_recommendations.stdout_lines +
+                 ['══════════════════════════════════════════════════════', ''] }}"
+      tags: [audit-psa]
+
+    # ==========================================================
+    # NETTOYAGE
+    # ==========================================================
+
+    - name: Supprimer les fichiers temporaires d'audit
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/audit-psa-check.jq
+        - /tmp/audit-psa-pods.json
+        - /tmp/audit-psa-ns.json
+      tags: [audit-psa]
