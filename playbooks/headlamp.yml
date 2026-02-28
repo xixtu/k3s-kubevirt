@@ -29,14 +29,14 @@
       environment:
         KUBECONFIG: /etc/rancher/k3s/k3s.yaml
       changed_when: false
-      tags: [headlamp, headlamp-install]
+      tags: [headlamp, headlamp-install, letsencrypt-tls]
 
     - name: Mettre à jour les repos Helm
       ansible.builtin.command: helm repo update
       environment:
         KUBECONFIG: /etc/rancher/k3s/k3s.yaml
       changed_when: false
-      tags: [headlamp, headlamp-install]
+      tags: [headlamp, headlamp-install, letsencrypt-tls]
 
     - name: Vérifier si Headlamp est déjà installé
       ansible.builtin.command: helm status headlamp -n headlamp
@@ -45,7 +45,7 @@
       register: headlamp_helm_status
       failed_when: false
       changed_when: false
-      tags: [headlamp, headlamp-install]
+      tags: [headlamp, headlamp-install, letsencrypt-tls]
 
     - name: Créer le namespace headlamp (si absent)
       ansible.builtin.command: k3s kubectl create namespace headlamp
@@ -54,7 +54,7 @@
       register: ns_create
       failed_when: ns_create.rc != 0 and 'already exists' not in ns_create.stderr
       changed_when: ns_create.rc == 0
-      tags: [headlamp, headlamp-install]
+      tags: [headlamp, headlamp-install, letsencrypt-tls]
 
     # ==========================================================
     # FICHIER DE VALEURS HELM
@@ -103,7 +103,7 @@
             limits:
               cpu: "200m"
               memory: "256Mi"
-      tags: [headlamp, headlamp-install]
+      tags: [headlamp, headlamp-install, letsencrypt-tls]
 
     # ==========================================================
     # INSTALLATION HEADLAMP
@@ -120,13 +120,13 @@
         --timeout 5m
       environment:
         KUBECONFIG: /etc/rancher/k3s/k3s.yaml
-      tags: [headlamp, headlamp-install]
+      tags: [headlamp, headlamp-install, letsencrypt-tls]
 
     - name: Supprimer le fichier de valeurs temporaire
       ansible.builtin.file:
         path: /tmp/headlamp-values.yml
         state: absent
-      tags: [headlamp, headlamp-install]
+      tags: [headlamp, headlamp-install, letsencrypt-tls]
 
     # ==========================================================
     # RENOUVELLEMENT CERTIFICAT ECDSA (si ancien certificat RSA)
@@ -141,7 +141,7 @@
       register: cert_key_type
       changed_when: false
       failed_when: false
-      tags: [headlamp, headlamp-install]
+      tags: [headlamp, headlamp-install, letsencrypt-tls]
 
     - name: Supprimer l'ancien certificat RSA pour forcer le renouvellement ECDSA
       ansible.builtin.command: >
@@ -150,7 +150,7 @@
         KUBECONFIG: /etc/rancher/k3s/k3s.yaml
       when: cert_key_type.stdout is defined and 'ECDSA' not in cert_key_type.stdout
       changed_when: true
-      tags: [headlamp, headlamp-install]
+      tags: [headlamp, headlamp-install, letsencrypt-tls]
 
     - name: Supprimer l'ancien secret TLS RSA
       ansible.builtin.command: >
@@ -159,7 +159,7 @@
         KUBECONFIG: /etc/rancher/k3s/k3s.yaml
       when: cert_key_type.stdout is defined and 'ECDSA' not in cert_key_type.stdout
       changed_when: true
-      tags: [headlamp, headlamp-install]
+      tags: [headlamp, headlamp-install, letsencrypt-tls]
 
     # ==========================================================
     # INGRESSROUTE HTTPS (Traefik CRD - router websecure explicite)

@@ -131,6 +131,7 @@
                           name: "{{ app_name }}-service"
                           port:
                             number: 80
+      tags: [kwaba, kwaba-install, letsencrypt-tls]
 
     - name: Vérifier le type de clé du certificat kwaba actuel
       ansible.builtin.shell: >
@@ -142,6 +143,7 @@
       register: kwaba_cert_key_type
       changed_when: false
       failed_when: false
+      tags: [kwaba, kwaba-install, letsencrypt-tls]
 
     - name: Supprimer l'ancien certificat RSA kwaba pour renouvellement ECDSA
       ansible.builtin.command: >
@@ -151,6 +153,7 @@
         KUBECONFIG: "{{ k3s_config }}"
       when: kwaba_cert_key_type.stdout is defined and 'ECDSA' not in kwaba_cert_key_type.stdout
       changed_when: true
+      tags: [kwaba, kwaba-install, letsencrypt-tls]
 
     - name: Supprimer l'ancien secret TLS RSA kwaba
       ansible.builtin.command: >
@@ -160,6 +163,7 @@
         KUBECONFIG: "{{ k3s_config }}"
       when: kwaba_cert_key_type.stdout is defined and 'ECDSA' not in kwaba_cert_key_type.stdout
       changed_when: true
+      tags: [kwaba, kwaba-install, letsencrypt-tls]
 
     - name: Créer l'IngressRoute HTTPS (Traefik CRD - router websecure explicite)
       kubernetes.core.k8s:
@@ -182,3 +186,4 @@
                     port: 80
             tls:
               secretName: "{{ app_name }}-tls"
+      tags: [kwaba, kwaba-install, letsencrypt-tls]
