@@ -72,6 +72,8 @@
               app: {{ app_name }}
           spec:
             replicas: 1
+            strategy:
+              type: Recreate
             selector:
               matchLabels:
                 app: {{ app_name }}
@@ -81,10 +83,7 @@
                   app: {{ app_name }}
               spec:
                 securityContext:
-                  runAsUser: 33
-                  runAsGroup: 33
                   fsGroup: 33
-                  runAsNonRoot: true
                   seccompProfile:
                     type: RuntimeDefault
                 containers:
