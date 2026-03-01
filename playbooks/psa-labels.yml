@@ -1,0 +1,151 @@
+---
+# =============================================================
+# PLAYBOOK : Pod Security Admission (PSA) via labels namespace
+# =============================================================
+# Usage : ansible-playbook -i inventory/hosts.yml playbooks/psa-labels.yml
+# Tags :
+#   psa-labels   → Appliquer les labels PSA sur tous les namespaces
+#   psa-verify   → Vérifier les labels actuels
+#
+# Approche : labels sur chaque namespace (pas de config centralisée)
+# Ref : https://kubernetes.io/docs/concepts/security/pod-security-admission/
+#
+# Profils PSA :
+#   privileged  → aucune restriction (défaut Kubernetes)
+#   baseline    → empêche les escalades connues (privileged, hostPath, hostNetwork...)
+#   restricted  → hardening complet (runAsNonRoot, seccomp, drop ALL, etc.)
+#
+# Modes PSA :
+#   enforce → bloque les pods non conformes
+#   audit   → log les violations (ne bloque pas)
+#   warn    → affiche un warning (ne bloque pas)
+# =============================================================
+
+- name: "PSA - Labels Pod Security Admission sur les namespaces"
+  hosts: k3s-node-1
+  become: true
+  gather_facts: false
+
+  vars:
+    # Namespaces conformes au profil restricted
+    # (runAsNonRoot, seccomp, drop ALL, allowPrivEsc=false)
+    psa_restricted:
+      - mobilizon
+      - kwaba-kinesiologie-redirect
+      - headlamp
+
+    # Namespaces avec enforce=baseline + warn=restricted
+    # (images nécessitant root mais avec du hardening partiel)
+    psa_baseline_warn_restricted:
+      - paheko
+      - adguardhome
+      - monitoring
+
+    # Namespaces avec enforce=baseline uniquement
+    # (peu ou pas de hardening, images third-party)
+    psa_baseline:
+      - nas
+
+    # Namespaces système à ne PAS toucher
+    # (kube-system, longhorn-system, metallb-system, default, etc.)
+    # → restent en "privileged" (défaut K8s, pas besoin de label)
+
+  tasks:
+
+    # ==========================================================
+    # PROFIL RESTRICTED (enforce + audit + warn)
+    # ==========================================================
+
+    - name: "PSA restricted — Appliquer les labels"
+      ansible.builtin.command: >
+        k3s kubectl label namespace {{ item }}
+        pod-security.kubernetes.io/enforce=restricted
+        pod-security.kubernetes.io/enforce-version=latest
+        pod-security.kubernetes.io/audit=restricted
+        pod-security.kubernetes.io/audit-version=latest
+        pod-security.kubernetes.io/warn=restricted
+        pod-security.kubernetes.io/warn-version=latest
+        --overwrite
+      loop: "{{ psa_restricted }}"
+      changed_when: true
+      tags: [psa-labels]
+
+    # ==========================================================
+    # PROFIL BASELINE + WARN RESTRICTED
+    # (enforce baseline, mais warn/audit restricted pour voir les écarts)
+    # ==========================================================
+
+    - name: "PSA baseline+warn — Appliquer les labels"
+      ansible.builtin.command: >
+        k3s kubectl label namespace {{ item }}
+        pod-security.kubernetes.io/enforce=baseline
+        pod-security.kubernetes.io/enforce-version=latest
+        pod-security.kubernetes.io/audit=restricted
+        pod-security.kubernetes.io/audit-version=latest
+        pod-security.kubernetes.io/warn=restricted
+        pod-security.kubernetes.io/warn-version=latest
+        --overwrite
+      loop: "{{ psa_baseline_warn_restricted }}"
+      changed_when: true
+      tags: [psa-labels]
+
+    # ==========================================================
+    # PROFIL BASELINE (enforce + audit + warn)
+    # ==========================================================
+
+    - name: "PSA baseline — Appliquer les labels"
+      ansible.builtin.command: >
+        k3s kubectl label namespace {{ item }}
+        pod-security.kubernetes.io/enforce=baseline
+        pod-security.kubernetes.io/enforce-version=latest
+        pod-security.kubernetes.io/audit=baseline
+        pod-security.kubernetes.io/audit-version=latest
+        pod-security.kubernetes.io/warn=restricted
+        pod-security.kubernetes.io/warn-version=latest
+        --overwrite
+      loop: "{{ psa_baseline }}"
+      changed_when: true
+      tags: [psa-labels]
+
+    # ==========================================================
+    # VÉRIFICATION
+    # ==========================================================
+
+    - name: "PSA — Lister les labels de tous les namespaces"
+      ansible.builtin.shell: |
+        k3s kubectl get namespaces -o json | python3 -c "
+        import json, sys
+        data = json.load(sys.stdin)
+        print(f'{'Namespace':40s} {'enforce':12s} {'audit':12s} {'warn':12s}')
+        print('-' * 76)
+        for ns in sorted(data['items'], key=lambda x: x['metadata']['name']):
+            name = ns['metadata']['name']
+            labels = ns['metadata'].get('labels', {})
+            enforce = labels.get('pod-security.kubernetes.io/enforce', '-')
+            audit = labels.get('pod-security.kubernetes.io/audit', '-')
+            warn = labels.get('pod-security.kubernetes.io/warn', '-')
+            print(f'{name:40s} {enforce:12s} {audit:12s} {warn:12s}')
+        "
+      register: psa_labels_check
+      changed_when: false
+      tags: [psa-labels, psa-verify]
+
+    - name: "PSA — Résumé"
+      ansible.builtin.debug:
+        msg: "{{ ['',
+                  '══════════════════════════════════════════════════════════════════════════════',
+                  '  PSA LABELS — État des namespaces',
+                  '══════════════════════════════════════════════════════════════════════════════'] +
+                 psa_labels_check.stdout_lines +
+                 ['══════════════════════════════════════════════════════════════════════════════',
+                  '',
+                  '  Légende :',
+                  '    restricted = hardening complet (runAsNonRoot, seccomp, drop ALL...)',
+                  '    baseline   = empêche les escalades connues (privileged, hostPath...)',
+                  '    -          = privileged par défaut (aucune restriction PSA)',
+                  '',
+                  '  Les namespaces avec enforce=baseline + warn=restricted afficheront',
+                  '  des warnings pour les violations restricted sans bloquer les pods.',
+                  '  Cela permet de progresser vers restricted sans casser les apps.',
+                  '══════════════════════════════════════════════════════════════════════════════'] }}"
+      tags: [psa-labels, psa-verify]
