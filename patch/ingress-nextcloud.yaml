@@ -1,0 +1,31 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-production
+    cert-manager.io/private-key-algorithm: ECDSA
+    cert-manager.io/private-key-size: "384"
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+    traefik.ingress.kubernetes.io/router.middlewares: traefik-redirect-to-https@kubernetescrd
+    traefik.ingress.kubernetes.io/router.tls: "true"
+    traefik.ingress.kubernetes.io/router.tls.certresolver: letsencrypt-production
+  name: nextcloud-ingress
+  namespace: nextcloud
+spec:
+  ingressClassName: traefik
+  rules:
+  - host: nextcloud.app.xixtu.eu
+    http:
+      paths:
+      - backend:
+          service:
+            name: nextcloud-service
+            port:
+              number: 80
+        path: /
+        pathType: Prefix
+  tls:
+  - hosts:
+    - nextcloud.app.xixtu.eu
+    secretName: nextcloud-tls
+

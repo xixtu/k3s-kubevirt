@@ -85,6 +85,76 @@ longhorn_storage_classes:
     reclaim_policy: Delete
     fs_type: ext4
 
+# --- NAS Configuration (Option C Hybride + Active Directory) ---
+# Architecture :
+#   Longhorn PVC (RWX - longhorn-slow)
+#   ├── Samba AD Member (RW) → SMB shares auth AD pour postes + Nextcloud
+#   └── Plex (RO) → Streaming média direct depuis le volume
+#
+# Flux :
+#   Postes AD (corp.lcl) ──SMB/Kerberos──► Samba Pod ──écrit──► Volume Longhorn
+#   Nextcloud             ──SMB (svc AD)──► Samba Pod ──écrit──►       │
+#   Plex                  ◄──lit directement (read-only)───────────────┘
+nas_config:
+  storage_class: "longhorn-slow"
+  nas_storage_size: "2Ti"                # ⚠ Ajuster selon besoin (~10.5 TB dispo avec replica:2)
+  plex_config_storage_class: "longhorn-fast"
+  plex_config_storage_size: "20Gi"       # Config Plex + base de données métadonnées
+  samba_ip: "192.168.0.30"              # IP fixe MetalLB pour Samba (\\192.168.0.30\media)
+  plex_ip: "192.168.0.31"              # IP fixe MetalLB pour Plex (http://192.168.0.31:32400)
+  plex_claim_token: ""                  # Obtenir sur https://plex.tv/claim (optionnel, config via UI)
+  # --- Active Directory (corp.lcl) ---
+  ad_domain: "corp.lcl"
+  ad_realm: "CORP.LCL"
+  ad_workgroup: "CORP"
+  ad_dc_hostname: "dc1.corp.lcl"
+  ad_dc_ip: "192.168.0.100"
+  ad_join_user: "svc-adjoin"            # Compte de service pour jonction AD
+  ad_join_password: "ch4nge-me-ad"       # ⚠ ansible-vault en production
+  # --- Shares avec groupes AD ---
+  shares:
+    - name: media
+      path: /nas/media
+      comment: "Fichiers media (vidéos, musique, photos)"
+      ad_group: "NAS-media-rw"
+    - name: documents
+      path: /nas/documents
+      comment: "Documents partagés"
+      ad_group: "NAS-documents-rw"
+    - name: shared
+      path: /nas/shared
+      comment: "Partage commun"
+      ad_group: "NAS-shared-rw"
+
+# --- Nextcloud Configuration ---
+# Se connecte au NAS via plugin "External Storage: SMB/CIFS"
+# Host SMB interne : samba-service.nas.svc.cluster.local
+# Auth : utiliser un compte de service AD (ex: svc-nextcloud@corp.lcl)
+nextcloud_config:
+  admin_user: "admin"
+  admin_password: "ch4nge-me-nextcloud"   # ⚠ Changer en production (ou ansible-vault)
+  db_name: "nextcloud"
+  db_user: "nextcloud"
+  db_password: "nextcloud-db-s3cret"      # ⚠ Changer en production (ou ansible-vault)
+  storage_class: "longhorn-fast"
+  db_storage_size: "5Gi"
+  data_storage_size: "50Gi"               # Données app, cache, thumbnails (fichiers sur NAS via SMB)
+  # LDAP / Active Directory
+  ldap_bind_user: "s_next_ad"
+  ldap_bind_password: "ffofkOPJPO+236f"   # ⚠ Changer en production (ou ansible-vault)
+
+# --- Collabora Online Configuration ---
+collabora_config:
+  admin_user: "admin"
+  admin_password: "ch4nge-me-collabora"   # ⚠ Changer en production (ou ansible-vault)
+
+# --- External Storage SMB (montage global Nextcloud) ---
+external_storage:
+  smb_host: "multinas.corp.lcl"            # NAS cible (hostname ou IP)
+  smb_share: "documents"                   # Nom du partage SMB
+  smb_domain: "CORP"                       # Domaine NetBIOS pour auth SMB
+  mount_point: "Documents"                 # Point de montage dans Nextcloud
+
 # --- Domaines et certificats ---
 cluster_domain: "cluster.local"
 letsencrypt_email: "admin@xixtu.eu"    # ⚠ Mettre l'email réel du compte Let's Encrypt
@@ -99,6 +169,9 @@ external_domains:
   grafana: "grafana.app.xixtu.eu"
   prometheus: "prometheus.app.xixtu.eu"
   alertmanager: "alertmanager.app.xixtu.eu"
+  nextcloud: "nextcloud.app.xixtu.eu"
+  collabora: "collabora.app.xixtu.eu"
+  plex: "plex.app.xixtu.eu"
 
 # --- Monitoring ---
 monitoring_config:
