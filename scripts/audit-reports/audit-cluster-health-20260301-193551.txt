@@ -1,0 +1,459 @@
+==============================================================
+  AUDIT SANTÉ CLUSTER K3S — Post-Hardening
+  2026-03-01 19:35:51 CET
+==============================================================
+
+==================================================================
+  [1m0. CONNEXION AU CLUSTER[0m
+==================================================================
+  [0;32m[OK][0m   Connexion au cluster OK
+  [0;36m[INFO][0m KUBECONFIG : /etc/rancher/k3s/k3s.yaml
+  [0;36m[INFO][0m Date audit : 2026-03-01 19:35:51 CET
+  [0;36m[INFO][0m Version serveur : Server Version: v1.30.0+k3s1
+
+==================================================================
+  [1m1. SANTÉ DES NŒUDS[0m
+==================================================================
+
+NAME         STATUS   ROLES                       AGE   VERSION        INTERNAL-IP    EXTERNAL-IP   OS-IMAGE       KERNEL-VERSION      CONTAINER-RUNTIME
+k3s-node-1   Ready    control-plane,etcd,master   9d    v1.30.0+k3s1   192.168.0.11   <none>        Ubuntu 25.10   6.17.0-14-generic   containerd://1.7.15-k3s1
+k3s-node-2   Ready    control-plane,etcd,master   9d    v1.30.0+k3s1   192.168.0.12   <none>        Ubuntu 25.10   6.17.0-14-generic   containerd://1.7.15-k3s1
+k3s-node-3   Ready    control-plane,etcd,master   9d    v1.30.0+k3s1   192.168.0.13   <none>        Ubuntu 25.10   6.17.0-14-generic   containerd://1.7.15-k3s1
+
+  [0;32m[OK][0m   Tous les nœuds sont Ready
+
+  [0;36m[INFO][0m Conditions des nœuds :
+
+  [0;36m[INFO][0m Utilisation des ressources :
+NAME         CPU(cores)   CPU%   MEMORY(bytes)   MEMORY%   
+k3s-node-1   661m         2%     6767Mi          5%        
+k3s-node-2   741m         3%     4951Mi          3%        
+k3s-node-3   724m         3%     4081Mi          2%        
+
+==================================================================
+  [1m2. PODS — État global[0m
+==================================================================
+
+  [0;36m[INFO][0m Résumé par namespace :
+    adguardhome Running: 1
+    headlamp Running: 1
+    kube-system Running: 3
+    kwaba-kinesiologie-redirect Running: 1
+    longhorn-system Running: 29
+    metallb-system Running: 4
+    mobilizon Running: 2
+    monitoring Running: 8
+    nas Running: 2
+    paheko Running: 1
+    sys-letsencrypt Running: 3
+    traefik Running: 1
+
+  [0;32m[OK][0m   Tous les pods sont Running ou Completed
+
+  [0;32m[OK][0m   Aucun pod en CrashLoopBackOff
+
+  [0;32m[OK][0m   Aucun pod en Pending
+
+  [0;36m[INFO][0m Pods avec restarts > 5 :
+  [1;33m[WARN][0m Pods avec beaucoup de restarts :
+    metallb-system/metallb-speaker-dq5cx restarts=242
+
+  [0;32m[OK][0m   Tous les containers running sont ready
+
+==================================================================
+  [1m3. DÉPLOIEMENTS — Rollout status[0m
+==================================================================
+
+NAMESPACE                     NAME                                       READY   UP-TO-DATE   AVAILABLE   AGE     CONTAINERS                                            IMAGES                                                                                                     SELECTOR
+adguardhome                   adguardhome                                1/1     1            1           3d7h    adguardhome,adguard-exporter                          adguard/adguardhome:latest,ebrianne/adguard-exporter:latest                                                app=adguardhome
+headlamp                      headlamp                                   1/1     1            1           9d      headlamp                                              ghcr.io/headlamp-k8s/headlamp:v0.40.0                                                                      app.kubernetes.io/instance=headlamp,app.kubernetes.io/name=headlamp
+kube-system                   coredns                                    1/1     1            1           10d     coredns                                               rancher/mirrored-coredns-coredns:1.10.1                                                                    k8s-app=kube-dns
+kube-system                   local-path-provisioner                     1/1     1            1           10d     local-path-provisioner                                rancher/local-path-provisioner:v0.0.26                                                                     app=local-path-provisioner
+kube-system                   metrics-server                             1/1     1            1           10d     metrics-server                                        rancher/mirrored-metrics-server:v0.7.0                                                                     k8s-app=metrics-server
+kwaba-kinesiologie-redirect   kwaba-redirect                             1/1     1            1           9d      nginx                                                 nginxinc/nginx-unprivileged:alpine                                                                         app=kwaba-redirect
+longhorn-system               csi-attacher                               3/3     3            3           2d23h   csi-attacher                                          docker.io/longhornio/csi-attacher:v4.10.0-20251226                                                         app=csi-attacher
+longhorn-system               csi-provisioner                            3/3     3            3           2d23h   csi-provisioner                                       docker.io/longhornio/csi-provisioner:v5.3.0-20251226                                                       app=csi-provisioner
+longhorn-system               csi-resizer                                3/3     3            3           2d23h   csi-resizer                                           docker.io/longhornio/csi-resizer:v2.0.0-20251226                                                           app=csi-resizer
+longhorn-system               csi-snapshotter                            3/3     3            3           2d23h   csi-snapshotter                                       docker.io/longhornio/csi-snapshotter:v8.4.0-20251226                                                       app=csi-snapshotter
+longhorn-system               longhorn-driver-deployer                   1/1     1            1           3d9h    longhorn-driver-deployer                              docker.io/longhornio/longhorn-manager:v1.11.0-hotfix-1                                                     app=longhorn-driver-deployer
+longhorn-system               longhorn-ui                                1/1     1            1           3d9h    longhorn-ui                                           docker.io/longhornio/longhorn-ui:v1.11.0                                                                   app=longhorn-ui
+metallb-system                metallb-controller                         1/1     1            1           9d      controller                                            quay.io/metallb/controller:v0.13.12                                                                        app.kubernetes.io/component=controller,app.kubernetes.io/instance=metallb,app.kubernetes.io/name=metallb
+mobilizon                     mobilizon                                  1/1     1            1           3d4h    mobilizon                                             kaihuri/mobilizon:5.1.4                                                                                    app=mobilizon
+mobilizon                     mobilizon-postgres                         1/1     1            1           3d4h    postgres                                              postgis/postgis:16-3.4                                                                                     app=mobilizon-postgres
+monitoring                    kube-prometheus-stack-grafana              1/1     1            1           3d      grafana-sc-dashboard,grafana-sc-datasources,grafana   quay.io/kiwigrid/k8s-sidecar:1.25.2,quay.io/kiwigrid/k8s-sidecar:1.25.2,docker.io/grafana/grafana:10.2.2   app.kubernetes.io/instance=kube-prometheus-stack,app.kubernetes.io/name=grafana
+monitoring                    kube-prometheus-stack-kube-state-metrics   1/1     1            1           3d      kube-state-metrics                                    registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.10.1                                              app.kubernetes.io/instance=kube-prometheus-stack,app.kubernetes.io/name=kube-state-metrics
+monitoring                    kube-prometheus-stack-operator             1/1     1            1           3d      kube-prometheus-stack                                 quay.io/prometheus-operator/prometheus-operator:v0.70.0                                                    app=kube-prometheus-stack-operator,release=kube-prometheus-stack
+nas                           plex                                       1/1     1            1           2d6h    plex                                                  linuxserver/plex:latest                                                                                    app=plex
+nas                           samba                                      1/1     1            1           2d6h    samba                                                 debian:bookworm                                                                                            app=samba
+paheko                        paheko                                     1/1     1            1           3d5h    paheko                                                paheko/paheko:latest                                                                                       app=paheko
+sys-letsencrypt               cert-manager                               1/1     1            1           9d      cert-manager-controller                               quay.io/jetstack/cert-manager-controller:v1.13.0                                                           app.kubernetes.io/component=controller,app.kubernetes.io/instance=cert-manager,app.kubernetes.io/name=cert-manager
+sys-letsencrypt               cert-manager-cainjector                    1/1     1            1           9d      cert-manager-cainjector                               quay.io/jetstack/cert-manager-cainjector:v1.13.0                                                           app.kubernetes.io/component=cainjector,app.kubernetes.io/instance=cert-manager,app.kubernetes.io/name=cainjector
+sys-letsencrypt               cert-manager-webhook                       1/1     1            1           9d      cert-manager-webhook                                  quay.io/jetstack/cert-manager-webhook:v1.13.0                                                              app.kubernetes.io/component=webhook,app.kubernetes.io/instance=cert-manager,app.kubernetes.io/name=webhook
+traefik                       traefik                                    1/1     1            1           9d      traefik                                               docker.io/traefik:v3.3.2                                                                                   app.kubernetes.io/instance=traefik-traefik,app.kubernetes.io/name=traefik
+
+  [0;32m[OK][0m   Tous les déploiements ont leurs replicas satisfaits
+
+  [0;36m[INFO][0m Vérification rollout stuck :
+  [OK]   Aucun rollout bloqué
+
+  [0;36m[INFO][0m Stratégie de déploiement vs PVC RWO :
+  [OK]   adguardhome/adguardhome — Recreate + PVC
+  [OK]   mobilizon/mobilizon — Recreate + PVC
+  [OK]   mobilizon/mobilizon-postgres — Recreate + PVC
+  [WARN] monitoring/kube-prometheus-stack-grafana — RollingUpdate + PVC (risque Multi-Attach)
+  [OK]   nas/plex — Recreate + PVC
+  [OK]   nas/samba — Recreate + PVC
+  [OK]   paheko/paheko — Recreate + PVC
+
+==================================================================
+  [1m4. STATEFULSETS & DAEMONSETS[0m
+==================================================================
+
+--- StatefulSets ---
+NAMESPACE    NAME                                              READY   AGE   CONTAINERS                     IMAGES
+monitoring   alertmanager-kube-prometheus-stack-alertmanager   1/1     3d    alertmanager,config-reloader   quay.io/prometheus/alertmanager:v0.26.0,quay.io/prometheus-operator/prometheus-config-reloader:v0.70.0
+monitoring   prometheus-kube-prometheus-stack-prometheus       1/1     3d    prometheus,config-reloader     quay.io/prometheus/prometheus:v2.48.1,quay.io/prometheus-operator/prometheus-config-reloader:v0.70.0
+  [0;32m[OK][0m   Tous les StatefulSets sont satisfaits
+
+--- DaemonSets ---
+NAMESPACE         NAME                                             DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR            AGE     CONTAINERS                                                          IMAGES                                                                                                                                                                       SELECTOR
+longhorn-system   engine-image-ei-ff1cedad                         3         3         3       3            3           <none>                   2d23h   engine-image-ei-ff1cedad                                            docker.io/longhornio/longhorn-engine:v1.11.0                                                                                                                                 longhorn.io/component=engine-image,longhorn.io/engine-image=ei-ff1cedad
+longhorn-system   longhorn-csi-plugin                              3         3         3       3            3           <none>                   2d23h   node-driver-registrar,longhorn-liveness-probe,longhorn-csi-plugin   docker.io/longhornio/csi-node-driver-registrar:v2.15.0-20251226,docker.io/longhornio/livenessprobe:v2.17.0-20251226,docker.io/longhornio/longhorn-manager:v1.11.0-hotfix-1   app=longhorn-csi-plugin
+longhorn-system   longhorn-manager                                 3         3         3       3            3           <none>                   3d9h    longhorn-manager,pre-pull-share-manager-image                       docker.io/longhornio/longhorn-manager:v1.11.0-hotfix-1,docker.io/longhornio/longhorn-share-manager:v1.11.0                                                                   app=longhorn-manager
+metallb-system    metallb-speaker                                  3         3         3       3            3           kubernetes.io/os=linux   9d      speaker,frr,reloader,frr-metrics                                    quay.io/metallb/speaker:v0.13.12,quay.io/frrouting/frr:8.5.2,quay.io/frrouting/frr:8.5.2,quay.io/frrouting/frr:8.5.2                                                         app.kubernetes.io/component=speaker,app.kubernetes.io/instance=metallb,app.kubernetes.io/name=metallb
+monitoring        kube-prometheus-stack-prometheus-node-exporter   3         3         3       3            3           kubernetes.io/os=linux   3d      node-exporter                                                       quay.io/prometheus/node-exporter:v1.7.0                                                                                                                                      app.kubernetes.io/instance=kube-prometheus-stack,app.kubernetes.io/name=prometheus-node-exporter
+  [0;32m[OK][0m   Tous les DaemonSets ont leurs pods ready
+
+==================================================================
+  [1m5. PERSISTENT VOLUME CLAIMS[0m
+==================================================================
+
+NAMESPACE     NAME                                                                                                   STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS     VOLUMEATTRIBUTESCLASS   AGE     VOLUMEMODE
+adguardhome   adguard-config-pvc                                                                                     Bound    pvc-5fe6d07c-bcf7-41a4-9c87-d25945344e00   5Gi        RWO            longhorn-fast    <unset>                 3d7h    Filesystem
+default       kbench-pvc-fast                                                                                        Bound    pvc-08257889-aa1e-457a-bf7e-504b2d96b2a8   33Gi       RWO            longhorn-fast    <unset>                 2d21h   Filesystem
+default       kbench-pvc-ultra                                                                                       Bound    pvc-16ddf43e-fecb-4758-9243-bac45d710ac7   33Gi       RWO            longhorn-ultra   <unset>                 2d21h   Filesystem
+mobilizon     mobilizon-db-data                                                                                      Bound    pvc-357c9fa1-f776-4378-b74b-7dfb3ca622d0   5Gi        RWO            longhorn-fast    <unset>                 3d4h    Filesystem
+mobilizon     mobilizon-uploads                                                                                      Bound    pvc-5df47149-c0c9-4384-9fe8-c3b252591c4f   10Gi       RWO            longhorn-fast    <unset>                 3d4h    Filesystem
+monitoring    alertmanager-kube-prometheus-stack-alertmanager-db-alertmanager-kube-prometheus-stack-alertmanager-0   Bound    pvc-840fb0b6-bd9b-46ff-a2f3-c49618eb74b0   10Gi       RWO            longhorn-fast    <unset>                 3d      Filesystem
+monitoring    kube-prometheus-stack-grafana                                                                          Bound    pvc-deb85c9f-00e3-4b8e-b87a-2e3a62d30ec7   10Gi       RWO            longhorn-fast    <unset>                 3d      Filesystem
+monitoring    prometheus-kube-prometheus-stack-prometheus-db-prometheus-kube-prometheus-stack-prometheus-0           Bound    pvc-35e26a00-d04f-4545-8404-dded988e4a75   50Gi       RWO            longhorn-fast    <unset>                 3d      Filesystem
+nas           nas-data                                                                                               Bound    pvc-8228c0c4-ad64-4169-aae5-28cd0dc978f6   2Ti        RWX            longhorn-slow    <unset>                 2d6h    Filesystem
+nas           plex-config                                                                                            Bound    pvc-0fb8b77c-7d7b-41d1-86e5-240326913b09   200Gi      RWO            longhorn-fast    <unset>                 2d6h    Filesystem
+nas           samba-state                                                                                            Bound    pvc-d9c272a5-a431-499e-90aa-f385632a70f2   1Gi        RWO            longhorn-fast    <unset>                 2d6h    Filesystem
+paheko        paheko-data                                                                                            Bound    pvc-800e3aca-263f-4f4e-ab54-aa10554d29dc   5Gi        RWO            longhorn-fast    <unset>                 3d5h    Filesystem
+
+  [0;32m[OK][0m   Tous les PVC sont Bound
+
+  [0;36m[INFO][0m Vérification usage PVC via Longhorn :
+  [INFO] pvc-08257889-aa1e-457a-bf7e-504b2d96b2a8      state=detached   robustness=unknown    0.0/33.0Gi (0%)
+  [OK]   pvc-0fb8b77c-7d7b-41d1-86e5-240326913b09      state=attached   robustness=healthy    94.7/200.0Gi (47%)
+  [INFO] pvc-16ddf43e-fecb-4758-9243-bac45d710ac7      state=detached   robustness=unknown    0.0/33.0Gi (0%)
+  [OK]   pvc-357c9fa1-f776-4378-b74b-7dfb3ca622d0      state=attached   robustness=healthy    0.3/5.0Gi (7%)
+  [OK]   pvc-35e26a00-d04f-4545-8404-dded988e4a75      state=attached   robustness=healthy    8.5/50.0Gi (17%)
+  [OK]   pvc-5df47149-c0c9-4384-9fe8-c3b252591c4f      state=attached   robustness=healthy    0.2/10.0Gi (2%)
+  [OK]   pvc-5fe6d07c-bcf7-41a4-9c87-d25945344e00      state=attached   robustness=healthy    0.1/5.0Gi (3%)
+  [OK]   pvc-800e3aca-263f-4f4e-ab54-aa10554d29dc      state=attached   robustness=healthy    0.1/5.0Gi (3%)
+  [OK]   pvc-8228c0c4-ad64-4169-aae5-28cd0dc978f6      state=attached   robustness=healthy    3226.0/4096.0Gi (79%)
+  [OK]   pvc-840fb0b6-bd9b-46ff-a2f3-c49618eb74b0      state=attached   robustness=healthy    0.2/10.0Gi (2%)
+  [OK]   pvc-d9c272a5-a431-499e-90aa-f385632a70f2      state=attached   robustness=healthy    0.1/1.0Gi (5%)
+  [OK]   pvc-deb85c9f-00e3-4b8e-b87a-2e3a62d30ec7      state=attached   robustness=healthy    0.3/10.0Gi (3%)
+
+==================================================================
+  [1m6. EVENTS RÉCENTS (Warnings, dernière heure)[0m
+==================================================================
+
+  [1;33m[WARN][0m Événements Warning récents :
+    NAMESPACE                     LAST SEEN   TYPE      REASON               OBJECT                                          MESSAGE
+    mobilizon                     54m         Warning   FailedAttachVolume   pod/mobilizon-postgres-58b45b8cb7-4bczt         Multi-Attach error for volume "pvc-357c9fa1-f776-4378-b74b-7dfb3ca622d0" Volume is already exclusively attached to one node and can't be attached to another
+    mobilizon                     53m         Warning   FailedAttachVolume   pod/mobilizon-866dddc847-dd46d                  Multi-Attach error for volume "pvc-5df47149-c0c9-4384-9fe8-c3b252591c4f" Volume is already exclusively attached to one node and can't be attached to another
+    headlamp                      50m         Warning   Unhealthy            pod/headlamp-69f686dccb-j8fwj                   Readiness probe failed: Get "http://10.42.0.127:4466/": dial tcp 10.42.0.127:4466: connect: connection refused
+    kwaba-kinesiologie-redirect   47m         Warning   BackOff              pod/kwaba-redirect-75bb4c4975-k42s6             Back-off restarting failed container nginx in pod kwaba-redirect-75bb4c4975-k42s6_kwaba-kinesiologie-redirect(fb41942e-6ff0-4d6e-bea9-31f8cce31e15)
+    kwaba-kinesiologie-redirect   41m         Warning   BackOff              pod/kwaba-redirect-75bb4c4975-czhvt             Back-off restarting failed container nginx in pod kwaba-redirect-75bb4c4975-czhvt_kwaba-kinesiologie-redirect(2ce8a14c-8fe3-415a-9bb4-894fa3206c89)
+    traefik                       38m         Warning   Unhealthy            pod/traefik-7b54bd6755-gkglm                    Readiness probe failed: Get "http://10.42.1.124:8080/ping": dial tcp 10.42.1.124:8080: connect: connection refused
+    paheko                        31m         Warning   FailedAttachVolume   pod/paheko-6594cf94f6-nlfnk                     Multi-Attach error for volume "pvc-800e3aca-263f-4f4e-ab54-aa10554d29dc" Volume is already used by pod(s) paheko-789c56b68d-65pvq
+    headlamp                      16m         Warning   BackOff              pod/headlamp-69f686dccb-j8fwj                   Back-off restarting failed container headlamp in pod headlamp-69f686dccb-j8fwj_headlamp(b4106dd6-a0f2-4f36-8c9a-2921254d27e6)
+    headlamp                      12m         Warning   Unhealthy            pod/headlamp-76c4654786-pv8d4                   Readiness probe failed: Get "http://10.42.0.132:4466/": dial tcp 10.42.0.132:4466: connect: connection refused
+    paheko                        9m48s       Warning   FailedAttachVolume   pod/paheko-767bc8ddc9-76q6j                     Multi-Attach error for volume "pvc-800e3aca-263f-4f4e-ab54-aa10554d29dc" Volume is already exclusively attached to one node and can't be attached to another
+    longhorn-system               9m6s        Warning   Update               snapshot/d57e5c26-92f8-4583-a093-9915bb6194c7   snapshot becomes not ready to use
+
+  [0;36m[INFO][0m Recherche d'events critiques (FailedAttach, FailedScheduling, OOMKilled, Evicted) :
+  [0;31m[FAIL][0m Events critiques détectés :
+    headlamp                      16m     Warning   BackOff                  pod/headlamp-69f686dccb-j8fwj                                           Back-off restarting failed container headlamp in pod headlamp-69f686dccb-j8fwj_headlamp(b4106dd6-a0f2-4f36-8c9a-2921254d27e6)
+    kwaba-kinesiologie-redirect   41m     Warning   BackOff                  pod/kwaba-redirect-75bb4c4975-czhvt                                     Back-off restarting failed container nginx in pod kwaba-redirect-75bb4c4975-czhvt_kwaba-kinesiologie-redirect(2ce8a14c-8fe3-415a-9bb4-894fa3206c89)
+    kwaba-kinesiologie-redirect   47m     Warning   BackOff                  pod/kwaba-redirect-75bb4c4975-k42s6                                     Back-off restarting failed container nginx in pod kwaba-redirect-75bb4c4975-k42s6_kwaba-kinesiologie-redirect(fb41942e-6ff0-4d6e-bea9-31f8cce31e15)
+    mobilizon                     53m     Warning   FailedAttachVolume       pod/mobilizon-866dddc847-dd46d                                          Multi-Attach error for volume "pvc-5df47149-c0c9-4384-9fe8-c3b252591c4f" Volume is already exclusively attached to one node and can't be attached to another
+    mobilizon                     54m     Warning   FailedAttachVolume       pod/mobilizon-postgres-58b45b8cb7-4bczt                                 Multi-Attach error for volume "pvc-357c9fa1-f776-4378-b74b-7dfb3ca622d0" Volume is already exclusively attached to one node and can't be attached to another
+    paheko                        31m     Warning   FailedAttachVolume       pod/paheko-6594cf94f6-nlfnk                                             Multi-Attach error for volume "pvc-800e3aca-263f-4f4e-ab54-aa10554d29dc" Volume is already used by pod(s) paheko-789c56b68d-65pvq
+    paheko                        9m48s   Warning   FailedAttachVolume       pod/paheko-767bc8ddc9-76q6j                                             Multi-Attach error for volume "pvc-800e3aca-263f-4f4e-ab54-aa10554d29dc" Volume is already exclusively attached to one node and can't be attached to another
+
+==================================================================
+  [1m7. SECURITY CONTEXT — Audit Hardening[0m
+==================================================================
+
+  [0;36m[INFO][0m Vérification des SecurityContext par namespace applicatif :
+
+  --- paheko ---
+    [OK]   paheko-767bc8ddc9-76q6j: seccomp=RuntimeDefault
+    [INFO]  paheko-767bc8ddc9-76q6j: runAsNonRoot non défini (image peut nécessiter root)
+    [OK]   paheko-767bc8ddc9-76q6j: paheko: allowPrivEsc=false
+    [OK]   paheko-767bc8ddc9-76q6j: paheko: drop ALL capabilities
+    [INFO]  paheko-767bc8ddc9-76q6j: paheko: capabilities.add=['NET_BIND_SERVICE']
+    [INFO]  paheko-767bc8ddc9-76q6j: paheko: readOnlyRootFilesystem=false (peut être requis)
+
+  --- mobilizon ---
+    [OK]   mobilizon-866dddc847-dd46d: seccomp=RuntimeDefault
+    [OK]   mobilizon-866dddc847-dd46d: runAsNonRoot=true
+    [OK]   mobilizon-866dddc847-dd46d: mobilizon: allowPrivEsc=false
+    [OK]   mobilizon-866dddc847-dd46d: mobilizon: drop ALL capabilities
+    [INFO]  mobilizon-866dddc847-dd46d: mobilizon: readOnlyRootFilesystem=false (peut être requis)
+    [OK]   mobilizon-postgres-58b45b8cb7-4bczt: seccomp=RuntimeDefault
+    [OK]   mobilizon-postgres-58b45b8cb7-4bczt: runAsNonRoot=true
+    [OK]   mobilizon-postgres-58b45b8cb7-4bczt: postgres: allowPrivEsc=false
+    [OK]   mobilizon-postgres-58b45b8cb7-4bczt: postgres: drop ALL capabilities
+    [INFO]  mobilizon-postgres-58b45b8cb7-4bczt: postgres: readOnlyRootFilesystem=false (peut être requis)
+
+  [0;36m[INFO][0m nextcloud — namespace inexistant, skip
+  --- headlamp ---
+    [OK]   headlamp-76c4654786-pv8d4: seccomp=RuntimeDefault
+    [OK]   headlamp-76c4654786-pv8d4: runAsNonRoot=true
+    [OK]   headlamp-76c4654786-pv8d4: headlamp: allowPrivEsc=false
+    [OK]   headlamp-76c4654786-pv8d4: headlamp: drop ALL capabilities
+    [OK]   headlamp-76c4654786-pv8d4: headlamp: readOnlyRootFilesystem=true
+
+  --- nas ---
+    [WARN]  plex-6b6db65c4d-5tkdl: seccomp non défini
+    [INFO]  plex-6b6db65c4d-5tkdl: runAsNonRoot non défini (image peut nécessiter root)
+    [WARN]  plex-6b6db65c4d-5tkdl: plex: allowPrivilegeEscalation non défini ou true
+    [WARN]  plex-6b6db65c4d-5tkdl: plex: capabilities.drop ne contient pas ALL
+    [INFO]  plex-6b6db65c4d-5tkdl: plex: readOnlyRootFilesystem=false (peut être requis)
+    [WARN]  samba-7dd75f47dc-5c4nt: seccomp non défini
+    [INFO]  samba-7dd75f47dc-5c4nt: runAsNonRoot non défini (image peut nécessiter root)
+    [WARN]  samba-7dd75f47dc-5c4nt: samba: allowPrivilegeEscalation non défini ou true
+    [WARN]  samba-7dd75f47dc-5c4nt: samba: capabilities.drop ne contient pas ALL
+    [INFO]  samba-7dd75f47dc-5c4nt: samba: readOnlyRootFilesystem=false (peut être requis)
+
+  --- monitoring ---
+    [OK]   alertmanager-kube-prometheus-stack-alertmanager-0: seccomp=RuntimeDefault
+    [OK]   alertmanager-kube-prometheus-stack-alertmanager-0: runAsNonRoot=true
+    [OK]   alertmanager-kube-prometheus-stack-alertmanager-0: alertmanager: allowPrivEsc=false
+    [OK]   alertmanager-kube-prometheus-stack-alertmanager-0: alertmanager: drop ALL capabilities
+    [OK]   alertmanager-kube-prometheus-stack-alertmanager-0: alertmanager: readOnlyRootFilesystem=true
+    [OK]   alertmanager-kube-prometheus-stack-alertmanager-0: config-reloader: allowPrivEsc=false
+    [OK]   alertmanager-kube-prometheus-stack-alertmanager-0: config-reloader: drop ALL capabilities
+    [OK]   alertmanager-kube-prometheus-stack-alertmanager-0: config-reloader: readOnlyRootFilesystem=true
+    [WARN]  kube-prometheus-stack-grafana-7b776fc75d-zhfzb: seccomp non défini
+    [OK]   kube-prometheus-stack-grafana-7b776fc75d-zhfzb: runAsNonRoot=true
+    [OK]   kube-prometheus-stack-grafana-7b776fc75d-zhfzb: grafana-sc-dashboard: allowPrivEsc=false
+    [OK]   kube-prometheus-stack-grafana-7b776fc75d-zhfzb: grafana-sc-dashboard: drop ALL capabilities
+    [INFO]  kube-prometheus-stack-grafana-7b776fc75d-zhfzb: grafana-sc-dashboard: readOnlyRootFilesystem=false (peut être requis)
+    [OK]   kube-prometheus-stack-grafana-7b776fc75d-zhfzb: grafana-sc-datasources: allowPrivEsc=false
+    [OK]   kube-prometheus-stack-grafana-7b776fc75d-zhfzb: grafana-sc-datasources: drop ALL capabilities
+    [INFO]  kube-prometheus-stack-grafana-7b776fc75d-zhfzb: grafana-sc-datasources: readOnlyRootFilesystem=false (peut être requis)
+    [OK]   kube-prometheus-stack-grafana-7b776fc75d-zhfzb: grafana: allowPrivEsc=false
+    [OK]   kube-prometheus-stack-grafana-7b776fc75d-zhfzb: grafana: drop ALL capabilities
+    [INFO]  kube-prometheus-stack-grafana-7b776fc75d-zhfzb: grafana: readOnlyRootFilesystem=false (peut être requis)
+    [OK]   kube-prometheus-stack-kube-state-metrics-5f454f8889-58wwl: seccomp=RuntimeDefault
+    [OK]   kube-prometheus-stack-kube-state-metrics-5f454f8889-58wwl: runAsNonRoot=true
+    [OK]   kube-prometheus-stack-kube-state-metrics-5f454f8889-58wwl: kube-state-metrics: allowPrivEsc=false
+    [OK]   kube-prometheus-stack-kube-state-metrics-5f454f8889-58wwl: kube-state-metrics: drop ALL capabilities
+    [INFO]  kube-prometheus-stack-kube-state-metrics-5f454f8889-58wwl: kube-state-metrics: readOnlyRootFilesystem=false (peut être requis)
+    [OK]   kube-prometheus-stack-operator-6d9958889f-9j7jg: seccomp=RuntimeDefault
+    [OK]   kube-prometheus-stack-operator-6d9958889f-9j7jg: runAsNonRoot=true
+    [OK]   kube-prometheus-stack-operator-6d9958889f-9j7jg: kube-prometheus-stack: allowPrivEsc=false
+    [OK]   kube-prometheus-stack-operator-6d9958889f-9j7jg: kube-prometheus-stack: drop ALL capabilities
+    [OK]   kube-prometheus-stack-operator-6d9958889f-9j7jg: kube-prometheus-stack: readOnlyRootFilesystem=true
+    [WARN]  kube-prometheus-stack-prometheus-node-exporter-4zsr2: seccomp non défini
+    [OK]   kube-prometheus-stack-prometheus-node-exporter-4zsr2: runAsNonRoot=true
+    [WARN]  kube-prometheus-stack-prometheus-node-exporter-4zsr2: node-exporter: allowPrivilegeEscalation non défini ou true
+    [WARN]  kube-prometheus-stack-prometheus-node-exporter-4zsr2: node-exporter: capabilities.drop ne contient pas ALL
+    [OK]   kube-prometheus-stack-prometheus-node-exporter-4zsr2: node-exporter: readOnlyRootFilesystem=true
+    [WARN]  kube-prometheus-stack-prometheus-node-exporter-tghnk: seccomp non défini
+    [OK]   kube-prometheus-stack-prometheus-node-exporter-tghnk: runAsNonRoot=true
+    [WARN]  kube-prometheus-stack-prometheus-node-exporter-tghnk: node-exporter: allowPrivilegeEscalation non défini ou true
+    [WARN]  kube-prometheus-stack-prometheus-node-exporter-tghnk: node-exporter: capabilities.drop ne contient pas ALL
+    [OK]   kube-prometheus-stack-prometheus-node-exporter-tghnk: node-exporter: readOnlyRootFilesystem=true
+    [WARN]  kube-prometheus-stack-prometheus-node-exporter-wq2rq: seccomp non défini
+    [OK]   kube-prometheus-stack-prometheus-node-exporter-wq2rq: runAsNonRoot=true
+    [WARN]  kube-prometheus-stack-prometheus-node-exporter-wq2rq: node-exporter: allowPrivilegeEscalation non défini ou true
+    [WARN]  kube-prometheus-stack-prometheus-node-exporter-wq2rq: node-exporter: capabilities.drop ne contient pas ALL
+    [OK]   kube-prometheus-stack-prometheus-node-exporter-wq2rq: node-exporter: readOnlyRootFilesystem=true
+    [OK]   prometheus-kube-prometheus-stack-prometheus-0: seccomp=RuntimeDefault
+    [OK]   prometheus-kube-prometheus-stack-prometheus-0: runAsNonRoot=true
+    [OK]   prometheus-kube-prometheus-stack-prometheus-0: prometheus: allowPrivEsc=false
+    [OK]   prometheus-kube-prometheus-stack-prometheus-0: prometheus: drop ALL capabilities
+    [OK]   prometheus-kube-prometheus-stack-prometheus-0: prometheus: readOnlyRootFilesystem=true
+    [OK]   prometheus-kube-prometheus-stack-prometheus-0: config-reloader: allowPrivEsc=false
+    [OK]   prometheus-kube-prometheus-stack-prometheus-0: config-reloader: drop ALL capabilities
+    [OK]   prometheus-kube-prometheus-stack-prometheus-0: config-reloader: readOnlyRootFilesystem=true
+
+  --- kwaba-kinesiologie-redirect ---
+    [OK]   kwaba-redirect-666576fb69-l26m4: seccomp=RuntimeDefault
+    [OK]   kwaba-redirect-666576fb69-l26m4: runAsNonRoot=true
+    [OK]   kwaba-redirect-666576fb69-l26m4: nginx: allowPrivEsc=false
+    [OK]   kwaba-redirect-666576fb69-l26m4: nginx: drop ALL capabilities
+    [INFO]  kwaba-redirect-666576fb69-l26m4: nginx: capabilities.add=['NET_BIND_SERVICE']
+    [INFO]  kwaba-redirect-666576fb69-l26m4: nginx: readOnlyRootFilesystem=false (peut être requis)
+
+  --- adguardhome ---
+    [WARN]  adguardhome-fc8779b45-vqwxt: seccomp non défini
+    [INFO]  adguardhome-fc8779b45-vqwxt: runAsNonRoot non défini (image peut nécessiter root)
+    [WARN]  adguardhome-fc8779b45-vqwxt: adguardhome: allowPrivilegeEscalation non défini ou true
+    [WARN]  adguardhome-fc8779b45-vqwxt: adguardhome: capabilities.drop ne contient pas ALL
+    [INFO]  adguardhome-fc8779b45-vqwxt: adguardhome: readOnlyRootFilesystem=false (peut être requis)
+    [WARN]  adguardhome-fc8779b45-vqwxt: adguard-exporter: allowPrivilegeEscalation non défini ou true
+    [WARN]  adguardhome-fc8779b45-vqwxt: adguard-exporter: capabilities.drop ne contient pas ALL
+    [INFO]  adguardhome-fc8779b45-vqwxt: adguard-exporter: readOnlyRootFilesystem=false (peut être requis)
+
+
+==================================================================
+  [1m8. SERVICES — Endpoints[0m
+==================================================================
+
+  [0;36m[INFO][0m Services sans endpoints (trafic ne peut pas être routé) :
+
+  [0;32m[OK][0m   Vérification endpoints terminée
+
+  [0;36m[INFO][0m Services LoadBalancer (MetalLB) :
+    adguardhome/adguard-service    192.168.0.21         IP=10.43.129.66
+    nas/plex-service               192.168.0.31         IP=10.43.55.129
+    nas/samba-service              192.168.0.30         IP=10.43.188.137
+    traefik/traefik                192.168.0.20         IP=10.43.156.126
+
+==================================================================
+  [1m9. ALERTES PROMETHEUS[0m
+==================================================================
+
+  [0;36m[INFO][0m Tentative de récupération des alertes actives...
+
+  [1;33m[WARN][0m Impossible de parser les alertes
+
+  [0;36m[INFO][0m PrometheusRules configurées :
+    NAMESPACE         NAME                                                              AGE
+    longhorn-system   prometheus-longhorn-rules                                         3d
+    monitoring        kube-prometheus-stack-alertmanager.rules                          3d
+    monitoring        kube-prometheus-stack-config-reloaders                            3d
+    monitoring        kube-prometheus-stack-general.rules                               3d
+    monitoring        kube-prometheus-stack-k8s.rules.container-cpu-usage-seconds-tot   3d
+    monitoring        kube-prometheus-stack-k8s.rules.container-memory-cache            3d
+    monitoring        kube-prometheus-stack-k8s.rules.container-memory-rss              3d
+    monitoring        kube-prometheus-stack-k8s.rules.container-memory-swap             3d
+    monitoring        kube-prometheus-stack-k8s.rules.container-memory-working-set-by   3d
+    monitoring        kube-prometheus-stack-k8s.rules.container-resource                3d
+    monitoring        kube-prometheus-stack-k8s.rules.pod-owner                         3d
+    monitoring        kube-prometheus-stack-kube-apiserver-availability.rules           3d
+    monitoring        kube-prometheus-stack-kube-apiserver-burnrate.rules               3d
+    monitoring        kube-prometheus-stack-kube-apiserver-histogram.rules              3d
+    monitoring        kube-prometheus-stack-kube-apiserver-slos                         3d
+    monitoring        kube-prometheus-stack-kube-prometheus-general.rules               3d
+    monitoring        kube-prometheus-stack-kube-prometheus-node-recording.rules        3d
+    monitoring        kube-prometheus-stack-kube-state-metrics                          3d
+    monitoring        kube-prometheus-stack-kubelet.rules                               3d
+    monitoring        kube-prometheus-stack-kubernetes-apps                             3d
+    monitoring        kube-prometheus-stack-kubernetes-resources                        3d
+    monitoring        kube-prometheus-stack-kubernetes-storage                          3d
+    monitoring        kube-prometheus-stack-kubernetes-system                           3d
+    monitoring        kube-prometheus-stack-kubernetes-system-apiserver                 3d
+    monitoring        kube-prometheus-stack-kubernetes-system-kubelet                   3d
+    monitoring        kube-prometheus-stack-node-exporter                               3d
+    monitoring        kube-prometheus-stack-node-exporter.rules                         3d
+    monitoring        kube-prometheus-stack-node-network                                3d
+    monitoring        kube-prometheus-stack-node.rules                                  3d
+    monitoring        kube-prometheus-stack-prometheus                                  3d
+    monitoring        kube-prometheus-stack-prometheus-operator                         3d
+
+==================================================================
+  [1m10. CERTIFICATS TLS — Expiration[0m
+==================================================================
+
+  NAMESPACE                     NAME                 READY   SECRET               AGE
+  headlamp                      headlamp-tls         True    headlamp-tls         9d
+  kwaba-kinesiologie-redirect   kwaba-redirect-tls   True    kwaba-redirect-tls   9d
+  longhorn-system               longhorn-tls         True    longhorn-tls         3d6h
+  mobilizon                     mobilizon-tls        True    mobilizon-tls        33h
+  monitoring                    alertmanager-tls     True    alertmanager-tls     3d
+  monitoring                    grafana-tls          True    grafana-tls          3d
+  monitoring                    prometheus-tls       True    prometheus-tls       3d
+  nas                           plex-tls             True    plex-tls             2d5h
+  paheko                        paheko-tls           True    paheko-tls           3d5h
+
+  [0;36m[INFO][0m Détail expiration :
+  [OK]   headlamp/headlamp-tls — Ready, expire dans 88j
+  [OK]   kwaba-kinesiologie-redirect/kwaba-redirect-tls — Ready, expire dans 88j
+  [OK]   longhorn-system/longhorn-tls — Ready, expire dans 88j
+  [OK]   mobilizon/mobilizon-tls — Ready, expire dans 88j
+  [OK]   monitoring/alertmanager-tls — Ready, expire dans 86j
+  [OK]   monitoring/grafana-tls — Ready, expire dans 86j
+  [OK]   monitoring/prometheus-tls — Ready, expire dans 86j
+  [OK]   nas/plex-tls — Ready, expire dans 87j
+  [OK]   paheko/paheko-tls — Ready, expire dans 88j
+
+==================================================================
+  [1m11. LONGHORN — Santé stockage[0m
+==================================================================
+
+  [0;36m[INFO][0m Nœuds Longhorn :
+  NAME         READY   ALLOWSCHEDULING   SCHEDULABLE   AGE
+  k3s-node-1   True    true              True          3d9h
+  k3s-node-2   True    true              True          3d9h
+  k3s-node-3   True    true              True          3d9h
+
+  [0;36m[INFO][0m État des répliques :
+    2d5h: 1
+    2d21h: 4
+    2d6h: 5
+    2d23h: 11
+    9m43s: 1
+    2d20h: 2
+  [0;32m[OK][0m   Toutes les répliques Longhorn sont saines
+
+  [0;36m[INFO][0m Engines Longhorn :
+    2d21h: 2
+    3d4h: 2
+    2d6h: 3
+    3d5h: 1
+    3d7h: 1
+    3d: 3
+
+==================================================================
+  [1m12. INGRESS — Accessibilité[0m
+==================================================================
+
+  [0;36m[INFO][0m IngressRoutes Traefik :
+
+  [0;36m[INFO][0m Ingress standard :
+  NAMESPACE                     NAME                       CLASS     HOSTS                         ADDRESS        PORTS     AGE
+  headlamp                      headlamp                   traefik   headlamp.app.xixtu.eu         192.168.0.20   80, 443   9d
+  kwaba-kinesiologie-redirect   kwaba-redirect-ingress     traefik   kwaba-kinesiologie.xixtu.eu   192.168.0.20   80, 443   9d
+  longhorn-system               longhorn-ingress-tls       traefik   longhorn.app.xixtu.eu         192.168.0.20   80, 443   3d6h
+  mobilizon                     mobilizon-ingress          traefik   mobilizon.app.xixtu.eu        192.168.0.20   80, 443   3d4h
+  monitoring                    alertmanager-ingress-tls   traefik   alertmanager.app.xixtu.eu     192.168.0.20   80, 443   3d
+  monitoring                    grafana-ingress-tls        traefik   grafana.app.xixtu.eu          192.168.0.20   80, 443   3d
+  monitoring                    prometheus-ingress-tls     traefik   prometheus.app.xixtu.eu       192.168.0.20   80, 443   3d
+  nas                           plex-ingress               traefik   plex.app.xixtu.eu             192.168.0.20   80, 443   2d5h
+  paheko                        paheko-ingress             traefik   paheko.app.xixtu.eu           192.168.0.20   80, 443   3d5h
+
+==================================================================
+  [1mRÉSUMÉ GLOBAL[0m
+==================================================================
+
+  [0;32mOK[0m   : 12
+  [1;33mWARN[0m : 3
+  [0;31mFAIL[0m : 1
+
+  [0;31m[1m=> Des problèmes critiques ont été détectés.[0m
+     Examinez les [FAIL] ci-dessus et corrigez-les.
+
+  Rapport sauvegardé dans : /home/administrator/git/k3s-kubevirt/scripts/audit-reports/audit-cluster-health-20260301-193551.txt
+
+
+  AIDE POUR LES FAUX POSITIFS COURANTS :
+  ─────────────────────────────────────────
+  • KubeDeploymentRolloutStuck : Peut se déclencher jusqu'à 15min après
+    un redéploiement — attendre la fin du rollout.
+  • KubePodNotReady : Peut apparaître pour des Jobs terminés ou
+    des pods de migration (Helm hooks). Vérifier si le pod est attendu.
+  • Watchdog / InfoInhibitor : Alertes de test — toujours firing, c'est normal.
+  • CPUThrottlingHigh : Courant si limits CPU trop basses vs requests.
+    Vérifier si l'app fonctionne normalement malgré le throttling.
+  • etcd_* alertes : Normales en k3s (utilise SQLite/dqlite, pas etcd).
+
