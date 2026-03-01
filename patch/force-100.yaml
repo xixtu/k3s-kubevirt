@@ -1,0 +1,17 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: nextcloud-tls # Nom différent pour bypasser le cache
+  namespace: nextcloud
+spec:
+  secretName: nextcloud-tls # On garde le même secret pour ton Ingress
+  privateKey:
+    algorithm: ECDSA
+    size: 384
+  issuerRef:
+    name: letsencrypt-staging
+    kind: ClusterIssuer
+  dnsNames:
+    - nextcloud.app.xixtu.eu
+
+    
