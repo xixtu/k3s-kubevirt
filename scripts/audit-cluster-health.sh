@@ -538,40 +538,21 @@ audit_prometheus_alerts() {
     info "Tentative de récupération des alertes actives..."
     echo ""
 
-    # Trouver le service Prometheus
-    local prom_svc
-    prom_svc=$($KUBECTL get svc -n monitoring --no-headers 2>/dev/null | \
-        grep "prometheus" | grep -v "alertmanager\|operator\|grafana\|exporter\|metrics" | \
-        awk '{print $1}' | head -1 || true)
+    # Trouver le pod Prometheus
+    local prom_pod
+    prom_pod=$($KUBECTL get pods -n monitoring -l app.kubernetes.io/name=prometheus \
+        --no-headers 2>/dev/null | awk '{print $1}' | head -1 || true)
 
-    if [ -z "$prom_svc" ]; then
-        warn "Service Prometheus non trouvé dans namespace monitoring"
-        return
-    fi
+    if [ -z "$prom_pod" ]; then
+        warn "Pod Prometheus non trouvé dans namespace monitoring"
+        info "Vérifiez manuellement : https://prometheus.app.xixtu.eu/alerts"
+    else
+        # Query via wget depuis le pod Prometheus lui-même (localhost:9090)
+        local alerts_json
+        alerts_json=$($KUBECTL exec -n monitoring "$prom_pod" -c prometheus -- \
+            wget -qO- "http://localhost:9090/api/v1/alerts" 2>/dev/null || true)
 
-    # Utiliser kubectl port-forward pour accéder à Prometheus
-    local local_port=19090
-    $KUBECTL port-forward -n monitoring "svc/$prom_svc" "${local_port}:9090" &>/dev/null &
-    local pf_pid=$!
-
-    # Attendre que le port-forward soit prêt
-    local retries=0
-    while [ $retries -lt 10 ]; do
-        if curl -sf "http://localhost:${local_port}/api/v1/status/config" &>/dev/null; then
-            break
-        fi
-        sleep 0.5
-        ((retries++)) || true
-    done
-
-    local alerts_json
-    alerts_json=$(curl -sf "http://localhost:${local_port}/api/v1/alerts" 2>/dev/null || true)
-
-    # Nettoyer le port-forward
-    kill "$pf_pid" 2>/dev/null || true
-    wait "$pf_pid" 2>/dev/null || true
-
-    if [ -n "$alerts_json" ]; then
+        if [ -n "$alerts_json" ]; then
         echo "$alerts_json" | python3 -c "
 import json, sys
 
@@ -643,8 +624,9 @@ except json.JSONDecodeError:
     print('  [WARN] Réponse Prometheus non-JSON')
 " 2>/dev/null || warn "Impossible de parser les alertes"
     else
-        warn "Impossible de contacter Prometheus (port-forward échoué)"
-        info "Vérifiez manuellement : https://prometheus.app.xixtu.eu/alerts"
+            warn "Impossible de contacter Prometheus (wget dans le pod a échoué)"
+            info "Vérifiez manuellement : https://prometheus.app.xixtu.eu/alerts"
+        fi
     fi
 
     # Fallback : vérifier les PrometheusRules configurées
