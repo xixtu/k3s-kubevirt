@@ -13,7 +13,19 @@ plugins:
         warn: "restricted"
         warn-version: "latest"
       exemptions:
-        # On exempte les namespaces système pour ne pas casser le cluster
+        # Namespaces exemptés du profil restricted :
+        #   kube-system       → composants système K3s (coredns, metrics-server, etc.)
+        #   cis-operator      → opérateur CIS benchmark
+        #   virt-operator     → KubeVirt (accès host requis)
+        #   longhorn-system   → Longhorn storage (privileged + hostPath requis)
+        #   metallb-system    → MetalLB speaker (NET_RAW requis)
+        #   adguardhome       → AdGuard image officielle ne supporte pas non-root (issue #7619)
         usernames: []
         runtimeClasses: []
-        namespaces: ["kube-system", "cis-operator", "virt-operator"]
+        namespaces:
+          - "kube-system"
+          - "cis-operator"
+          - "virt-operator"
+          - "longhorn-system"
+          - "metallb-system"
+          - "adguardhome"

@@ -163,6 +163,13 @@
                 labels:
                   app: {{ app_name }}-postgres
               spec:
+                securityContext:
+                  runAsUser: 999
+                  runAsGroup: 999
+                  fsGroup: 999
+                  runAsNonRoot: true
+                  seccompProfile:
+                    type: RuntimeDefault
                 containers:
                   - name: postgres
                     image: postgis/postgis:16-3.4
@@ -171,6 +178,11 @@
                     envFrom:
                       - secretRef:
                           name: {{ app_name }}-db-secret
+                    securityContext:
+                      allowPrivilegeEscalation: false
+                      capabilities:
+                        drop: ["ALL"]
+                      readOnlyRootFilesystem: false
                     volumeMounts:
                       - name: db-data
                         mountPath: /var/lib/postgresql/data
@@ -250,6 +262,13 @@
                 labels:
                   app: {{ app_name }}
               spec:
+                securityContext:
+                  runAsUser: 65534
+                  runAsGroup: 65534
+                  fsGroup: 65534
+                  runAsNonRoot: true
+                  seccompProfile:
+                    type: RuntimeDefault
                 containers:
                   - name: mobilizon
                     image: kaihuri/mobilizon:5.1.4
@@ -279,6 +298,11 @@
                         value: "{{ db_password }}"
                       - name: MOBILIZON_INSTANCE_LISTEN_IP
                         value: "0.0.0.0"
+                    securityContext:
+                      allowPrivilegeEscalation: false
+                      capabilities:
+                        drop: ["ALL"]
+                      readOnlyRootFilesystem: false
                     volumeMounts:
                       - name: uploads
                         mountPath: /var/lib/mobilizon/uploads

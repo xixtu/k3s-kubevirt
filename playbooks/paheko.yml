@@ -80,11 +80,24 @@
                 labels:
                   app: {{ app_name }}
               spec:
+                securityContext:
+                  runAsUser: 33
+                  runAsGroup: 33
+                  fsGroup: 33
+                  runAsNonRoot: true
+                  seccompProfile:
+                    type: RuntimeDefault
                 containers:
                   - name: paheko
                     image: paheko/paheko:latest
                     ports:
                       - containerPort: 80
+                    securityContext:
+                      allowPrivilegeEscalation: false
+                      capabilities:
+                        drop: ["ALL"]
+                        add: ["NET_BIND_SERVICE"]
+                      readOnlyRootFilesystem: false
                     volumeMounts:
                       - name: data-volume
                         mountPath: /var/www/html/data

@@ -95,6 +95,25 @@
                   - "{{ external_domains.headlamp }}"
                 secretName: headlamp-tls
 
+          # Security - PSA restricted compliant
+          podSecurityContext:
+            runAsUser: 100
+            runAsGroup: 101
+            runAsNonRoot: true
+            fsGroup: 101
+            seccompProfile:
+              type: RuntimeDefault
+
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 100
+            runAsGroup: 101
+            privileged: false
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            readOnlyRootFilesystem: true
+
           # Resources
           resources:
             requests:

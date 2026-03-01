@@ -49,6 +49,9 @@ spec:
       labels:
         app: adguardhome
     spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       containers:
       - name: adguardhome
         image: adguard/adguardhome:latest
@@ -63,6 +66,14 @@ spec:
         - containerPort: 53
           name: dns-tcp
           protocol: TCP
+        securityContext:
+          # AdGuard officiel ne supporte pas non-root (issue #7619)
+          # On durcit au maximum sans casser le fonctionnement
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+            add: ["NET_BIND_SERVICE"]
+          readOnlyRootFilesystem: false
         volumeMounts:
         - name: config
           mountPath: /opt/adguardhome/conf
@@ -74,6 +85,14 @@ spec:
         ports:
         - containerPort: 9617
           name: metrics
+        securityContext:
+          runAsUser: 65534
+          runAsGroup: 65534
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+          readOnlyRootFilesystem: true
         env:
         - name: ADGUARD_PROTOCOL
           value: "http"
