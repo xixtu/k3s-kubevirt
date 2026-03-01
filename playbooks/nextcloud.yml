@@ -1,0 +1,1121 @@
+---
+# =============================================================
+# PLAYBOOK : Déploiement Nextcloud - Cloud personnel
+# =============================================================
+# Usage : ansible-playbook -i inventory/hosts.yml playbooks/nextcloud.yml
+# Tags :
+#   nextcloud-install    → Namespace, Secrets, PVC, PostgreSQL, Nextcloud, Service
+#   nextcloud-ingress    → Ingress TLS + IngressRoute HTTPS
+#   letsencrypt-tls      → Ingress TLS + migration ECDSA + IngressRoute HTTPS
+#   nextcloud-ldap       → Compte AD s_next_ad + configuration LDAP backend
+#   nextcloud-collabora  → Collabora Online (Helm CLI) + richdocuments
+#   nextcloud-storage    → Montage SMB externe (\\multinas.corp.lcl\documents)
+#   nextcloud-verify     → Vérification pods, service, ingress, cert
+# Prérequis :
+#   - K3s + MetalLB + Traefik installés
+#   - Longhorn StorageClasses (longhorn-fast)
+#   - cert-manager + ClusterIssuer letsencrypt-production
+#   - NAS déployé (playbooks/nas.yml) pour le plugin External Storage SMB
+#   - DNS : nextcloud.app.xixtu.eu  → A → <IP publique>
+#   - DNS : collabora.app.xixtu.eu  → A → <IP publique>
+# URL publique : https://nextcloud.app.xixtu.eu
+# Collabora    : https://collabora.app.xixtu.eu
+# =============================================================
+# Stockage externe SMB (configuré automatiquement via occ) :
+#   - Montage global : \\multinas.corp.lcl\documents\$user → /Documents
+#   - Auth : credentials LDAP de l'utilisateur (password::logincredentials)
+#   - Chaque utilisateur voit son dossier personnel du NAS
+# =============================================================
+
+- name: "Nextcloud - Cloud personnel avec External Storage SMB"
+  hosts: k3s-node-1
+  become: true
+  gather_facts: false
+  vars_files:
+    - "../group_vars/k3s_cluster.yml"
+  vars:
+    target_namespace: "nextcloud"
+    app_name: "nextcloud"
+    storage_class: "{{ nextcloud_config.storage_class }}"
+    db_storage_size: "{{ nextcloud_config.db_storage_size }}"
+    data_storage_size: "{{ nextcloud_config.data_storage_size }}"
+    # PostgreSQL
+    db_name: "{{ nextcloud_config.db_name }}"
+    db_user: "{{ nextcloud_config.db_user }}"
+    db_password: "{{ nextcloud_config.db_password }}"
+    # Nextcloud
+    nextcloud_image: "nextcloud:29-apache"
+    # LDAP / Active Directory
+    ldap_bind_dn: "CN={{ nextcloud_config.ldap_bind_user }},OU=service_accounts,OU=CORP,DC=corp,DC=lcl"
+    ldap_base_dn: "DC=corp,DC=lcl"
+    ldap_users_dn: "OU=Users,OU=CORP,DC=corp,DC=lcl"
+
+  tasks:
+
+    # ==========================================================
+    # NAMESPACE
+    # ==========================================================
+
+    - name: Créer le namespace nextcloud
+      ansible.builtin.command: k3s kubectl create namespace {{ target_namespace }}
+      register: ns_create
+      failed_when: ns_create.rc != 0 and 'already exists' not in ns_create.stderr
+      changed_when: ns_create.rc == 0
+      tags: [nextcloud, nextcloud-install]
+
+    # ==========================================================
+    # SECRETS (PostgreSQL + Nextcloud admin)
+    # ==========================================================
+
+    - name: Créer le Secret PostgreSQL
+      ansible.builtin.shell: |
+        k3s kubectl create secret generic {{ app_name }}-db-secret \
+          --namespace {{ target_namespace }} \
+          --from-literal=POSTGRES_PASSWORD={{ db_password }} \
+          --from-literal=POSTGRES_USER={{ db_user }} \
+          --from-literal=POSTGRES_DB={{ db_name }} \
+          --dry-run=client -o yaml | k3s kubectl apply -f -
+      changed_when: true
+      tags: [nextcloud, nextcloud-install]
+
+    - name: Créer le Secret Nextcloud admin
+      ansible.builtin.shell: |
+        k3s kubectl create secret generic {{ app_name }}-admin-secret \
+          --namespace {{ target_namespace }} \
+          --from-literal=NEXTCLOUD_ADMIN_USER={{ nextcloud_config.admin_user }} \
+          --from-literal=NEXTCLOUD_ADMIN_PASSWORD={{ nextcloud_config.admin_password }} \
+          --dry-run=client -o yaml | k3s kubectl apply -f -
+      changed_when: true
+      tags: [nextcloud, nextcloud-install]
+
+    # ==========================================================
+    # PVC (PostgreSQL + Nextcloud data)
+    # ==========================================================
+
+    - name: Écrire les PVC Nextcloud
+      ansible.builtin.copy:
+        dest: /tmp/nextcloud-pvc.yml
+        mode: '0644'
+        content: |
+          ---
+          apiVersion: v1
+          kind: PersistentVolumeClaim
+          metadata:
+            name: {{ app_name }}-db-data
+            namespace: {{ target_namespace }}
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            storageClassName: {{ storage_class }}
+            resources:
+              requests:
+                storage: {{ db_storage_size }}
+          ---
+          apiVersion: v1
+          kind: PersistentVolumeClaim
+          metadata:
+            name: {{ app_name }}-data
+            namespace: {{ target_namespace }}
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            storageClassName: {{ storage_class }}
+            resources:
+              requests:
+                storage: {{ data_storage_size }}
+      tags: [nextcloud, nextcloud-install]
+
+    - name: Appliquer les PVC Nextcloud
+      ansible.builtin.command: k3s kubectl apply -f /tmp/nextcloud-pvc.yml
+      register: pvc_apply
+      changed_when: "'configured' in pvc_apply.stdout or 'created' in pvc_apply.stdout"
+      tags: [nextcloud, nextcloud-install]
+
+    - name: Supprimer le fichier PVC temporaire
+      ansible.builtin.file:
+        path: /tmp/nextcloud-pvc.yml
+        state: absent
+      tags: [nextcloud, nextcloud-install]
+
+    # ==========================================================
+    # POSTGRESQL 16
+    # ==========================================================
+
+    - name: Écrire le Deployment PostgreSQL
+      ansible.builtin.copy:
+        dest: /tmp/nextcloud-postgres.yml
+        mode: '0644'
+        content: |
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: {{ app_name }}-postgres
+            namespace: {{ target_namespace }}
+            labels:
+              app: {{ app_name }}-postgres
+          spec:
+            replicas: 1
+            strategy:
+              type: Recreate
+            selector:
+              matchLabels:
+                app: {{ app_name }}-postgres
+            template:
+              metadata:
+                labels:
+                  app: {{ app_name }}-postgres
+              spec:
+                containers:
+                  - name: postgres
+                    image: postgres:16-bookworm
+                    ports:
+                      - containerPort: 5432
+                    envFrom:
+                      - secretRef:
+                          name: {{ app_name }}-db-secret
+                    volumeMounts:
+                      - name: db-data
+                        mountPath: /var/lib/postgresql/data
+                        subPath: pgdata
+                    resources:
+                      requests:
+                        cpu: 100m
+                        memory: 256Mi
+                      limits:
+                        memory: 512Mi
+                volumes:
+                  - name: db-data
+                    persistentVolumeClaim:
+                      claimName: {{ app_name }}-db-data
+          ---
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: {{ app_name }}-postgres
+            namespace: {{ target_namespace }}
+          spec:
+            selector:
+              app: {{ app_name }}-postgres
+            ports:
+              - protocol: TCP
+                port: 5432
+                targetPort: 5432
+            type: ClusterIP
+      tags: [nextcloud, nextcloud-install]
+
+    - name: Appliquer le Deployment PostgreSQL
+      ansible.builtin.command: k3s kubectl apply -f /tmp/nextcloud-postgres.yml
+      register: pg_apply
+      changed_when: "'configured' in pg_apply.stdout or 'created' in pg_apply.stdout"
+      tags: [nextcloud, nextcloud-install]
+
+    - name: Supprimer le fichier PostgreSQL temporaire
+      ansible.builtin.file:
+        path: /tmp/nextcloud-postgres.yml
+        state: absent
+      tags: [nextcloud, nextcloud-install]
+
+    - name: Attendre que PostgreSQL soit Ready
+      ansible.builtin.command: >
+        k3s kubectl wait --for=condition=Ready pods
+        -l app={{ app_name }}-postgres
+        -n {{ target_namespace }}
+        --timeout=120s
+      changed_when: false
+      tags: [nextcloud, nextcloud-install]
+
+    # ==========================================================
+    # NEXTCLOUD (Application)
+    # ==========================================================
+    # Image : nextcloud:29-apache
+    # - smbclient installé via command override (root) avant entrypoint
+    # - Derrière Traefik reverse proxy (OVERWRITEPROTOCOL=https)
+    # - Trusted proxies = pod CIDR (Flannel)
+    # ==========================================================
+
+    - name: Écrire le Deployment Nextcloud
+      ansible.builtin.copy:
+        dest: /tmp/nextcloud-app.yml
+        mode: '0644'
+        content: |
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: {{ app_name }}
+            namespace: {{ target_namespace }}
+            labels:
+              app: {{ app_name }}
+          spec:
+            replicas: 1
+            strategy:
+              type: Recreate
+            selector:
+              matchLabels:
+                app: {{ app_name }}
+            template:
+              metadata:
+                labels:
+                  app: {{ app_name }}
+              spec:
+                containers:
+                  - name: nextcloud
+                    image: {{ nextcloud_image }}
+                    # Override : installe smbclient en root puis lance l'entrypoint
+                    # Le hook before-starting échoue (Permission denied) car Nextcloud 29
+                    # exécute les hooks avec des privileges réduits.
+                    command: ["/bin/bash", "-c"]
+                    args:
+                      - |
+                        echo "[init] Installation de smbclient..."
+                        apt-get update -qq && \
+                        apt-get install -y -qq --no-install-recommends smbclient && \
+                        rm -rf /var/lib/apt/lists/*
+                        echo "[init] smbclient OK - lancement Nextcloud"
+                        exec /entrypoint.sh apache2-foreground
+                    ports:
+                      - containerPort: 80
+                    envFrom:
+                      - secretRef:
+                          name: {{ app_name }}-admin-secret
+                    env:
+                      # --- PostgreSQL ---
+                      - name: POSTGRES_HOST
+                        value: "{{ app_name }}-postgres"
+                      - name: POSTGRES_DB
+                        value: "{{ db_name }}"
+                      - name: POSTGRES_USER
+                        value: "{{ db_user }}"
+                      - name: POSTGRES_PASSWORD
+                        valueFrom:
+                          secretKeyRef:
+                            name: {{ app_name }}-db-secret
+                            key: POSTGRES_PASSWORD
+                      # --- Reverse proxy (Traefik) ---
+                      - name: OVERWRITEPROTOCOL
+                        value: "https"
+                      - name: OVERWRITEHOST
+                        value: "{{ external_domains.nextcloud }}"
+                      - name: TRUSTED_PROXIES
+                        value: "{{ cluster_network.pod_cidr }}"
+                      - name: NEXTCLOUD_TRUSTED_DOMAINS
+                        value: "{{ external_domains.nextcloud }}"
+                      # --- PHP tuning ---
+                      - name: PHP_MEMORY_LIMIT
+                        value: "512M"
+                      - name: PHP_UPLOAD_LIMIT
+                        value: "10G"
+                    volumeMounts:
+                      - name: nextcloud-data
+                        mountPath: /var/www/html
+                    resources:
+                      requests:
+                        cpu: 200m
+                        memory: 256Mi
+                      limits:
+                        memory: 2Gi
+                    livenessProbe:
+                      httpGet:
+                        path: /status.php
+                        port: 80
+                        httpHeaders:
+                          - name: Host
+                            value: "{{ external_domains.nextcloud }}"
+                      initialDelaySeconds: 120
+                      periodSeconds: 30
+                      timeoutSeconds: 10
+                    readinessProbe:
+                      httpGet:
+                        path: /status.php
+                        port: 80
+                        httpHeaders:
+                          - name: Host
+                            value: "{{ external_domains.nextcloud }}"
+                      initialDelaySeconds: 60
+                      periodSeconds: 10
+                      timeoutSeconds: 5
+                volumes:
+                  - name: nextcloud-data
+                    persistentVolumeClaim:
+                      claimName: {{ app_name }}-data
+          ---
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: {{ app_name }}-service
+            namespace: {{ target_namespace }}
+          spec:
+            selector:
+              app: {{ app_name }}
+            ports:
+              - protocol: TCP
+                port: 80
+                targetPort: 80
+            type: ClusterIP
+      tags: [nextcloud, nextcloud-install]
+
+    - name: Appliquer le Deployment Nextcloud
+      ansible.builtin.command: k3s kubectl apply -f /tmp/nextcloud-app.yml
+      register: app_apply
+      changed_when: "'configured' in app_apply.stdout or 'created' in app_apply.stdout"
+      tags: [nextcloud, nextcloud-install]
+
+    - name: Supprimer le fichier Nextcloud temporaire
+      ansible.builtin.file:
+        path: /tmp/nextcloud-app.yml
+        state: absent
+      tags: [nextcloud, nextcloud-install]
+
+    # ==========================================================
+    # TLS - CERTIFICAT LET'S ENCRYPT (nextcloud.app.xixtu.eu)
+    # ==========================================================
+    # Pattern : Ingress K8s (déclenche cert-manager) + IngressRoute HTTPS
+    # ==========================================================
+
+    - name: Écrire l'Ingress TLS Nextcloud
+      ansible.builtin.copy:
+        dest: /tmp/nextcloud-ingress.yml
+        mode: '0644'
+        content: |
+          apiVersion: networking.k8s.io/v1
+          kind: Ingress
+          metadata:
+            name: {{ app_name }}-ingress
+            namespace: {{ target_namespace }}
+            annotations:
+              cert-manager.io/cluster-issuer: "letsencrypt-production"
+              cert-manager.io/private-key-algorithm: "ECDSA"
+              cert-manager.io/private-key-size: "256"
+              traefik.ingress.kubernetes.io/router.entrypoints: "web"
+              traefik.ingress.kubernetes.io/router.middlewares: "traefik-redirect-to-https@kubernetescrd"
+          spec:
+            ingressClassName: traefik
+            tls:
+              - hosts:
+                  - "{{ external_domains.nextcloud }}"
+                secretName: {{ app_name }}-tls
+            rules:
+              - host: "{{ external_domains.nextcloud }}"
+                http:
+                  paths:
+                    - path: /
+                      pathType: Prefix
+                      backend:
+                        service:
+                          name: {{ app_name }}-service
+                          port:
+                            number: 80
+      tags: [nextcloud, nextcloud-ingress, letsencrypt-tls]
+
+    - name: Appliquer l'Ingress TLS Nextcloud
+      ansible.builtin.command: k3s kubectl apply -f /tmp/nextcloud-ingress.yml
+      register: ingress_apply
+      changed_when: "'configured' in ingress_apply.stdout or 'created' in ingress_apply.stdout"
+      tags: [nextcloud, nextcloud-ingress, letsencrypt-tls]
+
+    - name: Supprimer le fichier Ingress temporaire
+      ansible.builtin.file:
+        path: /tmp/nextcloud-ingress.yml
+        state: absent
+      tags: [nextcloud, nextcloud-ingress, letsencrypt-tls]
+
+    # ==========================================================
+    # MIGRATION ECDSA (si ancien certificat RSA)
+    # ==========================================================
+
+    - name: Vérifier le type de clé du certificat actuel
+      ansible.builtin.shell: >
+        k3s kubectl get secret {{ app_name }}-tls -n {{ target_namespace }}
+        -o jsonpath='{.data.tls\.key}' | base64 -d
+        | openssl ec -noout 2>/dev/null && echo "ECDSA" || echo "RSA"
+      register: nextcloud_cert_key_type
+      changed_when: false
+      failed_when: false
+      tags: [nextcloud, nextcloud-ingress, letsencrypt-tls]
+
+    - name: Supprimer l'ancien certificat RSA pour renouvellement ECDSA
+      ansible.builtin.command: >
+        k3s kubectl delete certificate {{ app_name }}-tls
+        -n {{ target_namespace }} --ignore-not-found
+      when: nextcloud_cert_key_type.stdout is defined and 'ECDSA' not in nextcloud_cert_key_type.stdout
+      changed_when: true
+      tags: [nextcloud, nextcloud-ingress, letsencrypt-tls]
+
+    - name: Supprimer l'ancien secret TLS RSA
+      ansible.builtin.command: >
+        k3s kubectl delete secret {{ app_name }}-tls
+        -n {{ target_namespace }} --ignore-not-found
+      when: nextcloud_cert_key_type.stdout is defined and 'ECDSA' not in nextcloud_cert_key_type.stdout
+      changed_when: true
+      tags: [nextcloud, nextcloud-ingress, letsencrypt-tls]
+
+    # ==========================================================
+    # INGRESSROUTE HTTPS (Traefik CRD - router websecure)
+    # ==========================================================
+
+    - name: Écrire l'IngressRoute HTTPS Nextcloud
+      ansible.builtin.copy:
+        dest: /tmp/nextcloud-ingressroute-https.yml
+        mode: '0644'
+        content: |
+          apiVersion: traefik.io/v1alpha1
+          kind: Middleware
+          metadata:
+            name: {{ app_name }}-headers
+            namespace: {{ target_namespace }}
+          spec:
+            headers:
+              customRequestHeaders:
+                X-Forwarded-Proto: "https"
+              stsSeconds: 15552000
+              stsIncludeSubdomains: true
+              stsPreload: true
+          ---
+          apiVersion: traefik.io/v1alpha1
+          kind: Middleware
+          metadata:
+            name: {{ app_name }}-redirectregex
+            namespace: {{ target_namespace }}
+          spec:
+            redirectRegex:
+              permanent: true
+              regex: "https://(.*)/.well-known/(?:card|cal)dav"
+              replacement: "https://${1}/remote.php/dav"
+          ---
+          apiVersion: traefik.io/v1alpha1
+          kind: IngressRoute
+          metadata:
+            name: {{ app_name }}-https
+            namespace: {{ target_namespace }}
+          spec:
+            entryPoints:
+              - websecure
+            routes:
+              - match: "Host(`{{ external_domains.nextcloud }}`)"
+                kind: Rule
+                middlewares:
+                  - name: {{ app_name }}-headers
+                  - name: {{ app_name }}-redirectregex
+                services:
+                  - name: {{ app_name }}-service
+                    port: 80
+            tls:
+              secretName: {{ app_name }}-tls
+      tags: [nextcloud, nextcloud-ingress, letsencrypt-tls]
+
+    - name: Appliquer l'IngressRoute HTTPS Nextcloud
+      ansible.builtin.command: k3s kubectl apply -f /tmp/nextcloud-ingressroute-https.yml
+      register: ingressroute_apply
+      changed_when: "'configured' in ingressroute_apply.stdout or 'created' in ingressroute_apply.stdout"
+      tags: [nextcloud, nextcloud-ingress, letsencrypt-tls]
+
+    - name: Supprimer le fichier IngressRoute temporaire
+      ansible.builtin.file:
+        path: /tmp/nextcloud-ingressroute-https.yml
+        state: absent
+      tags: [nextcloud, nextcloud-ingress, letsencrypt-tls]
+
+    # ==========================================================
+    # VÉRIFICATION
+    # ==========================================================
+
+    - name: Attendre que tous les pods Nextcloud soient Ready
+      ansible.builtin.command: >
+        k3s kubectl wait --for=condition=Ready pods
+        --all -n {{ target_namespace }}
+        --timeout=300s
+      register: nextcloud_pods_ready
+      changed_when: false
+      tags: [nextcloud, nextcloud-verify]
+
+    - name: Vérifier les pods Nextcloud
+      ansible.builtin.command: k3s kubectl get pods -n {{ target_namespace }} -o wide
+      register: nextcloud_pods
+      changed_when: false
+      tags: [nextcloud, nextcloud-verify]
+
+    - name: Vérifier les services Nextcloud
+      ansible.builtin.command: k3s kubectl get svc -n {{ target_namespace }}
+      register: nextcloud_svc
+      changed_when: false
+      tags: [nextcloud, nextcloud-verify]
+
+    - name: Vérifier les PVC Nextcloud
+      ansible.builtin.command: k3s kubectl get pvc -n {{ target_namespace }}
+      register: nextcloud_pvc
+      changed_when: false
+      tags: [nextcloud, nextcloud-verify]
+
+    - name: Vérifier l'Ingress Nextcloud
+      ansible.builtin.command: k3s kubectl get ingress -n {{ target_namespace }}
+      register: nextcloud_ingress
+      changed_when: false
+      tags: [nextcloud, nextcloud-verify]
+
+    - name: Vérifier le certificat Nextcloud
+      ansible.builtin.command: k3s kubectl get certificate -n {{ target_namespace }}
+      register: nextcloud_cert
+      changed_when: false
+      failed_when: false
+      tags: [nextcloud, nextcloud-verify]
+
+    # ==========================================================
+    # LDAP / ACTIVE DIRECTORY
+    # ==========================================================
+    # Crée le compte de service {{ nextcloud_config.ldap_bind_user }} dans AD
+    # via le pod Samba (déjà membre du domaine) puis configure user_ldap.
+    # ==========================================================
+
+    - name: Attendre que Nextcloud soit prêt pour la configuration LDAP
+      ansible.builtin.command: >
+        k3s kubectl wait --for=condition=Ready pods
+        -l app={{ app_name }}
+        -n {{ target_namespace }}
+        --timeout=300s
+      changed_when: false
+      tags: [nextcloud, nextcloud-ldap]
+
+    - name: Attendre que le pod Samba soit prêt
+      ansible.builtin.command: >
+        k3s kubectl wait --for=condition=Ready pods
+        -l app=samba
+        -n nas
+        --timeout=120s
+      changed_when: false
+      tags: [nextcloud, nextcloud-ldap]
+
+    - name: Tester la connectivité réseau vers le DC ({{ nas_config.ad_dc_ip }}:389)
+      ansible.builtin.shell: >
+        k3s kubectl exec -n {{ target_namespace }} deployment/{{ app_name }} --
+        timeout 5 bash -c "echo > /dev/tcp/{{ nas_config.ad_dc_ip }}/389"
+      register: ldap_network_test
+      changed_when: false
+      failed_when: false
+      tags: [nextcloud, nextcloud-ldap]
+
+    - name: Résultat connectivité LDAP
+      ansible.builtin.debug:
+        msg: >-
+          {% if ldap_network_test.rc == 0 %}
+          OK - Le pod Nextcloud peut joindre {{ nas_config.ad_dc_ip }}:389
+          {% else %}
+          ERREUR - Le pod Nextcloud ne peut PAS joindre {{ nas_config.ad_dc_ip }}:389.
+          Vérifiez que le DC est démarré et que le port 389 est ouvert.
+          stderr: {{ ldap_network_test.stderr | default('') }}
+          {% endif %}
+      failed_when: ldap_network_test.rc != 0
+      tags: [nextcloud, nextcloud-ldap]
+
+    # --- Création du compte de service AD pour Nextcloud LDAP ---
+    # Utilise 'net rpc' depuis le pod Samba (membre du domaine)
+    # au lieu de 'samba-tool' qui échoue avec ldb_ldap backend.
+
+    - name: Vérifier si le compte AD {{ nextcloud_config.ldap_bind_user }} existe
+      ansible.builtin.shell: >
+        k3s kubectl exec -n nas deployment/samba --
+        net rpc user info {{ nextcloud_config.ldap_bind_user }}
+        -S {{ nas_config.ad_dc_hostname }}
+        -U "{{ nas_config.ad_join_user }}%{{ nas_config.ad_join_password }}"
+      register: ad_user_check
+      changed_when: false
+      failed_when: false
+      tags: [nextcloud, nextcloud-ldap]
+
+    - name: Créer le compte AD {{ nextcloud_config.ldap_bind_user }} (via net rpc)
+      ansible.builtin.shell: >
+        k3s kubectl exec -n nas deployment/samba --
+        net rpc user add {{ nextcloud_config.ldap_bind_user }}
+        "{{ nextcloud_config.ldap_bind_password }}"
+        -S {{ nas_config.ad_dc_hostname }}
+        -U "{{ nas_config.ad_join_user }}%{{ nas_config.ad_join_password }}"
+      register: ad_user_create
+      when: ad_user_check.rc != 0
+      changed_when: ad_user_create.rc == 0
+      tags: [nextcloud, nextcloud-ldap]
+
+    - name: Résultat création compte AD
+      ansible.builtin.debug:
+        msg: >-
+          {% if ad_user_check.rc == 0 %}
+          OK - Le compte {{ nextcloud_config.ldap_bind_user }} existe déjà dans AD
+          {% elif ad_user_create.rc | default(1) == 0 %}
+          OK - Le compte {{ nextcloud_config.ldap_bind_user }} a été créé dans AD
+          {% else %}
+          ERREUR - Impossible de créer {{ nextcloud_config.ldap_bind_user }} :
+          {{ ad_user_create.stderr | default('erreur inconnue') }}
+          {% endif %}
+      tags: [nextcloud, nextcloud-ldap]
+
+    - name: Définir le mot de passe à ne jamais expirer
+      ansible.builtin.shell: >
+        k3s kubectl exec -n nas deployment/samba --
+        net rpc user setexpiry {{ nextcloud_config.ldap_bind_user }} --never
+        -S {{ nas_config.ad_dc_hostname }}
+        -U "{{ nas_config.ad_join_user }}%{{ nas_config.ad_join_password }}"
+      register: ad_user_expiry
+      changed_when: true
+      failed_when: false
+      tags: [nextcloud, nextcloud-ldap]
+
+    - name: Activer l'app user_ldap dans Nextcloud
+      ansible.builtin.shell: >
+        k3s kubectl exec -n {{ target_namespace }} deployment/{{ app_name }} --
+        su -s /bin/bash www-data -c "php /var/www/html/occ app:enable user_ldap"
+      register: ldap_enable
+      changed_when: "'enabled' in ldap_enable.stdout"
+      tags: [nextcloud, nextcloud-ldap]
+
+    - name: Lister les configurations LDAP existantes
+      ansible.builtin.shell: >
+        k3s kubectl exec -n {{ target_namespace }} deployment/{{ app_name }} --
+        su -s /bin/bash www-data -c "php /var/www/html/occ ldap:show-config" || true
+      register: ldap_existing_configs
+      changed_when: false
+      tags: [nextcloud, nextcloud-ldap]
+
+    - name: Supprimer les configurations LDAP orphelines (s02, s03, ...)
+      ansible.builtin.shell: >
+        k3s kubectl exec -n {{ target_namespace }} deployment/{{ app_name }} --
+        su -s /bin/bash www-data -c "php /var/www/html/occ ldap:delete-config {{ item }}"
+      loop: "{{ ldap_existing_configs.stdout | regex_findall('Configuration:\\s+(s0[2-9]|s[1-9][0-9])') }}"
+      changed_when: true
+      failed_when: false
+      tags: [nextcloud, nextcloud-ldap]
+
+    - name: Créer la configuration LDAP s01 (si absente)
+      ansible.builtin.shell: >
+        k3s kubectl exec -n {{ target_namespace }} deployment/{{ app_name }} --
+        su -s /bin/bash www-data -c "php /var/www/html/occ ldap:create-empty-config"
+      register: ldap_config_create
+      when: "'s01' not in ldap_existing_configs.stdout"
+      changed_when: ldap_config_create.rc == 0
+      tags: [nextcloud, nextcloud-ldap]
+
+    - name: Configurer le backend LDAP (connexion AD)
+      ansible.builtin.shell: >
+        k3s kubectl exec -n {{ target_namespace }} deployment/{{ app_name }} --
+        su -s /bin/bash www-data -c
+        "php /var/www/html/occ ldap:set-config s01 {{ item.key }} '{{ item.value }}'"
+      loop:
+        # --- Connexion au DC ---
+        - { key: ldapHost, value: "ldap://{{ nas_config.ad_dc_ip }}" }
+        - { key: ldapPort, value: "389" }
+        - { key: ldapAgentName, value: "{{ ldap_bind_dn }}" }
+        - { key: ldapAgentPassword, value: "{{ nextcloud_config.ldap_bind_password }}" }
+        - { key: ldapBase, value: "{{ ldap_base_dn }}" }
+        - { key: ldapTLS, value: "0" }
+        - { key: turnOffCertCheck, value: "1" }
+        # --- Utilisateurs ---
+        - { key: ldapBaseUsers, value: "{{ ldap_users_dn }}" }
+        - { key: ldapUserFilter, value: "(&(objectClass=user)(!(objectClass=computer)))" }
+        - { key: ldapUserFilterObjectclass, value: "user" }
+        - { key: ldapUserDisplayName, value: "displayName" }
+        - { key: ldapEmailAttribute, value: "mail" }
+        - { key: ldapExpertUsernameAttr, value: "sAMAccountName" }
+        - { key: ldapExpertUUIDUserAttr, value: "sAMAccountName" }
+        # --- Login ---
+        - { key: ldapLoginFilter, value: "(&(objectClass=user)(|(sAMAccountName=%uid)(userPrincipalName=%uid)))" }
+        - { key: ldapLoginFilterUsername, value: "1" }
+        # --- Groupes ---
+        - { key: ldapBaseGroups, value: "{{ ldap_users_dn }}" }
+        - { key: ldapGroupFilter, value: "(objectClass=group)" }
+        - { key: ldapGroupFilterObjectclass, value: "group" }
+        - { key: ldapGroupMemberAssocAttr, value: "member" }
+        - { key: ldapExpertUUIDGroupAttr, value: "cn" }
+        # --- Compatibilité Active Directory ---
+        - { key: hasMemberOfFilterSupport, value: "1" }
+        - { key: useMemberOfToDetectMembership, value: "1" }
+        - { key: ldapConfigurationActive, value: "1" }
+      loop_control:
+        label: "{{ item.key }}"
+      changed_when: true
+      tags: [nextcloud, nextcloud-ldap]
+
+    - name: Vérifier la connexion LDAP (test-config s01)
+      ansible.builtin.shell: >
+        k3s kubectl exec -n {{ target_namespace }} deployment/{{ app_name }} --
+        su -s /bin/bash www-data -c "php /var/www/html/occ ldap:test-config s01"
+      register: ldap_test
+      changed_when: false
+      failed_when: false
+      tags: [nextcloud, nextcloud-ldap]
+
+    - name: Afficher la configuration LDAP complète
+      ansible.builtin.shell: >
+        k3s kubectl exec -n {{ target_namespace }} deployment/{{ app_name }} --
+        su -s /bin/bash www-data -c "php /var/www/html/occ ldap:show-config s01"
+      register: ldap_show
+      changed_when: false
+      tags: [nextcloud, nextcloud-ldap]
+
+    - name: Résultat du test LDAP
+      ansible.builtin.debug:
+        msg:
+          - "--- Test LDAP ---"
+          - "{{ ldap_test.stdout_lines | default(['(vide)']) }}"
+          - "{{ ldap_test.stderr_lines | default([]) }}"
+          - "--- Configuration s01 ---"
+          - "{{ ldap_show.stdout_lines | default(['(vide)']) }}"
+      tags: [nextcloud, nextcloud-ldap]
+
+    - name: Afficher les dernières erreurs du log Nextcloud (si test LDAP échoué)
+      ansible.builtin.shell: >
+        k3s kubectl exec -n {{ target_namespace }} deployment/{{ app_name }} --
+        su -s /bin/bash www-data -c "php /var/www/html/occ log:tail 10"
+      register: nc_log
+      changed_when: false
+      when: ldap_test.rc != 0 or 'not' in (ldap_test.stdout | default('') | lower) or 'fail' in (ldap_test.stdout | default('') | lower)
+      tags: [nextcloud, nextcloud-ldap]
+
+    - name: Log Nextcloud (dernières entrées)
+      ansible.builtin.debug:
+        msg: "{{ nc_log.stdout_lines | default(['LDAP test OK - pas de log supplémentaire nécessaire']) }}"
+      when: nc_log is defined and nc_log.stdout_lines is defined
+      tags: [nextcloud, nextcloud-ldap]
+
+    # ==========================================================
+    # COLLABORA ONLINE (via Helm chart officiel)
+    # ==========================================================
+    # Chart : collabora/collabora-online
+    # Repo  : https://collaboraonline.github.io/online/
+    # Déployé via Helm CLI (helm upgrade --install)
+    # Ingress cert-manager inclus dans le chart
+    # IngressRoute Traefik (websecure) séparé pour le pattern HTTPS
+    # ==========================================================
+
+    # --- Prérequis : Helm CLI ---
+
+    - name: Vérifier si Helm CLI est installé
+      ansible.builtin.command: helm version --short
+      register: helm_check
+      changed_when: false
+      failed_when: false
+      tags: [nextcloud, nextcloud-collabora]
+
+    - name: Installer Helm CLI (si absent)
+      ansible.builtin.shell: |
+        curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+      when: helm_check.rc != 0
+      changed_when: true
+      tags: [nextcloud, nextcloud-collabora]
+
+    # --- Nettoyage ancien HelmChart CRD (si migration depuis CRD) ---
+
+    - name: Supprimer l'ancien HelmChart CRD Collabora (si existant)
+      ansible.builtin.command: >
+        k3s kubectl delete helmchart collabora-online
+        -n kube-system --ignore-not-found
+      changed_when: true
+      failed_when: false
+      tags: [nextcloud, nextcloud-collabora]
+
+    # --- Déploiement Collabora via Helm CLI ---
+
+    - name: Ajouter le repo Helm Collabora
+      ansible.builtin.command: helm repo add collabora https://collaboraonline.github.io/online/
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: helm_repo_add
+      changed_when: "'has been added' in helm_repo_add.stdout"
+      failed_when: false
+      tags: [nextcloud, nextcloud-collabora]
+
+    - name: Mettre à jour le repo Helm Collabora
+      ansible.builtin.command: helm repo update collabora
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: true
+      tags: [nextcloud, nextcloud-collabora]
+
+    - name: Écrire les values Collabora
+      ansible.builtin.copy:
+        dest: /tmp/collabora-values.yml
+        mode: '0644'
+        content: |
+          fullnameOverride: "collabora"
+
+          replicaCount: 1
+
+          collabora:
+            aliasgroups:
+              - host: "https://{{ external_domains.nextcloud }}:443"
+            extra_params: --o:ssl.enable=false --o:ssl.termination=true
+            server_name: "{{ external_domains.collabora }}"
+            username: "{{ collabora_config.admin_user }}"
+            password: "{{ collabora_config.admin_password }}"
+            env:
+              - name: dictionaries
+                value: "fr_FR en_US"
+
+          ingress:
+            enabled: true
+            className: "traefik"
+            annotations:
+              cert-manager.io/cluster-issuer: "letsencrypt-production"
+              cert-manager.io/private-key-algorithm: "ECDSA"
+              cert-manager.io/private-key-size: "256"
+              traefik.ingress.kubernetes.io/router.entrypoints: "web"
+              traefik.ingress.kubernetes.io/router.middlewares: "traefik-redirect-to-https@kubernetescrd"
+            hosts:
+              - host: "{{ external_domains.collabora }}"
+                paths:
+                  - path: /
+                    pathType: Prefix
+            tls:
+              - secretName: collabora-tls
+                hosts:
+                  - "{{ external_domains.collabora }}"
+
+          autoscaling:
+            enabled: false
+
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              memory: 2Gi
+      tags: [nextcloud, nextcloud-collabora]
+
+    - name: Déployer Collabora Online via Helm
+      ansible.builtin.command: >
+        helm upgrade --install collabora-online collabora/collabora-online
+        --namespace {{ target_namespace }}
+        -f /tmp/collabora-values.yml
+        --wait --timeout 5m
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: collabora_helm_deploy
+      changed_when: true
+      tags: [nextcloud, nextcloud-collabora]
+
+    - name: Supprimer le fichier values temporaire
+      ansible.builtin.file:
+        path: /tmp/collabora-values.yml
+        state: absent
+      tags: [nextcloud, nextcloud-collabora]
+
+    - name: Résultat déploiement Helm Collabora
+      ansible.builtin.debug:
+        msg: "{{ collabora_helm_deploy.stdout_lines | default(['Collabora déployé']) }}"
+      tags: [nextcloud, nextcloud-collabora]
+
+    # --- IngressRoute HTTPS Collabora (Traefik websecure) ---
+
+    - name: Écrire l'IngressRoute HTTPS Collabora
+      ansible.builtin.copy:
+        dest: /tmp/collabora-ingressroute.yml
+        mode: '0644'
+        content: |
+          apiVersion: traefik.io/v1alpha1
+          kind: IngressRoute
+          metadata:
+            name: collabora-https
+            namespace: {{ target_namespace }}
+          spec:
+            entryPoints:
+              - websecure
+            routes:
+              - match: "Host(`{{ external_domains.collabora }}`)"
+                kind: Rule
+                services:
+                  - name: collabora
+                    port: 9980
+            tls:
+              secretName: collabora-tls
+      tags: [nextcloud, nextcloud-collabora, letsencrypt-tls]
+
+    - name: Appliquer l'IngressRoute HTTPS Collabora
+      ansible.builtin.command: k3s kubectl apply -f /tmp/collabora-ingressroute.yml
+      register: collabora_ir_apply
+      changed_when: "'configured' in collabora_ir_apply.stdout or 'created' in collabora_ir_apply.stdout"
+      tags: [nextcloud, nextcloud-collabora, letsencrypt-tls]
+
+    - name: Supprimer le fichier IngressRoute Collabora temporaire
+      ansible.builtin.file:
+        path: /tmp/collabora-ingressroute.yml
+        state: absent
+      tags: [nextcloud, nextcloud-collabora, letsencrypt-tls]
+
+    # --- Configurer richdocuments dans Nextcloud ---
+
+    - name: Attendre que Nextcloud soit prêt pour la configuration Collabora
+      ansible.builtin.command: >
+        k3s kubectl wait --for=condition=Ready pods
+        -l app={{ app_name }}
+        -n {{ target_namespace }}
+        --timeout=300s
+      changed_when: false
+      tags: [nextcloud, nextcloud-collabora]
+
+    - name: Installer l'app richdocuments (Nextcloud Office / Collabora)
+      ansible.builtin.shell: >
+        k3s kubectl exec -n {{ target_namespace }} deployment/{{ app_name }} --
+        su -s /bin/bash www-data -c "php /var/www/html/occ app:install richdocuments"
+      register: richdocuments_install
+      changed_when: "'installed' in richdocuments_install.stdout"
+      failed_when: false
+      tags: [nextcloud, nextcloud-collabora]
+
+    - name: Activer richdocuments (si déjà installée)
+      ansible.builtin.shell: >
+        k3s kubectl exec -n {{ target_namespace }} deployment/{{ app_name }} --
+        su -s /bin/bash www-data -c "php /var/www/html/occ app:enable richdocuments"
+      register: richdocuments_enable
+      changed_when: "'enabled' in richdocuments_enable.stdout"
+      failed_when: false
+      tags: [nextcloud, nextcloud-collabora]
+
+    - name: Configurer l'URL WOPI de Collabora
+      ansible.builtin.shell: >
+        k3s kubectl exec -n {{ target_namespace }} deployment/{{ app_name }} --
+        su -s /bin/bash www-data -c
+        "php /var/www/html/occ config:app:set richdocuments wopi_url --value='https://{{ external_domains.collabora }}'"
+      changed_when: true
+      tags: [nextcloud, nextcloud-collabora]
+
+    - name: Configurer le WOPI allowlist (pod CIDR)
+      ansible.builtin.shell: >
+        k3s kubectl exec -n {{ target_namespace }} deployment/{{ app_name }} --
+        su -s /bin/bash www-data -c
+        "php /var/www/html/occ config:app:set richdocuments wopi_allowlist --value='{{ cluster_network.pod_cidr }}'"
+      changed_when: true
+      tags: [nextcloud, nextcloud-collabora]
+
+    - name: Résultat Collabora
+      ansible.builtin.debug:
+        msg:
+          - "Collabora Online déployé via Helm chart dans {{ target_namespace }}"
+          - "URL          : https://{{ external_domains.collabora }}"
+          - "WOPI URL     : https://{{ external_domains.collabora }}"
+          - "richdocuments: installé et configuré"
+      tags: [nextcloud, nextcloud-collabora]
+
+    # ==========================================================
+    # STOCKAGE EXTERNE SMB (\\multinas.corp.lcl\documents)
+    # ==========================================================
+    # Monte le partage documents du NAS comme dossier personnel
+    # de chaque utilisateur via files_external.
+    # Auth : credentials de login AD (password::logincredentials)
+    # Sous-dossier : $user (chaque utilisateur = son répertoire)
+    # ==========================================================
+
+    - name: Attendre que Nextcloud soit prêt pour la configuration stockage
+      ansible.builtin.command: >
+        k3s kubectl wait --for=condition=Ready pods
+        -l app={{ app_name }}
+        -n {{ target_namespace }}
+        --timeout=300s
+      changed_when: false
+      tags: [nextcloud, nextcloud-storage]
+
+    - name: Activer l'app files_external
+      ansible.builtin.shell: >
+        k3s kubectl exec -n {{ target_namespace }} deployment/{{ app_name }} --
+        su -s /bin/bash www-data -c "php /var/www/html/occ app:enable files_external"
+      register: files_external_enable
+      changed_when: "'enabled' in files_external_enable.stdout"
+      failed_when: false
+      tags: [nextcloud, nextcloud-storage]
+
+    - name: Vérifier si le montage SMB {{ external_storage.mount_point }} existe déjà
+      ansible.builtin.shell: >
+        k3s kubectl exec -n {{ target_namespace }} deployment/{{ app_name }} --
+        su -s /bin/bash www-data -c "php /var/www/html/occ files_external:list --output=json"
+      register: ext_storage_list
+      changed_when: false
+      failed_when: false
+      tags: [nextcloud, nextcloud-storage]
+
+    - name: Créer le montage SMB \\{{ external_storage.smb_host }}\{{ external_storage.smb_share }}
+      ansible.builtin.shell: >
+        k3s kubectl exec -n {{ target_namespace }} deployment/{{ app_name }} --
+        su -s /bin/bash www-data -c
+        "php /var/www/html/occ files_external:create
+        '/{{ external_storage.mount_point }}' smb::smb password::logincredentials
+        --config host={{ external_storage.smb_host }}
+        --config share={{ external_storage.smb_share }}
+        --config root='\$user'
+        --config domain={{ external_storage.smb_domain }}
+        --output=json"
+      register: smb_mount_create
+      when: "external_storage.smb_host not in (ext_storage_list.stdout | default(''))"
+      changed_when: smb_mount_create.rc == 0
+      tags: [nextcloud, nextcloud-storage]
+
+    - name: Résultat montage SMB
+      ansible.builtin.debug:
+        msg: >-
+          {% if smb_mount_create is skipped %}
+          Le montage SMB {{ external_storage.mount_point }} existe déjà
+          {% elif smb_mount_create.rc | default(1) == 0 %}
+          Montage SMB créé : \\{{ external_storage.smb_host }}\{{ external_storage.smb_share }}\$user → /{{ external_storage.mount_point }}
+          {% else %}
+          ERREUR : {{ smb_mount_create.stderr | default('erreur inconnue') }}
+          {% endif %}
+      tags: [nextcloud, nextcloud-storage]
+
+    # ==========================================================
+    # RÉSUMÉ
+    # ==========================================================
+
+    - name: Résumé Nextcloud
+      ansible.builtin.debug:
+        msg:
+          - "================================================================"
+          - "  Nextcloud + Collabora déployés"
+          - "================================================================"
+          - "Namespace    : {{ target_namespace }}"
+          - "Nextcloud    : https://{{ external_domains.nextcloud }}"
+          - "Collabora    : https://{{ external_domains.collabora }}"
+          - "TLS          : cert-manager / letsencrypt-production (ECDSA P-256)"
+          - "PostgreSQL   : postgres:16-bookworm ({{ db_storage_size }})"
+          - "Data         : {{ data_storage_size }} ({{ storage_class }})"
+          - "Upload max   : 10 Go"
+          - "LDAP/AD      : {{ nas_config.ad_dc_hostname }} ({{ nas_config.ad_dc_ip }}:389)"
+          - "LDAP bind    : {{ nextcloud_config.ldap_bind_user }}"
+          - "================================================================"
+          - "  Pods"
+          - "================================================================"
+          - "{{ nextcloud_pods.stdout_lines }}"
+          - "================================================================"
+          - "  Services"
+          - "================================================================"
+          - "{{ nextcloud_svc.stdout_lines }}"
+          - "================================================================"
+          - "  PVC"
+          - "================================================================"
+          - "{{ nextcloud_pvc.stdout_lines }}"
+          - "================================================================"
+          - "  Ingress"
+          - "================================================================"
+          - "{{ nextcloud_ingress.stdout_lines }}"
+          - "================================================================"
+          - "  Certificat"
+          - "================================================================"
+          - "{{ nextcloud_cert.stdout_lines | default(['En attente...']) }}"
+          - "================================================================"
+          - ""
+          - "  AUTHENTIFICATION : LDAP / Active Directory"
+          - "  ────────────────────────────────────────"
+          - "  Les utilisateurs AD se connectent avec leur sAMAccountName"
+          - "  Ex: jean.dupont / <mot_de_passe_AD>"
+          - "  Les groupes AD sont synchronises automatiquement"
+          - ""
+          - "  COLLABORA ONLINE (Helm CLI) :"
+          - "  ────────────────────────────────────────"
+          - "  Chart : collabora/collabora-online"
+          - "  Repo  : https://collaboraonline.github.io/online/"
+          - "  URL   : https://{{ external_domains.collabora }}"
+          - "  App   : richdocuments (Nextcloud Office)"
+          - ""
+          - "  STOCKAGE EXTERNE (SMB) :"
+          - "  ────────────────────────────────────────"
+          - "  Montage global : \\\\{{ external_storage.smb_host }}\\{{ external_storage.smb_share }}\\$user"
+          - "  Point de montage : /{{ external_storage.mount_point }}"
+          - "  Auth : credentials LDAP (login automatique)"
+          - "  → Chaque utilisateur voit son dossier personnel du NAS"
+          - ""
+          - "  IMPORTANT : Changer admin_password et db_password !"
+          - ""
+          - "================================================================"
+      tags: [nextcloud, nextcloud-verify]
