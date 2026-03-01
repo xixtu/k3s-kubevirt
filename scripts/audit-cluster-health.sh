@@ -395,17 +395,44 @@ audit_events() {
         ok "Aucun événement Warning récent"
     fi
 
-    # Events spécifiques critiques
+    # Events spécifiques critiques — vérifier si les pods concernés existent encore
     echo ""
-    info "Recherche d'events critiques (FailedAttach, FailedScheduling, OOMKilled, Evicted) :"
+    info "Recherche d'events critiques sur des pods ACTUELS :"
+
+    # Collecter les pods actuels
+    local current_pods
+    current_pods=$($KUBECTL get pods --all-namespaces --no-headers 2>/dev/null | \
+        awk '{print $1"/"$2}' || true)
+
     local critical_events
-    critical_events=$($KUBECTL get events --all-namespaces --no-headers 2>/dev/null | \
+    critical_events=$($KUBECTL get events --all-namespaces --no-headers \
+        --field-selector type=Warning 2>/dev/null | \
         grep -iE "FailedAttach|FailedMount|FailedScheduling|OOMKill|Evicted|BackOff|Multi-Attach" || true)
+
+    local active_critical=""
+    local stale_count=0
     if [ -n "$critical_events" ]; then
-        fail "Events critiques détectés :"
-        echo "$critical_events" | head -20 | sed 's/^/    /'
+        while IFS= read -r line; do
+            # Extraire namespace et pod name depuis la colonne OBJECT (format pod/name)
+            local ev_ns ev_pod
+            ev_ns=$(echo "$line" | awk '{print $1}')
+            ev_pod=$(echo "$line" | awk '{print $5}' | sed 's|^pod/||')
+            if echo "$current_pods" | grep -q "^${ev_ns}/${ev_pod}$"; then
+                active_critical="${active_critical}${line}\n"
+            else
+                ((stale_count++)) || true
+            fi
+        done <<< "$critical_events"
+    fi
+
+    if [ -n "$active_critical" ]; then
+        fail "Events critiques sur pods actifs :"
+        echo -e "$active_critical" | head -15 | sed 's/^/    /'
     else
-        ok "Aucun événement critique détecté"
+        ok "Aucun événement critique sur des pods actifs"
+    fi
+    if [ "$stale_count" -gt 0 ]; then
+        info "$stale_count event(s) historique(s) ignoré(s) (pods déjà remplacés)"
     fi
 }
 
@@ -538,31 +565,33 @@ audit_prometheus_alerts() {
     info "Tentative de récupération des alertes actives..."
     echo ""
 
-    # Trouver le pod Prometheus
-    local prom_pod
-    prom_pod=$($KUBECTL get pods -n monitoring -l app.kubernetes.io/name=prometheus \
-        --no-headers 2>/dev/null | awk '{print $1}' | head -1 || true)
+    # Trouver le nom du service Prometheus (pour construire l'URL proxy)
+    local prom_svc
+    prom_svc=$($KUBECTL get svc -n monitoring --no-headers 2>/dev/null | \
+        grep "prometheus" | grep -v "alertmanager\|operator\|grafana\|exporter\|metrics" | \
+        awk '{print $1}' | head -1 || true)
 
-    if [ -z "$prom_pod" ]; then
-        warn "Pod Prometheus non trouvé dans namespace monitoring"
+    if [ -z "$prom_svc" ]; then
+        warn "Service Prometheus non trouvé dans namespace monitoring"
         info "Vérifiez manuellement : https://prometheus.app.xixtu.eu/alerts"
     else
-        # Query via wget depuis le pod Prometheus lui-même (localhost:9090)
+        # Query via kubectl API proxy (pas besoin d'exec ni de wget dans le container)
         local alerts_json
-        alerts_json=$($KUBECTL exec -n monitoring "$prom_pod" -c prometheus -- \
-            wget -qO- "http://localhost:9090/api/v1/alerts" 2>/dev/null || true)
+        alerts_json=$($KUBECTL get --raw \
+            "/api/v1/namespaces/monitoring/services/${prom_svc}:9090/proxy/api/v1/alerts" \
+            2>/dev/null || true)
 
         if [ -n "$alerts_json" ]; then
-        echo "$alerts_json" | python3 -c "
+            echo "$alerts_json" | python3 -c "
 import json, sys
 
-# Liste des alertes \"normales\" (faux positifs connus)
+# Liste des alertes 'normales' (faux positifs connus)
 FALSE_POSITIVES = {
     'Watchdog',           # Alerte de test, toujours firing
     'InfoInhibitor',      # Inhibe les alertes info, toujours firing
 }
 
-# Préfixes d'alertes non pertinentes en k3s (pas d'etcd)
+# Prefixes d'alertes non pertinentes en k3s (pas d'etcd)
 IGNORE_PREFIXES = ('etcd',)
 
 try:
@@ -571,7 +600,7 @@ try:
     firing = [a for a in alerts if a.get('state') == 'firing']
     pending = [a for a in alerts if a.get('state') == 'pending']
 
-    # Séparer faux positifs des vrais problèmes
+    # Separer faux positifs des vrais problemes
     real_firing = []
     fp_firing = []
     for a in firing:
@@ -582,7 +611,7 @@ try:
             real_firing.append(a)
 
     if not real_firing and not pending:
-        print('  [OK]   Aucune alerte réelle active')
+        print('  [OK]   Aucune alerte reelle active')
     else:
         if real_firing:
             print(f'  [WARN] {len(real_firing)} alerte(s) firing :')
@@ -615,16 +644,18 @@ try:
                     severity = labels.get('severity', '?')
                     print(f'    [INFO] {name} [{severity}]')
 
-    # Résumé faux positifs
+    # Resume faux positifs
     if fp_firing:
         fp_names = sorted(set(a.get('labels',{}).get('alertname','?') for a in fp_firing))
-        print(f'  [INFO] {len(fp_firing)} faux positif(s) ignorés : {", ".join(fp_names)}')
+        print(f'  [INFO] {len(fp_firing)} faux positif(s) ignores : {', '.join(fp_names)}')
 
 except json.JSONDecodeError:
-    print('  [WARN] Réponse Prometheus non-JSON')
+    print('  [WARN] Reponse Prometheus non-JSON')
+except Exception as e:
+    print(f'  [WARN] Erreur parsing alertes: {e}')
 " 2>/dev/null || warn "Impossible de parser les alertes"
-    else
-            warn "Impossible de contacter Prometheus (wget dans le pod a échoué)"
+        else
+            warn "Impossible de contacter Prometheus via kubectl proxy"
             info "Vérifiez manuellement : https://prometheus.app.xixtu.eu/alerts"
         fi
     fi
