@@ -5,7 +5,7 @@
 # Architecture :
 #   Longhorn PVC (RWX - longhorn-slow)
 #   ├── Samba AD Member (RW) → SMB shares auth AD (corp.lcl)
-#   └── Plex (RO) → Streaming média direct
+#   └── Plex (RW) → Streaming + suppression média
 #
 # Samba est joint au domaine corp.lcl via winbind + Kerberos.
 # Les utilisateurs s'authentifient avec leurs comptes AD.
@@ -490,7 +490,7 @@
     # PLEX MEDIA SERVER (read-only sur le volume NAS)
     # ==========================================================
     # Image : linuxserver/plex (PUID/PGID=1000)
-    # Monte le PVC NAS en read-only → pas de conflit d'écriture
+    # Monte le PVC NAS en RW → streaming + suppression média depuis l'UI Plex
     # Les fichiers créés via Samba AD sont world-readable (force create mode 0644)
     # Config/DB Plex sur PVC séparé (longhorn-fast) pour performance
     # Accès : http://<plex_ip>:32400/web
@@ -546,10 +546,9 @@
                       # Config Plex (RW) - sur longhorn-fast pour performance BDD
                       - name: plex-config
                         mountPath: /config
-                      # Données NAS (READ-ONLY) - streaming direct
+                      # Données NAS (RW) - streaming + suppression médias
                       - name: nas-data
                         mountPath: /data
-                        readOnly: true
                     resources:
                       requests:
                         cpu: 500m
@@ -577,7 +576,6 @@
                   - name: nas-data
                     persistentVolumeClaim:
                       claimName: nas-data
-                      readOnly: true
           ---
           apiVersion: v1
           kind: Service
@@ -758,7 +756,7 @@
           - "  Architecture :"
           - "  Longhorn PVC (RWX - {{ nas_config.storage_class }})"
           - "  ├── Samba AD Member (RW) → SMB shares (auth AD)"
-          - "  └── Plex (RO) → Streaming media"
+          - "  └── Plex (RW) → Streaming + suppression media"
           - ""
           - "  Active Directory : {{ nas_config.ad_realm }}"
           - "  Domain Controller: {{ nas_config.ad_dc_hostname }} ({{ nas_config.ad_dc_ip }})"
