@@ -118,9 +118,12 @@ for node in data.get('items', []):
         t = cond['type']
         s = cond['status']
         # Ready=True est OK, les autres True sont des problèmes
+        # EtcdIsVoter=True est normal en k3s HA (embedded etcd)
         if t == 'Ready' and s != 'True':
             print(f'  [FAIL] {name}: {t}={s} — {cond.get(\"message\",\"\")}')
-        elif t != 'Ready' and s == 'True':
+        elif t in ('MemoryPressure', 'DiskPressure', 'PIDPressure', 'NetworkUnavailable') and s == 'True':
+            print(f'  [FAIL] {name}: {t}={s} — {cond.get(\"message\",\"\")}')
+        elif t not in ('Ready', 'EtcdIsVoter') and s == 'True':
             print(f'  [WARN] {name}: {t}={s} — {cond.get(\"message\",\"\")}')
 " 2>/dev/null || true
 
@@ -314,10 +317,12 @@ audit_statefulsets() {
 
     local ds_issues
     ds_issues=$($KUBECTL get daemonsets --all-namespaces --no-headers 2>/dev/null | \
-        awk '{if ($4 != $2) print "    "$1"/"$2" desired="$3" ready="$5}' || true)
+        awk '{if ($5+0 != $3+0) print "    "$1"/"$2" desired="$3" ready="$5}' || true)
     if [ -n "$ds_issues" ]; then
         warn "DaemonSets avec nœuds non ready :"
         echo "$ds_issues"
+    else
+        ok "Tous les DaemonSets ont leurs pods ready"
     fi
 }
 
@@ -362,8 +367,11 @@ for vol in data.get('items', []):
     status_icon = '[OK]  ' if state == 'attached' and robustness == 'healthy' else '[WARN]'
     if robustness == 'degraded':
         status_icon = '[WARN]'
-    elif robustness == 'faulted' or state == 'detached':
+    elif robustness == 'faulted':
         status_icon = '[FAIL]'
+    elif state == 'detached' and robustness == 'unknown':
+        # Detached volumes with unknown robustness are simply unused (e.g. benchmark PVCs)
+        status_icon = '[INFO]'
 
     print(f'  {status_icon} {name[:45]:45s} state={state:10s} robustness={robustness:10s} {actual_gi:.1f}/{size_gi:.1f}Gi ({pct:.0f}%)')
 " 2>/dev/null || warn "Impossible de lire les volumes Longhorn"
@@ -412,7 +420,7 @@ audit_security() {
     echo ""
 
     local app_namespaces
-    app_namespaces="paheko mobilizon nextcloud headlamp nas monitoring kwaba-kinesiologie-redirect"
+    app_namespaces="paheko mobilizon nextcloud headlamp nas monitoring kwaba-kinesiologie-redirect adguardhome"
 
     for ns in $app_namespaces; do
         # Vérifier si le namespace existe
@@ -530,34 +538,74 @@ audit_prometheus_alerts() {
     info "Tentative de récupération des alertes actives..."
     echo ""
 
-    # Essayer via le service Prometheus interne
+    # Trouver le service Prometheus
     local prom_svc
     prom_svc=$($KUBECTL get svc -n monitoring --no-headers 2>/dev/null | \
-        grep "prometheus" | grep -v "alertmanager\|operator\|grafana" | \
+        grep "prometheus" | grep -v "alertmanager\|operator\|grafana\|exporter\|metrics" | \
         awk '{print $1}' | head -1 || true)
 
-    if [ -n "$prom_svc" ]; then
-        local alerts_json
-        alerts_json=$($KUBECTL exec -n monitoring deploy/kube-prometheus-stack-kube-state-metrics -- \
-            wget -qO- "http://$prom_svc:9090/api/v1/alerts" 2>/dev/null || \
-            $KUBECTL run -n monitoring prometheus-check --rm -i --restart=Never \
-            --image=busybox:1.36 -- wget -qO- "http://$prom_svc:9090/api/v1/alerts" 2>/dev/null || true)
+    if [ -z "$prom_svc" ]; then
+        warn "Service Prometheus non trouvé dans namespace monitoring"
+        return
+    fi
 
-        if [ -n "$alerts_json" ]; then
-            echo "$alerts_json" | python3 -c "
+    # Utiliser kubectl port-forward pour accéder à Prometheus
+    local local_port=19090
+    $KUBECTL port-forward -n monitoring "svc/$prom_svc" "${local_port}:9090" &>/dev/null &
+    local pf_pid=$!
+
+    # Attendre que le port-forward soit prêt
+    local retries=0
+    while [ $retries -lt 10 ]; do
+        if curl -sf "http://localhost:${local_port}/api/v1/status/config" &>/dev/null; then
+            break
+        fi
+        sleep 0.5
+        ((retries++)) || true
+    done
+
+    local alerts_json
+    alerts_json=$(curl -sf "http://localhost:${local_port}/api/v1/alerts" 2>/dev/null || true)
+
+    # Nettoyer le port-forward
+    kill "$pf_pid" 2>/dev/null || true
+    wait "$pf_pid" 2>/dev/null || true
+
+    if [ -n "$alerts_json" ]; then
+        echo "$alerts_json" | python3 -c "
 import json, sys
+
+# Liste des alertes \"normales\" (faux positifs connus)
+FALSE_POSITIVES = {
+    'Watchdog',           # Alerte de test, toujours firing
+    'InfoInhibitor',      # Inhibe les alertes info, toujours firing
+}
+
+# Préfixes d'alertes non pertinentes en k3s (pas d'etcd)
+IGNORE_PREFIXES = ('etcd',)
+
 try:
     data = json.load(sys.stdin)
     alerts = data.get('data', {}).get('alerts', [])
     firing = [a for a in alerts if a.get('state') == 'firing']
     pending = [a for a in alerts if a.get('state') == 'pending']
 
-    if not firing and not pending:
-        print('  [OK]   Aucune alerte active')
+    # Séparer faux positifs des vrais problèmes
+    real_firing = []
+    fp_firing = []
+    for a in firing:
+        name = a.get('labels', {}).get('alertname', '?')
+        if name in FALSE_POSITIVES or any(name.startswith(p) for p in IGNORE_PREFIXES):
+            fp_firing.append(a)
+        else:
+            real_firing.append(a)
+
+    if not real_firing and not pending:
+        print('  [OK]   Aucune alerte réelle active')
     else:
-        if firing:
-            print(f'  [WARN] {len(firing)} alerte(s) firing :')
-            for a in firing:
+        if real_firing:
+            print(f'  [WARN] {len(real_firing)} alerte(s) firing :')
+            for a in real_firing:
                 labels = a.get('labels', {})
                 name = labels.get('alertname', '?')
                 severity = labels.get('severity', '?')
@@ -570,27 +618,33 @@ try:
                 if summary:
                     print(f'           {summary}')
                 if description:
-                    # Tronquer les descriptions longues
                     desc = description[:120] + '...' if len(description) > 120 else description
                     print(f'           {desc}')
                 print()
 
         if pending:
-            print(f'  [INFO] {len(pending)} alerte(s) pending :')
-            for a in pending:
-                labels = a.get('labels', {})
-                name = labels.get('alertname', '?')
-                severity = labels.get('severity', '?')
-                print(f'    [INFO] {name} [{severity}]')
+            real_pending = [a for a in pending
+                if a.get('labels',{}).get('alertname','') not in FALSE_POSITIVES
+                and not any(a.get('labels',{}).get('alertname','').startswith(p) for p in IGNORE_PREFIXES)]
+            if real_pending:
+                print(f'  [INFO] {len(real_pending)} alerte(s) pending :')
+                for a in real_pending:
+                    labels = a.get('labels', {})
+                    name = labels.get('alertname', '?')
+                    severity = labels.get('severity', '?')
+                    print(f'    [INFO] {name} [{severity}]')
+
+    # Résumé faux positifs
+    if fp_firing:
+        fp_names = sorted(set(a.get('labels',{}).get('alertname','?') for a in fp_firing))
+        print(f'  [INFO] {len(fp_firing)} faux positif(s) ignorés : {", ".join(fp_names)}')
+
 except json.JSONDecodeError:
     print('  [WARN] Réponse Prometheus non-JSON')
 " 2>/dev/null || warn "Impossible de parser les alertes"
-        else
-            warn "Impossible de contacter Prometheus via le cluster"
-            info "Vérifiez manuellement : https://prometheus.app.xixtu.eu/alerts"
-        fi
     else
-        warn "Service Prometheus non trouvé dans namespace monitoring"
+        warn "Impossible de contacter Prometheus (port-forward échoué)"
+        info "Vérifiez manuellement : https://prometheus.app.xixtu.eu/alerts"
     fi
 
     # Fallback : vérifier les PrometheusRules configurées

@@ -114,6 +114,19 @@
               drop: ["ALL"]
             readOnlyRootFilesystem: true
 
+          # Volumes for readOnlyRootFilesystem (headlamp needs /tmp and ~/.config)
+          volumes:
+            - name: tmp
+              emptyDir: {}
+            - name: headlamp-config
+              emptyDir: {}
+
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: headlamp-config
+              mountPath: /home/headlamp/.config
+
           # Resources
           resources:
             requests:
