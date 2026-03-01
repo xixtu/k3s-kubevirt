@@ -1,0 +1,458 @@
+---
+# =============================================================
+# PLAYBOOK : Déploiement AdGuard Home - DNS + Interface Web
+# =============================================================
+# Usage : ansible-playbook -i inventory/hosts.yml playbooks/adguardhome.yml
+# Tags :
+#   adguard-install  → Namespace, PVC, Secret, Deployment, Services, ServiceMonitor
+#   adguard-ingress  → Ingress TLS + IngressRoute HTTPS
+#   letsencrypt-tls  → Ingress TLS + migration ECDSA + IngressRoute HTTPS
+#   adguard-verify   → Vérification pods, service, ingress, cert
+# Prérequis :
+#   - K3s + MetalLB + Traefik + Longhorn installés
+#   - cert-manager + ClusterIssuer letsencrypt-production
+#   - DNS : adguardhome.app.xixtu.eu → A → <IP publique>
+# DNS : 192.168.0.21 (MetalLB LoadBalancer)
+# URL publique : https://adguardhome.app.xixtu.eu
+# =============================================================
+
+- name: "AdGuard Home - DNS + Interface Web"
+  hosts: k3s-node-1
+  become: true
+  gather_facts: false
+  vars_files:
+    - "../group_vars/k3s_cluster.yml"
+  vars:
+    target_namespace: "adguardhome"
+    app_name: "adguardhome"
+    storage_size: "5Gi"
+    storage_class: "longhorn-fast"
+
+  tasks:
+
+    # ==========================================================
+    # NAMESPACE
+    # ==========================================================
+
+    - name: Créer le namespace adguardhome
+      ansible.builtin.command: k3s kubectl create namespace {{ target_namespace }}
+      register: ns_create
+      failed_when: ns_create.rc != 0 and 'already exists' not in ns_create.stderr
+      changed_when: ns_create.rc == 0
+      tags: [adguard, adguard-install]
+
+    # ==========================================================
+    # PVC + SECRET + DEPLOYMENT + SERVICES + SERVICEMONITOR
+    # ==========================================================
+
+    - name: Écrire le manifeste AdGuard Home
+      ansible.builtin.copy:
+        dest: /tmp/adguard-manifests.yml
+        mode: '0644'
+        content: |
+          ---
+          apiVersion: v1
+          kind: PersistentVolumeClaim
+          metadata:
+            name: adguard-config-pvc
+            namespace: {{ target_namespace }}
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            storageClassName: {{ storage_class }}
+            resources:
+              requests:
+                storage: {{ storage_size }}
+          ---
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: adguard-credentials
+            namespace: {{ target_namespace }}
+          type: Opaque
+          stringData:
+            username: "administrator"
+            password: "P@ssw0rd"
+          ---
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: {{ app_name }}
+            namespace: {{ target_namespace }}
+            labels:
+              app: {{ app_name }}
+          spec:
+            replicas: 1
+            strategy:
+              type: Recreate
+            selector:
+              matchLabels:
+                app: {{ app_name }}
+            template:
+              metadata:
+                labels:
+                  app: {{ app_name }}
+              spec:
+                securityContext:
+                  seccompProfile:
+                    type: RuntimeDefault
+                containers:
+                - name: adguardhome
+                  image: adguard/adguardhome:latest
+                  ports:
+                  - containerPort: 3000
+                    name: http-setup
+                  - containerPort: 80
+                    name: http-web
+                  - containerPort: 53
+                    name: dns-udp
+                    protocol: UDP
+                  - containerPort: 53
+                    name: dns-tcp
+                    protocol: TCP
+                  securityContext:
+                    allowPrivilegeEscalation: false
+                    capabilities:
+                      drop: ["ALL"]
+                      add: ["NET_BIND_SERVICE"]
+                    readOnlyRootFilesystem: false
+                  volumeMounts:
+                  - name: config
+                    mountPath: /opt/adguardhome/conf
+                  - name: work
+                    mountPath: /opt/adguardhome/work
+                - name: adguard-exporter
+                  image: ebrianne/adguard-exporter:latest
+                  ports:
+                  - containerPort: 9617
+                    name: metrics
+                  securityContext:
+                    runAsUser: 65534
+                    runAsGroup: 65534
+                    runAsNonRoot: true
+                    allowPrivilegeEscalation: false
+                    capabilities:
+                      drop: ["ALL"]
+                    readOnlyRootFilesystem: true
+                  env:
+                  - name: ADGUARD_PROTOCOL
+                    value: "http"
+                  - name: ADGUARD_HOSTNAME
+                    value: "127.0.0.1"
+                  - name: ADGUARD_PORT
+                    value: "80"
+                  - name: ADGUARD_USERNAME
+                    valueFrom:
+                      secretKeyRef:
+                        name: adguard-credentials
+                        key: username
+                  - name: ADGUARD_PASSWORD
+                    valueFrom:
+                      secretKeyRef:
+                        name: adguard-credentials
+                        key: password
+                  - name: SERVER_PORT
+                    value: "9617"
+                  - name: INTERVAL
+                    value: "10s"
+                  resources:
+                    requests:
+                      cpu: 10m
+                      memory: 32Mi
+                    limits:
+                      cpu: 100m
+                      memory: 64Mi
+                volumes:
+                - name: config
+                  persistentVolumeClaim:
+                    claimName: adguard-config-pvc
+                - name: work
+                  emptyDir: {}
+          ---
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: adguard-service
+            namespace: {{ target_namespace }}
+          spec:
+            selector:
+              app: {{ app_name }}
+            type: LoadBalancer
+            loadBalancerIP: 192.168.0.21
+            externalTrafficPolicy: Local
+            ports:
+            - name: dns-udp
+              port: 53
+              protocol: UDP
+              targetPort: 53
+            - name: dns-tcp
+              port: 53
+              protocol: TCP
+              targetPort: 53
+            - name: http-setup
+              port: 3000
+              targetPort: 3000
+            - name: http-web
+              port: 80
+              targetPort: 80
+          ---
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: adguard-web
+            namespace: {{ target_namespace }}
+            labels:
+              app: {{ app_name }}
+          spec:
+            selector:
+              app: {{ app_name }}
+            type: ClusterIP
+            ports:
+            - name: http
+              port: 80
+              targetPort: 80
+          ---
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: adguard-metrics
+            namespace: {{ target_namespace }}
+            labels:
+              app: {{ app_name }}
+          spec:
+            selector:
+              app: {{ app_name }}
+            type: ClusterIP
+            ports:
+            - name: metrics
+              port: 9617
+              targetPort: 9617
+              protocol: TCP
+          ---
+          apiVersion: monitoring.coreos.com/v1
+          kind: ServiceMonitor
+          metadata:
+            name: adguard-servicemonitor
+            namespace: {{ target_namespace }}
+            labels:
+              app: {{ app_name }}
+          spec:
+            selector:
+              matchLabels:
+                app: {{ app_name }}
+            namespaceSelector:
+              matchNames:
+              - {{ target_namespace }}
+            endpoints:
+            - port: metrics
+              interval: 30s
+              path: /metrics
+      tags: [adguard, adguard-install]
+
+    - name: Appliquer les manifestes AdGuard Home
+      ansible.builtin.command: k3s kubectl apply -f /tmp/adguard-manifests.yml
+      register: adguard_apply
+      changed_when: "'configured' in adguard_apply.stdout or 'created' in adguard_apply.stdout"
+      tags: [adguard, adguard-install]
+
+    - name: Supprimer le fichier manifestes temporaire
+      ansible.builtin.file:
+        path: /tmp/adguard-manifests.yml
+        state: absent
+      tags: [adguard, adguard-install]
+
+    # ==========================================================
+    # TLS - CERTIFICAT LET'S ENCRYPT (adguardhome.app.xixtu.eu)
+    # ==========================================================
+    # Pattern : Ingress K8s (déclenche cert-manager) + IngressRoute HTTPS
+    # ==========================================================
+
+    - name: Écrire l'Ingress TLS AdGuard Home
+      ansible.builtin.copy:
+        dest: /tmp/adguard-ingress.yml
+        mode: '0644'
+        content: |
+          apiVersion: networking.k8s.io/v1
+          kind: Ingress
+          metadata:
+            name: {{ app_name }}-ingress
+            namespace: {{ target_namespace }}
+            annotations:
+              cert-manager.io/cluster-issuer: "letsencrypt-production"
+              cert-manager.io/private-key-algorithm: "ECDSA"
+              cert-manager.io/private-key-size: "384"
+              cert-manager.io/private-key-rotation-policy: "Always"
+              traefik.ingress.kubernetes.io/router.entrypoints: "web"
+              traefik.ingress.kubernetes.io/router.middlewares: "traefik-redirect-to-https@kubernetescrd"
+          spec:
+            ingressClassName: traefik
+            tls:
+              - hosts:
+                  - "{{ external_domains.adguardhome }}"
+                secretName: {{ app_name }}-tls
+            rules:
+              - host: "{{ external_domains.adguardhome }}"
+                http:
+                  paths:
+                    - path: /
+                      pathType: Prefix
+                      backend:
+                        service:
+                          name: adguard-web
+                          port:
+                            number: 80
+      tags: [adguard, adguard-ingress, letsencrypt-tls]
+
+    - name: Appliquer l'Ingress TLS AdGuard Home
+      ansible.builtin.command: k3s kubectl apply -f /tmp/adguard-ingress.yml
+      register: ingress_apply
+      changed_when: "'configured' in ingress_apply.stdout or 'created' in ingress_apply.stdout"
+      tags: [adguard, adguard-ingress, letsencrypt-tls]
+
+    - name: Supprimer le fichier Ingress temporaire
+      ansible.builtin.file:
+        path: /tmp/adguard-ingress.yml
+        state: absent
+      tags: [adguard, adguard-ingress, letsencrypt-tls]
+
+    # ==========================================================
+    # MIGRATION ECDSA (si ancien certificat RSA)
+    # ==========================================================
+
+    - name: Vérifier le type de clé du certificat actuel
+      ansible.builtin.shell: >
+        k3s kubectl get secret {{ app_name }}-tls -n {{ target_namespace }}
+        -o jsonpath='{.data.tls\.key}' | base64 -d
+        | openssl ec -noout 2>/dev/null && echo "ECDSA" || echo "RSA"
+      register: adguard_cert_key_type
+      changed_when: false
+      failed_when: false
+      tags: [adguard, adguard-ingress, letsencrypt-tls]
+
+    - name: Supprimer l'ancien certificat RSA pour renouvellement ECDSA
+      ansible.builtin.command: >
+        k3s kubectl delete certificate {{ app_name }}-tls
+        -n {{ target_namespace }} --ignore-not-found
+      when: adguard_cert_key_type.stdout is defined and 'ECDSA' not in adguard_cert_key_type.stdout
+      changed_when: true
+      tags: [adguard, adguard-ingress, letsencrypt-tls]
+
+    - name: Supprimer l'ancien secret TLS RSA
+      ansible.builtin.command: >
+        k3s kubectl delete secret {{ app_name }}-tls
+        -n {{ target_namespace }} --ignore-not-found
+      when: adguard_cert_key_type.stdout is defined and 'ECDSA' not in adguard_cert_key_type.stdout
+      changed_when: true
+      tags: [adguard, adguard-ingress, letsencrypt-tls]
+
+    # ==========================================================
+    # INGRESSROUTE HTTPS (Traefik CRD - router websecure)
+    # ==========================================================
+
+    - name: Écrire l'IngressRoute HTTPS AdGuard Home
+      ansible.builtin.copy:
+        dest: /tmp/adguard-ingressroute-https.yml
+        mode: '0644'
+        content: |
+          apiVersion: traefik.io/v1alpha1
+          kind: IngressRoute
+          metadata:
+            name: {{ app_name }}-https
+            namespace: {{ target_namespace }}
+          spec:
+            entryPoints:
+              - websecure
+            routes:
+              - match: "Host(`{{ external_domains.adguardhome }}`)"
+                kind: Rule
+                services:
+                  - name: adguard-web
+                    port: 80
+            tls:
+              secretName: {{ app_name }}-tls
+      tags: [adguard, adguard-ingress, letsencrypt-tls]
+
+    - name: Appliquer l'IngressRoute HTTPS AdGuard Home
+      ansible.builtin.command: k3s kubectl apply -f /tmp/adguard-ingressroute-https.yml
+      register: ingressroute_apply
+      changed_when: "'configured' in ingressroute_apply.stdout or 'created' in ingressroute_apply.stdout"
+      tags: [adguard, adguard-ingress, letsencrypt-tls]
+
+    - name: Supprimer le fichier IngressRoute temporaire
+      ansible.builtin.file:
+        path: /tmp/adguard-ingressroute-https.yml
+        state: absent
+      tags: [adguard, adguard-ingress, letsencrypt-tls]
+
+    # ==========================================================
+    # VÉRIFICATION
+    # ==========================================================
+
+    - name: Attendre que les pods AdGuard Home soient Ready
+      ansible.builtin.command: >
+        k3s kubectl wait --for=condition=Ready pods
+        --all -n {{ target_namespace }}
+        --timeout=120s
+      register: adguard_pods_ready
+      changed_when: false
+      tags: [adguard, adguard-verify]
+
+    - name: Vérifier les pods AdGuard Home
+      ansible.builtin.command: k3s kubectl get pods -n {{ target_namespace }} -o wide
+      register: adguard_pods
+      changed_when: false
+      tags: [adguard, adguard-verify]
+
+    - name: Vérifier les services AdGuard Home
+      ansible.builtin.command: k3s kubectl get svc -n {{ target_namespace }}
+      register: adguard_svc
+      changed_when: false
+      tags: [adguard, adguard-verify]
+
+    - name: Vérifier l'Ingress AdGuard Home
+      ansible.builtin.command: k3s kubectl get ingress -n {{ target_namespace }}
+      register: adguard_ingress
+      changed_when: false
+      tags: [adguard, adguard-verify]
+
+    - name: Vérifier le certificat AdGuard Home
+      ansible.builtin.command: k3s kubectl get certificate -n {{ target_namespace }}
+      register: adguard_cert
+      changed_when: false
+      failed_when: false
+      tags: [adguard, adguard-verify]
+
+    # ==========================================================
+    # RÉSUMÉ
+    # ==========================================================
+
+    - name: Résumé AdGuard Home
+      ansible.builtin.debug:
+        msg:
+          - "================================================"
+          - "  AdGuard Home déployé"
+          - "================================================"
+          - "Namespace   : {{ target_namespace }}"
+          - "DNS         : 192.168.0.21 (MetalLB LoadBalancer)"
+          - "URL publique: https://{{ external_domains.adguardhome }}"
+          - "TLS         : cert-manager / letsencrypt-production (ECDSA P-384)"
+          - "Stockage    : {{ storage_size }} ({{ storage_class }})"
+          - "Métriques   : ServiceMonitor (Prometheus)"
+          - "================================================"
+          - "  Pods"
+          - "================================================"
+          - "{{ adguard_pods.stdout_lines }}"
+          - "================================================"
+          - "  Services"
+          - "================================================"
+          - "{{ adguard_svc.stdout_lines }}"
+          - "================================================"
+          - "  Ingress"
+          - "================================================"
+          - "{{ adguard_ingress.stdout_lines }}"
+          - "================================================"
+          - "  Certificat"
+          - "================================================"
+          - "{{ adguard_cert.stdout_lines | default(['En attente...']) }}"
+          - "================================================"
+      tags: [adguard, adguard-verify]

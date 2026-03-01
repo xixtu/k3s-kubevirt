@@ -172,6 +172,7 @@ external_domains:
   nextcloud: "nextcloud.app.xixtu.eu"
   collabora: "collabora.app.xixtu.eu"
   plex: "plex.app.xixtu.eu"
+  adguardhome: "adguardhome.app.xixtu.eu"
 
 # --- Monitoring ---
 monitoring_config:
