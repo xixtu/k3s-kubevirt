@@ -299,7 +299,9 @@
       ansible.builtin.copy:
         dest: /tmp/hardware-prometheusrules.yml
         mode: '0644'
-        content: |
+        # !unsafe : empêche Jinja2 de parser {{ $labels.xxx }} et {{ $value }}
+        # qui sont des annotations PromQL, pas des variables Ansible
+        content: !unsafe |
           apiVersion: monitoring.coreos.com/v1
           kind: PrometheusRule
           metadata:
