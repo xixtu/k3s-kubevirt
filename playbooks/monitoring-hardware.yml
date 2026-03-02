@@ -385,7 +385,7 @@
                 rules:
                   - alert: NodeFanStopped
                     expr: >
-                      node_hwmon_fan_rpm > 0 offset 10m
+                      (node_hwmon_fan_rpm offset 10m) > 0
                       unless node_hwmon_fan_rpm > 0
                     for: 2m
                     labels:
