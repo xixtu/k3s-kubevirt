@@ -199,6 +199,22 @@
           nodeExporter:
             enabled: true
 
+          # --- Node Exporter : textfile collector (SMART + hardware custom metrics) ---
+          # Le collector hwmon est activé par défaut (lit /sys/class/hwmon)
+          # Le textfile collector expose les fichiers .prom écrits par les scripts host
+          # Prérequis : playbook monitoring-hardware.yml exécuté sur les nœuds
+          prometheus-node-exporter:
+            extraArgs:
+              - --collector.textfile.directory=/host/textfile_collector
+            extraVolumes:
+              - name: textfile-collector
+                hostPath:
+                  path: /var/lib/node_exporter/textfile_collector
+                  type: DirectoryOrCreate
+            extraVolumeMounts:
+              - name: textfile-collector
+                mountPath: /host/textfile_collector
+
           # --- Kube State Metrics ---
           kubeStateMetrics:
             enabled: true
