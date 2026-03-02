@@ -118,8 +118,10 @@
           TMP_FILE="${OUTPUT_FILE}.tmp"
 
           # Extraire un attribut SATA (colonne RAW_VALUE = col 10) depuis $1
+          # head -1 : évite plusieurs lignes si l'attribut apparaît plusieurs fois
+          # grep -E '^[0-9]+$' : ne retourne rien si la valeur est composite (ex: 18013h+00m)
           parse_attr() {
-            echo "$1" | grep "$2" | awk '{print $10}'
+            echo "$1" | grep "$2" | awk '{print $10}' | head -1 | grep -E '^[0-9]+$'
           }
 
           # Tout le contenu est redirigé vers TMP_FILE via le bloc { }
