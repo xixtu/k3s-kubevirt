@@ -94,11 +94,11 @@
                         storage: "{{ monitoring_config.prometheus_storage }}"
               resources:
                 requests:
-                  cpu: "200m"
-                  memory: "512Mi"
-                limits:
-                  cpu: "1000m"
+                  cpu: "500m"
                   memory: "2Gi"
+                limits:
+                  cpu: "2000m"
+                  memory: "4Gi"
               # Scrape tous les namespaces
               serviceMonitorSelectorNilUsesHelmValues: false
               podMonitorSelectorNilUsesHelmValues: false
@@ -202,6 +202,18 @@
           # --- Kube State Metrics ---
           kubeStateMetrics:
             enabled: true
+
+          # --- kube-apiserver : réduction cardinalité histogrammes ---
+          # kube-apiserver-burnrate.rules n'utilise que les buckets 0.1, 0.5 et +Inf
+          # Les autres buckets (0.005, 0.01, 0.025, 0.05, 0.25, 1, 2.5, 5, 10)
+          # génèrent des séries inutiles qui font exploser la durée d'évaluation
+          # (217s observé pour kube-apiserver-burnrate.rules avec 305k séries actives)
+          kubeApiServer:
+            serviceMonitor:
+              metricRelabelings:
+                - sourceLabels: [__name__, le]
+                  regex: 'apiserver_request_duration_seconds_bucket;(0\.005|0\.01|0\.025|0\.05|0\.25|1|2\.5|5|10)$'
+                  action: drop
 
           # --- Désactiver les composants non compatibles K3s ---
           kubeEtcd:
