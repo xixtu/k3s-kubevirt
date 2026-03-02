@@ -413,17 +413,21 @@
               - name: hardware.fans
                 rules:
                   - alert: NodeFanStopped
+                    # min_over_time + max_over_time sur la MÊME métrique courante
+                    # → pas de problème de label-mismatch avec offset/unless
+                    # quand un chip hwmon est rechargé ou réénuméré (GPU PCI addr)
                     expr: >
-                      (node_hwmon_fan_rpm offset 10m) > 0
-                      unless node_hwmon_fan_rpm > 0
-                    for: 2m
+                      min_over_time(node_hwmon_fan_rpm[5m]) == 0
+                      and max_over_time(node_hwmon_fan_rpm[15m]) > 100
+                    for: 3m
                     labels:
                       severity: critical
                     annotations:
                       summary: "Ventilateur arrêté sur {{ $labels.instance }}"
                       description: >
-                        Ventilateur {{ $labels.sensor }} sur {{ $labels.instance }}
-                        était actif et s'est arrêté
+                        Ventilateur {{ $labels.sensor }} ({{ $labels.chip }}) sur
+                        {{ $labels.instance }} était actif (>100 RPM dans les 15 min)
+                        et est à 0 RPM depuis plus de 5 min
 
                   - alert: NodeFanSpeedLow
                     expr: >
