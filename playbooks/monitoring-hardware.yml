@@ -218,6 +218,37 @@
       changed_when: false
       tags: [hw-smart]
 
+    - name: Valider le format Prometheus du fichier .prom
+      # Vérifie qu'aucune ligne n'est ambiguë :
+      #   - lignes non-vides
+      #   - qui ne sont pas des commentaires (# HELP / # TYPE)
+      #   - mais qui ne respectent pas metric_name{...} value
+      ansible.builtin.shell: |
+        set -e
+        FILE=/var/lib/node_exporter/textfile_collector/smart.prom
+        ERRORS=0
+        LINE_NUM=0
+        while IFS= read -r line; do
+          LINE_NUM=$((LINE_NUM + 1))
+          # Ignorer lignes vides et commentaires
+          [[ -z "$line" || "$line" == \#* ]] && continue
+          # Une ligne de métrique valide : commence par une lettre/underscore
+          # et contient une valeur numérique (float/int) après le dernier espace
+          if ! echo "$line" | grep -qE '^[a-zA-Z_][a-zA-Z0-9_]*(\{[^}]*\})? [0-9eE.+\-]+$'; then
+            echo "ERREUR ligne ${LINE_NUM}: $line"
+            ERRORS=$((ERRORS + 1))
+          fi
+        done < "$FILE"
+        if [ "$ERRORS" -gt 0 ]; then
+          echo "ÉCHEC : ${ERRORS} ligne(s) invalide(s) dans smart.prom"
+          exit 1
+        fi
+        echo "OK : smart.prom valide (${LINE_NUM} lignes)"
+      register: prom_validation
+      changed_when: false
+      failed_when: prom_validation.rc != 0
+      tags: [hw-smart]
+
     - name: Afficher les métriques SMART générées
       ansible.builtin.debug:
         msg: "{{ smart_prom_check.stdout_lines }}"
