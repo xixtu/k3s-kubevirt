@@ -219,31 +219,24 @@
       tags: [hw-smart]
 
     - name: Valider le format Prometheus du fichier .prom
-      # Vérifie qu'aucune ligne n'est ambiguë :
-      #   - lignes non-vides
-      #   - qui ne sont pas des commentaires (# HELP / # TYPE)
-      #   - mais qui ne respectent pas metric_name{...} value
+      # Lignes invalides = non-vides, non-commentaires, ne respectant pas
+      # le format  metric_name{labels} valeur
+      # grep -c : retourne le nombre de lignes invalides (0 = OK)
       ansible.builtin.shell: |
-        set -e
         FILE=/var/lib/node_exporter/textfile_collector/smart.prom
-        ERRORS=0
-        LINE_NUM=0
-        while IFS= read -r line; do
-          LINE_NUM=$((LINE_NUM + 1))
-          # Ignorer lignes vides et commentaires
-          [[ -z "$line" || "$line" == \#* ]] && continue
-          # Une ligne de métrique valide : commence par une lettre/underscore
-          # et contient une valeur numérique (float/int) après le dernier espace
-          if ! echo "$line" | grep -qE '^[a-zA-Z_][a-zA-Z0-9_]*(\{[^}]*\})? [0-9eE.+\-]+$'; then
-            echo "ERREUR ligne ${LINE_NUM}: $line"
-            ERRORS=$((ERRORS + 1))
-          fi
-        done < "$FILE"
-        if [ "$ERRORS" -gt 0 ]; then
-          echo "ÉCHEC : ${ERRORS} ligne(s) invalide(s) dans smart.prom"
+        INVALID=$(grep -vE '(^[[:space:]]*$|^#)' "$FILE" \
+                  | grep -cvE '^[a-zA-Z_][a-zA-Z0-9_]*(\{[^}]*\})? [0-9eE.+\-]+$' \
+                  || true)
+        if [ "$INVALID" -gt 0 ]; then
+          echo "ÉCHEC : ${INVALID} ligne(s) invalide(s) dans smart.prom :"
+          grep -vE '(^[[:space:]]*$|^#)' "$FILE" \
+            | grep -vE '^[a-zA-Z_][a-zA-Z0-9_]*(\{[^}]*\})? [0-9eE.+\-]+$'
           exit 1
         fi
-        echo "OK : smart.prom valide (${LINE_NUM} lignes)"
+        TOTAL=$(grep -c '' "$FILE")
+        echo "OK : smart.prom valide (${TOTAL} lignes)"
+      args:
+        executable: /bin/bash
       register: prom_validation
       changed_when: false
       failed_when: prom_validation.rc != 0
