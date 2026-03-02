@@ -154,6 +154,9 @@
                 | awk -F': ' '{gsub(/^[ \t]+|[ \t]+$/, "", $2); print $2}')
               [ -z "$SERIAL" ] && SERIAL="unknown"
 
+              # Ignorer les volumes virtuels Longhorn (model et serial inconnus)
+              [ "$MODEL" = "unknown" ] && [ "$SERIAL" = "unknown" ] && continue
+
               LABELS="device=\"${disk}\",model=\"${MODEL}\",serial=\"${SERIAL}\""
 
               # Santé globale (if absorbe le code retour non-nul de smartctl)
@@ -568,7 +571,9 @@
       tags: [hw-dashboard]
 
     - name: Appliquer le ConfigMap dashboard Node Exporter Full
-      ansible.builtin.command: k3s kubectl apply -f /tmp/node-exporter-full-cm.yml
+      # --server-side : évite l'annotation last-applied-configuration (limite 256KB)
+      # le dashboard Node Exporter Full (ID 1860) dépasse cette limite
+      ansible.builtin.command: k3s kubectl apply --server-side -f /tmp/node-exporter-full-cm.yml
       environment:
         KUBECONFIG: /etc/rancher/k3s/k3s.yaml
       changed_when: false
@@ -605,7 +610,7 @@
       tags: [hw-dashboard]
 
     - name: Appliquer le ConfigMap dashboard SMART
-      ansible.builtin.command: k3s kubectl apply -f /tmp/smart-dashboard-cm.yml
+      ansible.builtin.command: k3s kubectl apply --server-side -f /tmp/smart-dashboard-cm.yml
       environment:
         KUBECONFIG: /etc/rancher/k3s/k3s.yaml
       changed_when: false
