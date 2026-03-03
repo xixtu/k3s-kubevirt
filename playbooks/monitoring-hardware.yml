@@ -21,246 +21,307 @@
 #   - monitoring.yml exécuté (kube-prometheus-stack déployé)
 #   - smartmontools déjà installé (common_packages)
 #   - Machines : Dell Precision T5600 (x86, kernel ≥ 5.4)
+#
+# Note SSH :
+#   Ce playbook ne nécessite PAS de SSH vers les nœuds.
+#   La Partie 1 utilise kubectl exec sur des pods privilégiés (hostPID + host root monté).
+#   La Partie 2 s'exécute en connection locale sur k3s-node-1.
 # =============================================================
 
 # =============================================================
-# PARTIE 1 : Setup sur chaque nœud K3s
+# PARTIE 1 : Setup sur chaque nœud K3s via kubectl
+# Pas de SSH — pods privilégiés avec host root monté sous /host
 # =============================================================
-- name: "Hardware Monitoring - Setup nœuds"
-  hosts: k3s_cluster
-  become: true
-  gather_facts: true
+- name: "Hardware Monitoring - Setup nœuds via kubectl"
+  hosts: k3s-node-1
+  connection: local
+  become: false
+  gather_facts: false
+  vars_files:
+    - "../group_vars/k3s_cluster.yml"
 
   tasks:
 
     # ----------------------------------------------------------
-    # MODULES KERNEL
+    # POD PRIVILÉGIÉ : un pod par nœud avec accès au host
+    # Utilisé par hw-modules ET hw-smart
     # ----------------------------------------------------------
 
-    - name: Installer lm-sensors
-      ansible.builtin.package:
-        name: lm-sensors
+    - name: "Créer le pod de setup sur {{ node }}"
+      kubernetes.core.k8s:
+        kubeconfig: /etc/rancher/k3s/k3s.yaml
         state: present
+        definition:
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: "hw-setup-{{ node | replace('k3s-', '') }}"
+            namespace: kube-system
+            labels:
+              app: hw-setup
+          spec:
+            nodeName: "{{ node }}"
+            restartPolicy: Never
+            tolerations:
+              - operator: Exists
+            hostPID: true
+            containers:
+              - name: setup
+                image: alpine:3.19
+                command: ["sleep", "300"]
+                securityContext:
+                  privileged: true
+                volumeMounts:
+                  - name: host-root
+                    mountPath: /host
+            volumes:
+              - name: host-root
+                hostPath:
+                  path: /
+      loop: "{{ groups['k3s_cluster'] }}"
+      loop_control:
+        loop_var: node
+        label: "{{ node }}"
+      tags: [hw-modules, hw-smart]
+
+    - name: "Attendre que le pod hw-setup-{{ node | replace('k3s-', '') }} soit Ready"
+      kubernetes.core.k8s_info:
+        kubeconfig: /etc/rancher/k3s/k3s.yaml
+        api_version: v1
+        kind: Pod
+        name: "hw-setup-{{ node | replace('k3s-', '') }}"
+        namespace: kube-system
+        wait: true
+        wait_condition:
+          type: Ready
+          status: "True"
+        wait_timeout: 90
+      loop: "{{ groups['k3s_cluster'] }}"
+      loop_control:
+        loop_var: node
+        label: "{{ node }}"
+      tags: [hw-modules, hw-smart]
+
+    # ----------------------------------------------------------
+    # MODULES KERNEL (tag: hw-modules)
+    # ----------------------------------------------------------
+
+    - name: "Installer lm-sensors sur {{ node }}"
+      ansible.builtin.command: >
+        kubectl exec hw-setup-{{ node | replace('k3s-', '') }}
+        -n kube-system
+        -- chroot /host apt-get install -y --no-install-recommends lm-sensors
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      failed_when: false
+      loop: "{{ groups['k3s_cluster'] }}"
+      loop_control:
+        loop_var: node
+        label: "{{ node }}"
       tags: [hw-modules]
 
-    - name: Charger le module coretemp (températures Intel Core)
-      community.general.modprobe:
-        name: coretemp
-        state: present
+    - name: "Charger le module coretemp sur {{ node }}"
+      ansible.builtin.command: >
+        kubectl exec hw-setup-{{ node | replace('k3s-', '') }}
+        -n kube-system
+        -- chroot /host modprobe coretemp
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      loop: "{{ groups['k3s_cluster'] }}"
+      loop_control:
+        loop_var: node
+        label: "{{ node }}"
       tags: [hw-modules]
 
-    - name: Charger le module dell-smm-hwmon (capteurs Dell SMM)
-      community.general.modprobe:
-        name: dell-smm-hwmon
-        params: "restricted=0 ignore_dmi=1"
-        state: present
+    - name: "Charger le module dell-smm-hwmon sur {{ node }}"
+      ansible.builtin.command: >
+        kubectl exec hw-setup-{{ node | replace('k3s-', '') }}
+        -n kube-system
+        -- chroot /host sh -c "modprobe dell-smm-hwmon restricted=0 ignore_dmi=1"
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
       register: dell_smm_result
       failed_when: false
-      tags: [hw-modules]
-
-    - name: Avertir si dell-smm-hwmon non disponible
-      ansible.builtin.debug:
-        msg: "ATTENTION : module dell-smm-hwmon non chargé sur {{ inventory_hostname }} — vérifier le kernel"
-      when: dell_smm_result.rc is defined and dell_smm_result.rc != 0
-      tags: [hw-modules]
-
-    - name: Persister les modules au démarrage
-      ansible.builtin.copy:
-        dest: /etc/modules-load.d/hwmon-dell.conf
-        mode: '0644'
-        content: |
-          # Modules hwmon Dell T5600 - chargés par monitoring-hardware.yml
-          coretemp
-          dell-smm-hwmon
-      tags: [hw-modules]
-
-    - name: Configurer les options du module dell-smm-hwmon
-      ansible.builtin.copy:
-        dest: /etc/modprobe.d/dell-smm-hwmon.conf
-        mode: '0644'
-        content: |
-          # Options dell-smm-hwmon : bypass DMI check et mode non restreint
-          options dell-smm-hwmon restricted=0 ignore_dmi=1
-      tags: [hw-modules]
-
-    # ----------------------------------------------------------
-    # RÉPERTOIRE TEXTFILE COLLECTOR
-    # ----------------------------------------------------------
-
-    - name: Créer le répertoire textfile_collector
-      ansible.builtin.file:
-        path: /var/lib/node_exporter/textfile_collector
-        state: directory
-        mode: '0755'
-        owner: root
-        group: root
-      tags: [hw-smart]
-
-    # ----------------------------------------------------------
-    # SCRIPT SMART METRICS
-    # ----------------------------------------------------------
-
-    - name: Déployer le script smart-metrics.sh
-      ansible.builtin.copy:
-        dest: /usr/local/bin/smart-metrics.sh
-        mode: '0755'
-        content: |
-          #!/bin/bash
-          # ==========================================================
-          # smart-metrics.sh - Métriques SMART au format Prometheus
-          # Exécuté par cron toutes les 5 minutes
-          # Sortie : /var/lib/node_exporter/textfile_collector/smart.prom
-          # ==========================================================
-          # Pas de set -e : smartctl retourne des codes non-nuls légitimes
-          # (bit 3 = FAILED, bit 4 = prefail attr, bit 6 = error log, etc.)
-
-          OUTPUT_FILE="/var/lib/node_exporter/textfile_collector/smart.prom"
-          TMP_FILE="${OUTPUT_FILE}.tmp"
-
-          # Extraire un attribut SATA (colonne RAW_VALUE = col 10) depuis $1
-          # head -1 : évite plusieurs lignes si l'attribut apparaît plusieurs fois
-          # grep -E '^[0-9]+$' : ne retourne rien si la valeur est composite (ex: 18013h+00m)
-          parse_attr() {
-            echo "$1" | grep "$2" | awk '{print $10}' | head -1 | grep -E '^[0-9]+$'
-          }
-
-          # Tout le contenu est redirigé vers TMP_FILE via le bloc { }
-          # puis remplacé atomiquement — node-exporter ne lit jamais un fichier partiel
-          {
-            echo "# HELP node_smart_device_health SMART overall health (1=PASSED 0=FAILED)"
-            echo "# TYPE node_smart_device_health gauge"
-            echo "# HELP node_smart_temperature_celsius Disk temperature in Celsius"
-            echo "# TYPE node_smart_temperature_celsius gauge"
-            echo "# HELP node_smart_reallocated_sectors_total Reallocated sector count (SMART attr 5)"
-            echo "# TYPE node_smart_reallocated_sectors_total gauge"
-            echo "# HELP node_smart_pending_sectors_total Current pending sector count (SMART attr 197)"
-            echo "# TYPE node_smart_pending_sectors_total gauge"
-            echo "# HELP node_smart_uncorrectable_errors_total Uncorrectable error count (SMART attr 198)"
-            echo "# TYPE node_smart_uncorrectable_errors_total gauge"
-            echo "# HELP node_smart_power_on_hours_total Power on hours total (SMART attr 9)"
-            echo "# TYPE node_smart_power_on_hours_total gauge"
-            echo "# HELP node_smart_power_cycles_total Power cycle count (SMART attr 12)"
-            echo "# TYPE node_smart_power_cycles_total gauge"
-            echo "# HELP node_smart_collection_timestamp_seconds Last successful collection (Unix timestamp)"
-            echo "# TYPE node_smart_collection_timestamp_seconds gauge"
-
-            # Détecter tous les disques blocs physiques (exclure partitions et loop)
-            for disk in $(lsblk -dpno NAME 2>/dev/null | grep -E '^/dev/(sd|hd|nvme)'); do
-              MODEL=$(smartctl -i "$disk" 2>/dev/null \
-                | grep -E 'Device Model:|Model Number:' \
-                | awk -F': ' '{gsub(/^[ \t]+|[ \t]+$/, "", $2); gsub(/ /, "_", $2); print $2}')
-              [ -z "$MODEL" ] && MODEL="unknown"
-
-              SERIAL=$(smartctl -i "$disk" 2>/dev/null \
-                | grep 'Serial Number:' \
-                | awk -F': ' '{gsub(/^[ \t]+|[ \t]+$/, "", $2); print $2}')
-              [ -z "$SERIAL" ] && SERIAL="unknown"
-
-              # Ignorer les volumes virtuels Longhorn (model et serial inconnus)
-              [ "$MODEL" = "unknown" ] && [ "$SERIAL" = "unknown" ] && continue
-
-              LABELS="device=\"${disk}\",model=\"${MODEL}\",serial=\"${SERIAL}\""
-
-              # Santé globale (if absorbe le code retour non-nul de smartctl)
-              if smartctl -H "$disk" 2>/dev/null | grep -q 'PASSED\|OK'; then
-                echo "node_smart_device_health{${LABELS}} 1"
-              else
-                echo "node_smart_device_health{${LABELS}} 0"
-              fi
-
-              # Lire les attributs SMART (smartctl peut retourner != 0 sur disque dégradé)
-              ATTRS=$(smartctl -A "$disk" 2>/dev/null) || true
-
-              # Température (SATA HDD/SSD)
-              TEMP=$(echo "$ATTRS" | grep -iE 'Temperature_Celsius|Airflow_Temperature_Cel' \
-                | awk '{print $10}' | head -1)
-              # Température (NVMe)
-              if [ -z "$TEMP" ]; then
-                TEMP=$(smartctl -A "$disk" 2>/dev/null | grep '^Temperature:' | awk '{print $2}') || true
-              fi
-              if [ -n "$TEMP" ] && [[ "$TEMP" =~ ^[0-9]+$ ]]; then
-                echo "node_smart_temperature_celsius{${LABELS}} ${TEMP}"
-              fi
-
-              REALLOC=$(parse_attr "$ATTRS" 'Reallocated_Sector_Ct')
-              [ -n "$REALLOC" ] && echo "node_smart_reallocated_sectors_total{${LABELS}} ${REALLOC}"
-
-              PENDING=$(parse_attr "$ATTRS" 'Current_Pending_Sector')
-              [ -n "$PENDING" ] && echo "node_smart_pending_sectors_total{${LABELS}} ${PENDING}"
-
-              UNCORR=$(parse_attr "$ATTRS" 'Offline_Uncorrectable')
-              [ -n "$UNCORR" ] && echo "node_smart_uncorrectable_errors_total{${LABELS}} ${UNCORR}"
-
-              POH=$(parse_attr "$ATTRS" 'Power_On_Hours')
-              [ -n "$POH" ] && echo "node_smart_power_on_hours_total{${LABELS}} ${POH}"
-
-              CYCLES=$(parse_attr "$ATTRS" 'Power_Cycle_Count')
-              [ -n "$CYCLES" ] && echo "node_smart_power_cycles_total{${LABELS}} ${CYCLES}"
-
-            done
-
-            echo "node_smart_collection_timestamp_seconds $(date +%s)"
-
-          } > "$TMP_FILE"
-
-          # Remplacement atomique (évite une lecture partielle par node-exporter)
-          mv "$TMP_FILE" "$OUTPUT_FILE"
-      tags: [hw-smart]
-
-    - name: Exécuter le script SMART une première fois
-      ansible.builtin.command: /usr/local/bin/smart-metrics.sh
       changed_when: false
+      loop: "{{ groups['k3s_cluster'] }}"
+      loop_control:
+        loop_var: node
+        label: "{{ node }}"
+      tags: [hw-modules]
+
+    - name: "Avertir si dell-smm-hwmon non disponible sur {{ item.node }}"
+      ansible.builtin.debug:
+        msg: "ATTENTION : module dell-smm-hwmon non chargé sur {{ item.node }} — vérifier le kernel"
+      when: item.rc is defined and item.rc != 0
+      loop: "{{ dell_smm_result.results }}"
+      loop_control:
+        label: "{{ item.node }}"
+      tags: [hw-modules]
+
+    - name: "Persister les modules au démarrage sur {{ node }}"
+      ansible.builtin.command: >
+        kubectl exec hw-setup-{{ node | replace('k3s-', '') }}
+        -n kube-system
+        -- sh -c "printf 'coretemp\ndell-smm-hwmon\n'
+          > /host/etc/modules-load.d/hwmon-dell.conf"
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: true
+      loop: "{{ groups['k3s_cluster'] }}"
+      loop_control:
+        loop_var: node
+        label: "{{ node }}"
+      tags: [hw-modules]
+
+    - name: "Configurer les options du module dell-smm-hwmon sur {{ node }}"
+      ansible.builtin.command: >
+        kubectl exec hw-setup-{{ node | replace('k3s-', '') }}
+        -n kube-system
+        -- sh -c "printf 'options dell-smm-hwmon restricted=0 ignore_dmi=1\n'
+          > /host/etc/modprobe.d/dell-smm-hwmon.conf"
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: true
+      loop: "{{ groups['k3s_cluster'] }}"
+      loop_control:
+        loop_var: node
+        label: "{{ node }}"
+      tags: [hw-modules]
+
+    # ----------------------------------------------------------
+    # RÉPERTOIRE TEXTFILE COLLECTOR (tag: hw-smart)
+    # ----------------------------------------------------------
+
+    - name: "Créer le répertoire textfile_collector sur {{ node }}"
+      ansible.builtin.command: >
+        kubectl exec hw-setup-{{ node | replace('k3s-', '') }}
+        -n kube-system
+        -- sh -c "mkdir -p /host/var/lib/node_exporter/textfile_collector
+          && chmod 755 /host/var/lib/node_exporter/textfile_collector"
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: true
+      loop: "{{ groups['k3s_cluster'] }}"
+      loop_control:
+        loop_var: node
+        label: "{{ node }}"
       tags: [hw-smart]
 
-    - name: Vérifier le fichier .prom généré
-      ansible.builtin.command: cat /var/lib/node_exporter/textfile_collector/smart.prom
+    # ----------------------------------------------------------
+    # SCRIPT SMART METRICS (tag: hw-smart)
+    # Source de vérité : scripts/smart-metrics.sh
+    # ----------------------------------------------------------
+
+    - name: "Copier smart-metrics.sh vers le pod sur {{ node }}"
+      ansible.builtin.command: >
+        kubectl cp {{ playbook_dir }}/../scripts/smart-metrics.sh
+        kube-system/hw-setup-{{ node | replace('k3s-', '') }}:/tmp/smart-metrics.sh
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: true
+      loop: "{{ groups['k3s_cluster'] }}"
+      loop_control:
+        loop_var: node
+        label: "{{ node }}"
+      tags: [hw-smart]
+
+    - name: "Installer smart-metrics.sh sur le host {{ node }}"
+      ansible.builtin.command: >
+        kubectl exec hw-setup-{{ node | replace('k3s-', '') }}
+        -n kube-system
+        -- sh -c "cp /tmp/smart-metrics.sh /host/usr/local/bin/smart-metrics.sh
+          && chmod 755 /host/usr/local/bin/smart-metrics.sh"
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: true
+      loop: "{{ groups['k3s_cluster'] }}"
+      loop_control:
+        loop_var: node
+        label: "{{ node }}"
+      tags: [hw-smart]
+
+    - name: "Créer le cron job SMART sur {{ node }} (toutes les 5 minutes)"
+      ansible.builtin.command: >
+        kubectl exec hw-setup-{{ node | replace('k3s-', '') }}
+        -n kube-system
+        -- sh -c "printf '*/5 * * * * root /usr/local/bin/smart-metrics.sh 2>/dev/null\n'
+          > /host/etc/cron.d/smart-metrics-prom
+          && chmod 644 /host/etc/cron.d/smart-metrics-prom"
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: true
+      loop: "{{ groups['k3s_cluster'] }}"
+      loop_control:
+        loop_var: node
+        label: "{{ node }}"
+      tags: [hw-smart]
+
+    - name: "Exécuter smart-metrics.sh une première fois sur {{ node }}"
+      ansible.builtin.command: >
+        kubectl exec hw-setup-{{ node | replace('k3s-', '') }}
+        -n kube-system
+        -- chroot /host /usr/local/bin/smart-metrics.sh
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      failed_when: false
+      loop: "{{ groups['k3s_cluster'] }}"
+      loop_control:
+        loop_var: node
+        label: "{{ node }}"
+      tags: [hw-smart]
+
+    - name: "Vérifier le fichier smart.prom généré sur {{ node }}"
+      ansible.builtin.command: >
+        kubectl exec hw-setup-{{ node | replace('k3s-', '') }}
+        -n kube-system
+        -- cat /host/var/lib/node_exporter/textfile_collector/smart.prom
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
       register: smart_prom_check
       changed_when: false
-      tags: [hw-smart]
-
-    - name: Valider le format Prometheus du fichier .prom
-      # Lignes invalides = non-vides, non-commentaires, ne respectant pas
-      # le format  metric_name{labels} valeur
-      # grep -c : retourne le nombre de lignes invalides (0 = OK)
-      ansible.builtin.shell: |
-        FILE=/var/lib/node_exporter/textfile_collector/smart.prom
-        INVALID=$(grep -vE '(^[[:space:]]*$|^#)' "$FILE" \
-                  | grep -cvE '^[a-zA-Z_][a-zA-Z0-9_]*(\{[^}]*\})? [0-9eE.+\-]+$' \
-                  || true)
-        if [ "$INVALID" -gt 0 ]; then
-          echo "ÉCHEC : ${INVALID} ligne(s) invalide(s) dans smart.prom :"
-          grep -vE '(^[[:space:]]*$|^#)' "$FILE" \
-            | grep -vE '^[a-zA-Z_][a-zA-Z0-9_]*(\{[^}]*\})? [0-9eE.+\-]+$'
-          exit 1
-        fi
-        TOTAL=$(grep -c '' "$FILE")
-        echo "OK : smart.prom valide (${TOTAL} lignes)"
-      args:
-        executable: /bin/bash
-      register: prom_validation
-      changed_when: false
-      failed_when: prom_validation.rc != 0
+      loop: "{{ groups['k3s_cluster'] }}"
+      loop_control:
+        loop_var: node
+        label: "{{ node }}"
       tags: [hw-smart]
 
     - name: Afficher les métriques SMART générées
       ansible.builtin.debug:
-        msg: "{{ smart_prom_check.stdout_lines }}"
+        msg: "{{ item.stdout_lines }}"
+      loop: "{{ smart_prom_check.results }}"
+      loop_control:
+        label: "{{ item.node }}"
       tags: [hw-smart]
 
-    - name: Créer le cron job SMART (toutes les 5 minutes)
-      ansible.builtin.cron:
-        name: "Prometheus SMART metrics textfile collector"
-        minute: "*/5"
-        job: "/usr/local/bin/smart-metrics.sh 2>/dev/null"
-        user: root
-      tags: [hw-smart]
+    # ----------------------------------------------------------
+    # NETTOYAGE : supprimer les pods de setup
+    # ----------------------------------------------------------
+
+    - name: "Supprimer le pod de setup sur {{ node }}"
+      kubernetes.core.k8s:
+        kubeconfig: /etc/rancher/k3s/k3s.yaml
+        state: absent
+        api_version: v1
+        kind: Pod
+        name: "hw-setup-{{ node | replace('k3s-', '') }}"
+        namespace: kube-system
+      loop: "{{ groups['k3s_cluster'] }}"
+      loop_control:
+        loop_var: node
+        label: "{{ node }}"
+      tags: [hw-modules, hw-smart]
+
 
 # =============================================================
 # PARTIE 2 : Ressources Kubernetes (node-exporter + rules + dashboards)
 # =============================================================
 - name: "Hardware Monitoring - Ressources Kubernetes"
   hosts: k3s-node-1
-  become: true
+  connection: local
+  become: false
   gather_facts: false
   vars_files:
     - "../group_vars/k3s_cluster.yml"
