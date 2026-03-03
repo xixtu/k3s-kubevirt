@@ -1,0 +1,626 @@
+---
+# =============================================================
+# PLAYBOOK : Hardware Monitoring - Dell T5600 Sensors & SMART
+# =============================================================
+# Usage : ansible-playbook -i inventory/hosts.yml playbooks/monitoring-hardware.yml
+# Tags :
+#   hw-modules    → Modules kernel hwmon (coretemp, dell-smm-hwmon)
+#   hw-smart      → Script SMART + cron textfile collector
+#   hw-exporter   → Helm upgrade node-exporter (active textfile collector)
+#   hw-rules      → PrometheusRules hardware (temp, SMART, fans)
+#   hw-dashboard  → Dashboards Grafana (Node Exporter Full + SMART disk)
+#   hw-verify     → Vérification finale
+#
+# Architecture :
+#   [host cron] → smart-metrics.sh → /var/lib/node_exporter/textfile_collector/smart.prom
+#   [node-exporter DaemonSet] → mount hostPath → expose via /metrics
+#   [Prometheus] → scrape → stocke séries node_smart_* et node_hwmon_*
+#   [Grafana] → dashboard hardware / SMART
+#
+# Prérequis :
+#   - monitoring.yml exécuté (kube-prometheus-stack déployé)
+#   - smartmontools déjà installé (common_packages)
+#   - Machines : Dell Precision T5600 (x86, kernel ≥ 5.4)
+# =============================================================
+
+# =============================================================
+# PARTIE 1 : Setup sur chaque nœud K3s (SSH)
+# =============================================================
+- name: "Hardware Monitoring - Setup nœuds"
+  hosts: k3s_cluster
+  become: true
+  gather_facts: true
+
+  tasks:
+
+    # ----------------------------------------------------------
+    # MODULES KERNEL
+    # ----------------------------------------------------------
+
+    - name: Installer lm-sensors
+      ansible.builtin.package:
+        name: lm-sensors
+        state: present
+      tags: [hw-modules]
+
+    - name: Charger le module coretemp (températures Intel Core)
+      community.general.modprobe:
+        name: coretemp
+        state: present
+      tags: [hw-modules]
+
+    - name: Charger le module dell-smm-hwmon (capteurs Dell SMM)
+      community.general.modprobe:
+        name: dell-smm-hwmon
+        params: "restricted=0 ignore_dmi=1"
+        state: present
+      register: dell_smm_result
+      failed_when: false
+      tags: [hw-modules]
+
+    - name: Avertir si dell-smm-hwmon non disponible
+      ansible.builtin.debug:
+        msg: "ATTENTION : module dell-smm-hwmon non chargé sur {{ inventory_hostname }} — vérifier le kernel"
+      when: dell_smm_result.rc is defined and dell_smm_result.rc != 0
+      tags: [hw-modules]
+
+    - name: Persister les modules au démarrage
+      ansible.builtin.copy:
+        dest: /etc/modules-load.d/hwmon-dell.conf
+        mode: '0644'
+        content: |
+          # Modules hwmon Dell T5600 - chargés par monitoring-hardware.yml
+          coretemp
+          dell-smm-hwmon
+      tags: [hw-modules]
+
+    - name: Configurer les options du module dell-smm-hwmon
+      ansible.builtin.copy:
+        dest: /etc/modprobe.d/dell-smm-hwmon.conf
+        mode: '0644'
+        content: |
+          # Options dell-smm-hwmon : bypass DMI check et mode non restreint
+          options dell-smm-hwmon restricted=0 ignore_dmi=1
+      tags: [hw-modules]
+
+    # ----------------------------------------------------------
+    # RÉPERTOIRE TEXTFILE COLLECTOR
+    # ----------------------------------------------------------
+
+    - name: Créer le répertoire textfile_collector
+      ansible.builtin.file:
+        path: /var/lib/node_exporter/textfile_collector
+        state: directory
+        mode: '0755'
+        owner: root
+        group: root
+      tags: [hw-smart]
+
+    # ----------------------------------------------------------
+    # SCRIPT SMART METRICS
+    # Source de vérité : scripts/smart-metrics.sh
+    # ----------------------------------------------------------
+
+    - name: Déployer le script smart-metrics.sh
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../scripts/smart-metrics.sh"
+        dest: /usr/local/bin/smart-metrics.sh
+        mode: '0755'
+        owner: root
+        group: root
+      tags: [hw-smart]
+
+    - name: Exécuter le script SMART une première fois
+      ansible.builtin.command: /usr/local/bin/smart-metrics.sh
+      changed_when: false
+      tags: [hw-smart]
+
+    - name: Vérifier le fichier .prom généré
+      ansible.builtin.command: cat /var/lib/node_exporter/textfile_collector/smart.prom
+      register: smart_prom_check
+      changed_when: false
+      tags: [hw-smart]
+
+    - name: Valider le format Prometheus du fichier .prom
+      # Lignes invalides = non-vides, non-commentaires, ne respectant pas
+      # le format  metric_name{labels} valeur
+      # grep -c : retourne le nombre de lignes invalides (0 = OK)
+      ansible.builtin.shell: |
+        FILE=/var/lib/node_exporter/textfile_collector/smart.prom
+        INVALID=$(grep -vE '(^[[:space:]]*$|^#)' "$FILE" \
+                  | grep -cvE '^[a-zA-Z_][a-zA-Z0-9_]*(\{[^}]*\})? [0-9eE.+\-]+$' \
+                  || true)
+        if [ "$INVALID" -gt 0 ]; then
+          echo "ÉCHEC : ${INVALID} ligne(s) invalide(s) dans smart.prom :"
+          grep -vE '(^[[:space:]]*$|^#)' "$FILE" \
+            | grep -vE '^[a-zA-Z_][a-zA-Z0-9_]*(\{[^}]*\})? [0-9eE.+\-]+$'
+          exit 1
+        fi
+        TOTAL=$(grep -c '' "$FILE")
+        echo "OK : smart.prom valide (${TOTAL} lignes)"
+      args:
+        executable: /bin/bash
+      register: prom_validation
+      changed_when: false
+      failed_when: prom_validation.rc != 0
+      tags: [hw-smart]
+
+    - name: Afficher les métriques SMART générées
+      ansible.builtin.debug:
+        msg: "{{ smart_prom_check.stdout_lines }}"
+      tags: [hw-smart]
+
+    - name: Créer le cron job SMART (toutes les 5 minutes)
+      ansible.builtin.cron:
+        name: "Prometheus SMART metrics textfile collector"
+        minute: "*/5"
+        job: "/usr/local/bin/smart-metrics.sh 2>/dev/null"
+        user: root
+      tags: [hw-smart]
+
+# =============================================================
+# PARTIE 2 : Ressources Kubernetes (node-exporter + rules + dashboards)
+# =============================================================
+- name: "Hardware Monitoring - Ressources Kubernetes"
+  hosts: k3s-node-1
+  connection: local
+  become: false
+  gather_facts: false
+  vars_files:
+    - "../group_vars/k3s_cluster.yml"
+
+  tasks:
+
+    # ----------------------------------------------------------
+    # HELM UPGRADE : activer textfile collector dans node-exporter
+    # ----------------------------------------------------------
+
+    - name: Écrire les valeurs node-exporter (textfile collector)
+      ansible.builtin.copy:
+        dest: /tmp/node-exporter-hw-values.yml
+        mode: '0644'
+        content: |
+          prometheus-node-exporter:
+            extraArgs:
+              # Le DaemonSet monte déjà / → /host/root (--path.rootfs=/host/root)
+              # On utilise ce mount existant, pas besoin d'un volume supplémentaire
+              - --collector.textfile.directory=/host/root/var/lib/node_exporter/textfile_collector
+      tags: [hw-exporter]
+
+    - name: Helm upgrade node-exporter (textfile collector)
+      ansible.builtin.command: >
+        helm upgrade kube-prometheus-stack
+        prometheus-community/kube-prometheus-stack
+        --namespace monitoring
+        --reuse-values
+        --version {{ prometheus_stack_version }}
+        --values /tmp/node-exporter-hw-values.yml
+        --wait
+        --timeout 5m
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      tags: [hw-exporter]
+
+    - name: Supprimer le fichier de valeurs temporaire
+      ansible.builtin.file:
+        path: /tmp/node-exporter-hw-values.yml
+        state: absent
+      tags: [hw-exporter]
+
+    - name: Attendre que les pods node-exporter soient Ready
+      ansible.builtin.command: >
+        k3s kubectl rollout status daemonset
+        kube-prometheus-stack-prometheus-node-exporter
+        -n monitoring
+        --timeout=120s
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [hw-exporter]
+
+    # ----------------------------------------------------------
+    # PROMETHEUSRULES : alertes hardware
+    # ----------------------------------------------------------
+
+    - name: Écrire les PrometheusRules hardware
+      ansible.builtin.copy:
+        dest: /tmp/hardware-prometheusrules.yml
+        mode: '0644'
+        # !unsafe : empêche Jinja2 de parser {{ $labels.xxx }} et {{ $value }}
+        # qui sont des annotations PromQL, pas des variables Ansible
+        content: !unsafe |
+          apiVersion: monitoring.coreos.com/v1
+          kind: PrometheusRule
+          metadata:
+            name: hardware-rules
+            namespace: monitoring
+            labels:
+              app: kube-prometheus-stack
+              release: kube-prometheus-stack
+          spec:
+            groups:
+
+              # ------------------------------------------------
+              # Températures CPU (Intel coretemp)
+              # node_hwmon_temp_celsius{chip=~"coretemp.*", sensor="temp1"} = Package temp
+              # ------------------------------------------------
+              - name: hardware.cpu.temperature
+                rules:
+                  - alert: NodeCPUTempWarning
+                    expr: >
+                      node_hwmon_temp_celsius{chip=~"coretemp.*", sensor=~"temp[0-9]+"}
+                      > 75
+                    for: 5m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: "Température CPU élevée sur {{ $labels.instance }}"
+                      description: >
+                        CPU {{ $labels.sensor }} sur {{ $labels.instance }} :
+                        {{ $value | printf "%.1f" }}°C (seuil warning 75°C)
+
+                  - alert: NodeCPUTempCritical
+                    expr: >
+                      node_hwmon_temp_celsius{chip=~"coretemp.*", sensor=~"temp[0-9]+"}
+                      > 85
+                    for: 2m
+                    labels:
+                      severity: critical
+                    annotations:
+                      summary: "CRITIQUE : température CPU sur {{ $labels.instance }}"
+                      description: >
+                        CPU {{ $labels.sensor }} sur {{ $labels.instance }} :
+                        {{ $value | printf "%.1f" }}°C (seuil critique 85°C) —
+                        risque throttling / dommage matériel
+
+              # ------------------------------------------------
+              # Températures Dell SMM (SODIMM, Ambient, CPU dell)
+              # node_hwmon_temp_celsius{chip=~"dell_smm.*"}
+              # ------------------------------------------------
+              - name: hardware.dell.temperature
+                rules:
+                  - alert: NodeDellAmbientTempWarning
+                    expr: >
+                      node_hwmon_temp_celsius{chip=~"dell_smm.*"}
+                      > 45
+                    for: 5m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: "Température interne Dell élevée sur {{ $labels.instance }}"
+                      description: >
+                        Capteur Dell {{ $labels.sensor }} sur {{ $labels.instance }} :
+                        {{ $value | printf "%.1f" }}°C (seuil 45°C)
+
+                  - alert: NodeDellAmbientTempCritical
+                    expr: >
+                      node_hwmon_temp_celsius{chip=~"dell_smm.*"}
+                      > 55
+                    for: 2m
+                    labels:
+                      severity: critical
+                    annotations:
+                      summary: "CRITIQUE : température interne Dell sur {{ $labels.instance }}"
+                      description: >
+                        Capteur Dell {{ $labels.sensor }} sur {{ $labels.instance }} :
+                        {{ $value | printf "%.1f" }}°C (seuil critique 55°C)
+
+              # ------------------------------------------------
+              # Ventilateurs (node_hwmon_fan_rpm)
+              # ------------------------------------------------
+              - name: hardware.fans
+                rules:
+                  - alert: NodeFanStopped
+                    # min_over_time + max_over_time sur la MÊME métrique courante
+                    # → pas de problème de label-mismatch avec offset/unless
+                    # quand un chip hwmon est rechargé ou réénuméré (GPU PCI addr)
+                    expr: >
+                      min_over_time(node_hwmon_fan_rpm[5m]) == 0
+                      and max_over_time(node_hwmon_fan_rpm[15m]) > 100
+                    for: 3m
+                    labels:
+                      severity: critical
+                    annotations:
+                      summary: "Ventilateur arrêté sur {{ $labels.instance }}"
+                      description: >
+                        Ventilateur {{ $labels.sensor }} ({{ $labels.chip }}) sur
+                        {{ $labels.instance }} était actif (>100 RPM dans les 15 min)
+                        et est à 0 RPM depuis plus de 5 min
+
+                  - alert: NodeFanSpeedLow
+                    expr: >
+                      node_hwmon_fan_rpm{sensor=~"fan[0-9]+"}
+                      > 0 and node_hwmon_fan_rpm{sensor=~"fan[0-9]+"} < 400
+                    for: 5m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: "Ventilateur lent sur {{ $labels.instance }}"
+                      description: >
+                        Ventilateur {{ $labels.sensor }} sur {{ $labels.instance }} :
+                        {{ $value | printf "%.0f" }} RPM (seuil minimum 400 RPM)
+
+              # ------------------------------------------------
+              # GPU (nouveau driver)
+              # node_hwmon_temp_celsius{chip=~"nouveau.*"}
+              # ------------------------------------------------
+              - name: hardware.gpu
+                rules:
+                  - alert: NodeGPUTempWarning
+                    expr: >
+                      node_hwmon_temp_celsius{chip=~"nouveau.*"}
+                      > 75
+                    for: 5m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: "Température GPU élevée sur {{ $labels.instance }}"
+                      description: >
+                        GPU sur {{ $labels.instance }} :
+                        {{ $value | printf "%.1f" }}°C (seuil 75°C)
+
+              # ------------------------------------------------
+              # SMART - Santé disques (métriques textfile collector)
+              # ------------------------------------------------
+              - name: hardware.smart.health
+                rules:
+                  - alert: DiskSMARTFailed
+                    expr: node_smart_device_health == 0
+                    for: 0m
+                    labels:
+                      severity: critical
+                    annotations:
+                      summary: "SMART FAILED sur {{ $labels.instance }}"
+                      description: >
+                        Disque {{ $labels.device }} ({{ $labels.model }})
+                        sur {{ $labels.instance }} a échoué le self-test SMART.
+                        Remplacement urgent requis.
+
+                  - alert: DiskSMARTReallocatedSectors
+                    expr: node_smart_reallocated_sectors_total > 0
+                    for: 5m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: "Secteurs réalloués sur {{ $labels.instance }}"
+                      description: >
+                        Disque {{ $labels.device }} ({{ $labels.model }})
+                        sur {{ $labels.instance }} :
+                        {{ $value | printf "%.0f" }} secteur(s) réalloué(s).
+                        Signe de défaillance imminente.
+
+                  - alert: DiskSMARTPendingSectors
+                    expr: node_smart_pending_sectors_total > 0
+                    for: 5m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: "Secteurs en attente sur {{ $labels.instance }}"
+                      description: >
+                        Disque {{ $labels.device }} ({{ $labels.model }})
+                        sur {{ $labels.instance }} :
+                        {{ $value | printf "%.0f" }} secteur(s) en attente de réallocation.
+
+              # ------------------------------------------------
+              # SMART - Températures disques
+              # ------------------------------------------------
+              - name: hardware.smart.temperature
+                rules:
+                  - alert: DiskTempWarning
+                    expr: node_smart_temperature_celsius > 50
+                    for: 5m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: "Température disque élevée sur {{ $labels.instance }}"
+                      description: >
+                        Disque {{ $labels.device }} ({{ $labels.model }})
+                        sur {{ $labels.instance }} :
+                        {{ $value | printf "%.0f" }}°C (seuil warning 50°C)
+
+                  - alert: DiskTempCritical
+                    expr: node_smart_temperature_celsius > 60
+                    for: 2m
+                    labels:
+                      severity: critical
+                    annotations:
+                      summary: "CRITIQUE : température disque sur {{ $labels.instance }}"
+                      description: >
+                        Disque {{ $labels.device }} ({{ $labels.model }})
+                        sur {{ $labels.instance }} :
+                        {{ $value | printf "%.0f" }}°C (seuil critique 60°C) —
+                        risque de perte de données
+
+              # ------------------------------------------------
+              # SMART - Collecte (freshness check)
+              # ------------------------------------------------
+              - name: hardware.smart.freshness
+                rules:
+                  - alert: SMARTCollectionStale
+                    expr: >
+                      (time() - node_smart_collection_timestamp_seconds) > 600
+                    for: 5m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: "Collecte SMART bloquée sur {{ $labels.instance }}"
+                      description: >
+                        Le script smart-metrics.sh sur {{ $labels.instance }}
+                        n'a pas mis à jour les métriques depuis
+                        {{ $value | printf "%.0f" }} secondes (seuil 600s = 10 min).
+                        Vérifier le cron job.
+      tags: [hw-rules]
+
+    - name: Appliquer les PrometheusRules hardware
+      ansible.builtin.command: k3s kubectl apply -f /tmp/hardware-prometheusrules.yml
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [hw-rules]
+
+    - name: Supprimer le fichier PrometheusRules temporaire
+      ansible.builtin.file:
+        path: /tmp/hardware-prometheusrules.yml
+        state: absent
+      tags: [hw-rules]
+
+    # ----------------------------------------------------------
+    # GRAFANA DASHBOARDS
+    # ----------------------------------------------------------
+
+    - name: Télécharger le dashboard Node Exporter Full (ID 1860)
+      ansible.builtin.command: >
+        curl -sL https://grafana.com/api/dashboards/1860/revisions/latest/download
+        -o /tmp/node-exporter-full-dashboard.json
+      changed_when: false
+      tags: [hw-dashboard]
+
+    - name: Lire le dashboard Node Exporter Full
+      ansible.builtin.slurp:
+        src: /tmp/node-exporter-full-dashboard.json
+      register: node_exporter_dashboard_json
+      tags: [hw-dashboard]
+
+    - name: Créer le ConfigMap dashboard Node Exporter Full
+      ansible.builtin.copy:
+        dest: /tmp/node-exporter-full-cm.yml
+        mode: '0644'
+        content: |
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: node-exporter-full-dashboard
+            namespace: monitoring
+            labels:
+              grafana_dashboard: "1"
+          data:
+            node-exporter-full-dashboard.json: |
+              {{ node_exporter_dashboard_json.content | b64decode | indent(6) }}
+      tags: [hw-dashboard]
+
+    - name: Appliquer le ConfigMap dashboard Node Exporter Full
+      # --server-side : évite l'annotation last-applied-configuration (limite 256KB)
+      # le dashboard Node Exporter Full (ID 1860) dépasse cette limite
+      ansible.builtin.command: k3s kubectl apply --server-side -f /tmp/node-exporter-full-cm.yml
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [hw-dashboard]
+
+    - name: Télécharger le dashboard SMART disk data (ID 10530)
+      ansible.builtin.command: >
+        curl -sL https://grafana.com/api/dashboards/10530/revisions/latest/download
+        -o /tmp/smart-dashboard.json
+      changed_when: false
+      tags: [hw-dashboard]
+
+    - name: Lire le dashboard SMART
+      ansible.builtin.slurp:
+        src: /tmp/smart-dashboard.json
+      register: smart_dashboard_json
+      tags: [hw-dashboard]
+
+    - name: Créer le ConfigMap dashboard SMART
+      ansible.builtin.copy:
+        dest: /tmp/smart-dashboard-cm.yml
+        mode: '0644'
+        content: |
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: smart-disk-dashboard
+            namespace: monitoring
+            labels:
+              grafana_dashboard: "1"
+          data:
+            smart-disk-dashboard.json: |
+              {{ smart_dashboard_json.content | b64decode | indent(6) }}
+      tags: [hw-dashboard]
+
+    - name: Appliquer le ConfigMap dashboard SMART
+      ansible.builtin.command: k3s kubectl apply --server-side -f /tmp/smart-dashboard-cm.yml
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [hw-dashboard]
+
+    - name: Supprimer les fichiers dashboard temporaires
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/node-exporter-full-dashboard.json
+        - /tmp/node-exporter-full-cm.yml
+        - /tmp/smart-dashboard.json
+        - /tmp/smart-dashboard-cm.yml
+      tags: [hw-dashboard]
+
+    # ----------------------------------------------------------
+    # VÉRIFICATION
+    # ----------------------------------------------------------
+
+    - name: Vérifier les PrometheusRules hardware
+      ansible.builtin.command: k3s kubectl get prometheusrule hardware-rules -n monitoring
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: hw_rules_check
+      changed_when: false
+      tags: [hw-verify]
+
+    - name: Vérifier les ConfigMaps dashboard
+      ansible.builtin.command: >
+        k3s kubectl get configmap -n monitoring
+        -l grafana_dashboard=1
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: grafana_cm_check
+      changed_when: false
+      tags: [hw-verify]
+
+    - name: Vérifier les args du DaemonSet node-exporter
+      ansible.builtin.command: >
+        k3s kubectl get daemonset
+        kube-prometheus-stack-prometheus-node-exporter
+        -n monitoring
+        -o jsonpath='{.spec.template.spec.containers[0].args}'
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: node_exporter_args
+      changed_when: false
+      tags: [hw-verify]
+
+    - name: Résumé Hardware Monitoring
+      ansible.builtin.debug:
+        msg:
+          - "================================================"
+          - "  Hardware Monitoring installé"
+          - "================================================"
+          - "PrometheusRules  : {{ hw_rules_check.stdout }}"
+          - "Grafana dashboards :"
+          - "{{ grafana_cm_check.stdout_lines }}"
+          - "node-exporter args :"
+          - "  {{ node_exporter_args.stdout }}"
+          - "================================================"
+          - "  Métriques disponibles dans Prometheus"
+          - "================================================"
+          - "  node_hwmon_temp_celsius    → CPU / SODIMM / GPU / Ambient"
+          - "  node_hwmon_fan_rpm         → Ventilateurs"
+          - "  node_smart_device_health   → PASSED(1) / FAILED(0)"
+          - "  node_smart_temperature_celsius → Température disques"
+          - "  node_smart_reallocated_sectors_total → Secteurs défaillants"
+          - "  node_smart_pending_sectors_total     → Secteurs en attente"
+          - "  node_smart_power_on_hours_total      → Heures de fonctionnement"
+          - "================================================"
+          - "  Alertes configurées"
+          - "================================================"
+          - "  NodeCPUTempWarning / NodeCPUTempCritical     (75°C / 85°C)"
+          - "  NodeDellAmbientTempWarning / Critical        (45°C / 55°C)"
+          - "  NodeFanStopped / NodeFanSpeedLow             (arrêt / < 400 RPM)"
+          - "  NodeGPUTempWarning                           (75°C)"
+          - "  DiskSMARTFailed                              (santé FAILED)"
+          - "  DiskSMARTReallocatedSectors                  (> 0)"
+          - "  DiskSMARTPendingSectors                      (> 0)"
+          - "  DiskTempWarning / DiskTempCritical           (50°C / 60°C)"
+          - "  SMARTCollectionStale                         (> 10 min sans update)"
+          - "================================================"
+      tags: [hw-verify]
