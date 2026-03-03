@@ -182,15 +182,9 @@
         content: |
           prometheus-node-exporter:
             extraArgs:
-              - --collector.textfile.directory=/host/textfile_collector
-            extraVolumes:
-              - name: textfile-collector
-                hostPath:
-                  path: /var/lib/node_exporter/textfile_collector
-                  type: DirectoryOrCreate
-            extraVolumeMounts:
-              - name: textfile-collector
-                mountPath: /host/textfile_collector
+              # Le DaemonSet monte déjà / → /host/root (--path.rootfs=/host/root)
+              # On utilise ce mount existant, pas besoin d'un volume supplémentaire
+              - --collector.textfile.directory=/host/root/var/lib/node_exporter/textfile_collector
       tags: [hw-exporter]
 
     - name: Helm upgrade node-exporter (textfile collector)
