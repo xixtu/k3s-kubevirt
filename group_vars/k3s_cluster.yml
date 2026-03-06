@@ -103,6 +103,12 @@ nas_config:
   samba_ip: "192.168.0.30"              # IP fixe MetalLB pour Samba (\\192.168.0.30\media)
   plex_ip: "192.168.0.31"              # IP fixe MetalLB pour Plex (http://192.168.0.31:32400)
   plex_claim_token: ""                  # Obtenir sur https://plex.tv/claim (optionnel, config via UI)
+  # --- JDownloader 2 ---
+  jdownloader_config_storage_class: "longhorn-fast"
+  jdownloader_config_storage_size: "1Gi"
+  jdownloader_email: "xixtu@hotmail.com"
+  jdownloader_password: "Lavaur81500"    # ⚠ ansible-vault en production
+  jdownloader_device_name: "k3s-jdownloader"
   # --- Active Directory (corp.lcl) ---
   ad_domain: "corp.lcl"
   ad_realm: "CORP.LCL"

@@ -5,7 +5,8 @@
 # Architecture :
 #   Longhorn PVC (RWX - longhorn-slow)
 #   ├── Samba AD Member (RW) → SMB shares auth AD (corp.lcl)
-#   └── Plex (RO) → Streaming média direct
+#   ├── Plex (RO) → Streaming média direct
+#   └── JDownloader 2 (RW) → Downloads → media/download
 #
 # Samba est joint au domaine corp.lcl via winbind + Kerberos.
 # Les utilisateurs s'authentifient avec leurs comptes AD.
@@ -13,10 +14,11 @@
 #
 # Usage : ansible-playbook -i inventory/hosts.yml playbooks/nas.yml
 # Tags :
-#   nas-install  → Namespace, Secrets, ConfigMaps, PVC, Samba, Plex
-#   nas-samba    → Samba Deployment + Service uniquement
-#   nas-plex     → Plex Deployment + Service uniquement
-#   nas-verify   → Vérification pods, services, PVC
+#   nas-install      → Namespace, Secrets, ConfigMaps, PVC, Samba, Plex
+#   nas-samba        → Samba Deployment + Service uniquement
+#   nas-plex         → Plex Deployment + Service uniquement
+#   nas-jdownloader  → JDownloader 2 Deployment + Service
+#   nas-verify       → Vérification pods, services, PVC
 # Prérequis :
 #   - K3s + MetalLB + Longhorn installés
 #   - Longhorn StorageClass longhorn-slow + longhorn-fast
@@ -27,9 +29,11 @@
 #   - Compte de service AD svc-adjoin avec droit de jonction machine
 #   - DNS : dc1.corp.lcl résolvable depuis les nœuds K3s
 # Accès :
-#   Samba : \\192.168.0.30\media (auth AD : user@corp.lcl)
-#   Plex  : https://plex.app.xixtu.eu (Let's Encrypt)
-#   Plex  : http://192.168.0.31:32400/web (LAN direct)
+#   Samba       : \\192.168.0.30\media (auth AD : user@corp.lcl)
+#   Plex        : https://plex.app.xixtu.eu (Let's Encrypt)
+#   Plex        : http://192.168.0.31:32400/web (LAN direct)
+#   JDownloader : http://jdownloader.app.corp.lcl (web UI)
+#   JDownloader : MyJDownloader (accès distant via my.jdownloader.org)
 # =============================================================
 
 - name: "NAS - Stockage partagé (Option C Hybride + Active Directory)"
@@ -42,6 +46,7 @@
     target_namespace: "nas"
     samba_image: "debian:bookworm"
     plex_image: "linuxserver/plex:latest"
+    jdownloader_image: "jlesage/jdownloader-2:latest"
 
   tasks:
 
@@ -709,6 +714,205 @@
       tags: [nas, nas-install, nas-plex]
 
     # ==========================================================
+    # JDOWNLOADER 2 (Téléchargement → media/download)
+    # ==========================================================
+    # Image : jlesage/jdownloader-2
+    # Downloads : /output → PVC nas-data subPath media/download
+    # Config    : PVC dédié (longhorn-fast)
+    # Accès     : Web UI (5800) + MyJDownloader (3129)
+    # ==========================================================
+
+    - name: Écrire le PVC config JDownloader
+      ansible.builtin.copy:
+        dest: /tmp/jdownloader-pvc.yml
+        mode: '0644'
+        content: |
+          apiVersion: v1
+          kind: PersistentVolumeClaim
+          metadata:
+            name: jdownloader-config
+            namespace: {{ target_namespace }}
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            storageClassName: {{ nas_config.jdownloader_config_storage_class }}
+            resources:
+              requests:
+                storage: {{ nas_config.jdownloader_config_storage_size }}
+      tags: [nas, nas-jdownloader]
+
+    - name: Appliquer le PVC config JDownloader
+      ansible.builtin.command: k3s kubectl apply -f /tmp/jdownloader-pvc.yml
+      register: jd_pvc_apply
+      changed_when: "'configured' in jd_pvc_apply.stdout or 'created' in jd_pvc_apply.stdout"
+      tags: [nas, nas-jdownloader]
+
+    - name: Supprimer le fichier PVC JDownloader temporaire
+      ansible.builtin.file:
+        path: /tmp/jdownloader-pvc.yml
+        state: absent
+      tags: [nas, nas-jdownloader]
+
+    - name: Écrire le Deployment JDownloader
+      ansible.builtin.copy:
+        dest: /tmp/jdownloader-app.yml
+        mode: '0644'
+        content: |
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: jdownloader
+            namespace: {{ target_namespace }}
+            labels:
+              app: jdownloader
+          spec:
+            replicas: 1
+            strategy:
+              type: Recreate
+            selector:
+              matchLabels:
+                app: jdownloader
+            template:
+              metadata:
+                labels:
+                  app: jdownloader
+              spec:
+                initContainers:
+                  - name: init-download-dir
+                    image: busybox
+                    command: ['sh', '-c', 'mkdir -p /data/media/download && chmod 0777 /data/media/download']
+                    volumeMounts:
+                      - name: nas-data
+                        mountPath: /data
+                containers:
+                  - name: jdownloader
+                    image: {{ jdownloader_image }}
+                    ports:
+                      - containerPort: 5800
+                        name: webui
+                      - containerPort: 3129
+                        name: myjd
+                    env:
+                      - name: MYJDOWNLOADER_EMAIL
+                        value: "{{ nas_config.jdownloader_email }}"
+                      - name: MYJDOWNLOADER_PASSWORD
+                        value: "{{ nas_config.jdownloader_password }}"
+                      - name: MYJDOWNLOADER_DEVICE_NAME
+                        value: "{{ nas_config.jdownloader_device_name }}"
+                      - name: KEEP_APP_RUNNING
+                        value: "1"
+                      - name: TZ
+                        value: "{{ system_config.timezone }}"
+                      - name: USER_ID
+                        value: "1000"
+                      - name: GROUP_ID
+                        value: "1000"
+                    volumeMounts:
+                      - name: nas-data
+                        mountPath: /output
+                        subPath: media/download
+                      - name: jdownloader-config
+                        mountPath: /config
+                    resources:
+                      requests:
+                        cpu: 100m
+                        memory: 256Mi
+                      limits:
+                        memory: 1Gi
+                volumes:
+                  - name: nas-data
+                    persistentVolumeClaim:
+                      claimName: nas-data
+                  - name: jdownloader-config
+                    persistentVolumeClaim:
+                      claimName: jdownloader-config
+          ---
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: jdownloader-service
+            namespace: {{ target_namespace }}
+          spec:
+            selector:
+              app: jdownloader
+            ports:
+              - name: webui
+                protocol: TCP
+                port: 5800
+                targetPort: 5800
+              - name: myjd
+                protocol: TCP
+                port: 3129
+                targetPort: 3129
+            type: ClusterIP
+      tags: [nas, nas-jdownloader]
+
+    - name: Appliquer le Deployment JDownloader
+      ansible.builtin.command: k3s kubectl apply -f /tmp/jdownloader-app.yml
+      register: jd_app_apply
+      changed_when: "'configured' in jd_app_apply.stdout or 'created' in jd_app_apply.stdout"
+      tags: [nas, nas-jdownloader]
+
+    - name: Supprimer le fichier JDownloader temporaire
+      ansible.builtin.file:
+        path: /tmp/jdownloader-app.yml
+        state: absent
+      tags: [nas, nas-jdownloader]
+
+    - name: Attendre que JDownloader soit Ready
+      ansible.builtin.command: >
+        k3s kubectl wait --for=condition=Ready pods
+        -l app=jdownloader
+        -n {{ target_namespace }}
+        --timeout=180s
+      changed_when: false
+      tags: [nas, nas-jdownloader]
+
+    # --- IngressRoute HTTP JDownloader (web UI interne) ---
+
+    - name: Écrire l'IngressRoute JDownloader (HTTP interne)
+      ansible.builtin.copy:
+        dest: /tmp/jdownloader-ingressroute.yml
+        mode: '0644'
+        content: |
+          apiVersion: traefik.io/v1alpha1
+          kind: IngressRoute
+          metadata:
+            name: jdownloader-http
+            namespace: {{ target_namespace }}
+          spec:
+            entryPoints:
+              - web
+            routes:
+              - match: "Host(`jdownloader.{{ cluster_network.apps_domain }}`)"
+                kind: Rule
+                services:
+                  - name: jdownloader-service
+                    port: 5800
+      tags: [nas, nas-jdownloader]
+
+    - name: Appliquer l'IngressRoute JDownloader
+      ansible.builtin.command: k3s kubectl apply -f /tmp/jdownloader-ingressroute.yml
+      register: jd_ir_apply
+      changed_when: "'configured' in jd_ir_apply.stdout or 'created' in jd_ir_apply.stdout"
+      tags: [nas, nas-jdownloader]
+
+    - name: Supprimer le fichier IngressRoute JDownloader temporaire
+      ansible.builtin.file:
+        path: /tmp/jdownloader-ingressroute.yml
+        state: absent
+      tags: [nas, nas-jdownloader]
+
+    - name: Résultat JDownloader
+      ansible.builtin.debug:
+        msg:
+          - "JDownloader 2 déployé dans {{ target_namespace }}"
+          - "Web UI       : http://jdownloader.{{ cluster_network.apps_domain }}"
+          - "MyJDownloader: {{ nas_config.jdownloader_device_name }} (my.jdownloader.org)"
+          - "Downloads    : /output → nas-data/media/download"
+      tags: [nas, nas-jdownloader]
+
+    # ==========================================================
     # VÉRIFICATION
     # ==========================================================
 
@@ -758,7 +962,8 @@
           - "  Architecture :"
           - "  Longhorn PVC (RWX - {{ nas_config.storage_class }})"
           - "  ├── Samba AD Member (RW) → SMB shares (auth AD)"
-          - "  └── Plex (RO) → Streaming media"
+          - "  ├── Plex (RO) → Streaming media"
+          - "  └── JDownloader 2 (RW) → Downloads media/download"
           - ""
           - "  Active Directory : {{ nas_config.ad_realm }}"
           - "  Domain Controller: {{ nas_config.ad_dc_hostname }} ({{ nas_config.ad_dc_ip }})"
@@ -788,6 +993,13 @@
           - "    Host interne : samba-service.{{ target_namespace }}.svc.cluster.local"
           - "    Host externe : {{ nas_config.samba_ip }}"
           - "    Auth : compte de service AD (ex: svc-nextcloud@{{ nas_config.ad_domain }})"
+          - ""
+          - "  JDOWNLOADER 2"
+          - "  ────────────────────────────────────"
+          - "  Web UI  : http://jdownloader.{{ cluster_network.apps_domain }}"
+          - "  MyJD    : {{ nas_config.jdownloader_device_name }} (my.jdownloader.org)"
+          - "  Output  : nas-data/media/download (acces direct volume RWX)"
+          - "  Config  : jdownloader-config ({{ nas_config.jdownloader_config_storage_class }})"
           - ""
           - "  PLEX ({{ nas_config.plex_ip }}:32400)"
           - "  ────────────────────────────────────"
