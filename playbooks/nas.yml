@@ -802,6 +802,8 @@
                       - name: MYJDOWNLOADER_DEVICE_NAME
                         value: "{{ nas_config.jdownloader_device_name }}"
                       # --- Sécurité ---
+                      - name: SECURE_CONNECTION
+                        value: "1"
                       - name: VNC_PASSWORD
                         value: "{{ nas_config.jdownloader_vnc_password }}"
                       - name: WEB_AUTHENTICATION
@@ -950,6 +952,14 @@
         mode: '0644'
         content: |
           apiVersion: traefik.io/v1alpha1
+          kind: ServersTransport
+          metadata:
+            name: jdownloader-transport
+            namespace: {{ target_namespace }}
+          spec:
+            insecureSkipVerify: true
+          ---
+          apiVersion: traefik.io/v1alpha1
           kind: IngressRoute
           metadata:
             name: jdownloader-https
@@ -963,6 +973,8 @@
                 services:
                   - name: jdownloader-service
                     port: 5800
+                    scheme: https
+                    serversTransport: jdownloader-transport
             tls:
               secretName: jdownloader-tls
       tags: [nas, nas-jdownloader, letsencrypt-tls]
