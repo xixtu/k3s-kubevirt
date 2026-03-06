@@ -109,6 +109,8 @@ nas_config:
   jdownloader_email: "xixtu@hotmail.com"
   jdownloader_password: "Lavaur81500"    # ⚠ ansible-vault en production
   jdownloader_device_name: "k3s-jdownloader"
+  jdownloader_vnc_password: "Eleanor@2014"  # ⚠ ansible-vault en production
+  jdownloader_max_mem: "512M"            # Limite mémoire JVM JDownloader
   # --- Active Directory (corp.lcl) ---
   ad_domain: "corp.lcl"
   ad_realm: "CORP.LCL"
@@ -177,6 +179,7 @@ external_domains:
   alertmanager: "alertmanager.app.xixtu.eu"
   nextcloud: "nextcloud.app.xixtu.eu"
   collabora: "collabora.app.xixtu.eu"
+  jdownloader: "jdownloader.app.xixtu.eu"
   plex: "plex.app.xixtu.eu"
 
 # --- Monitoring ---

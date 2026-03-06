@@ -28,11 +28,12 @@
 #   - Groupes AD créés : media-rw, documents-rw, shared-rw
 #   - Compte de service AD svc-adjoin avec droit de jonction machine
 #   - DNS : dc1.corp.lcl résolvable depuis les nœuds K3s
+#   - DNS : jdownloader.app.xixtu.eu → A → <IP publique> (pour HTTPS)
 # Accès :
 #   Samba       : \\192.168.0.30\media (auth AD : user@corp.lcl)
 #   Plex        : https://plex.app.xixtu.eu (Let's Encrypt)
 #   Plex        : http://192.168.0.31:32400/web (LAN direct)
-#   JDownloader : http://jdownloader.app.corp.lcl (web UI)
+#   JDownloader : https://jdownloader.app.xixtu.eu (Let's Encrypt)
 #   JDownloader : MyJDownloader (accès distant via my.jdownloader.org)
 # =============================================================
 
@@ -793,12 +794,30 @@
                       - containerPort: 3129
                         name: myjd
                     env:
+                      # --- MyJDownloader (accès distant) ---
                       - name: MYJDOWNLOADER_EMAIL
                         value: "{{ nas_config.jdownloader_email }}"
                       - name: MYJDOWNLOADER_PASSWORD
                         value: "{{ nas_config.jdownloader_password }}"
                       - name: MYJDOWNLOADER_DEVICE_NAME
                         value: "{{ nas_config.jdownloader_device_name }}"
+                      # --- Sécurité ---
+                      - name: VNC_PASSWORD
+                        value: "{{ nas_config.jdownloader_vnc_password }}"
+                      - name: WEB_AUTHENTICATION
+                        value: "1"
+                      - name: WEB_AUTHENTICATION_USERNAME
+                        value: "admin"
+                      - name: WEB_AUTHENTICATION_PASSWORD
+                        value: "{{ nas_config.jdownloader_vnc_password }}"
+                      # --- Affichage ---
+                      - name: DISPLAY_WIDTH
+                        value: "1280"
+                      - name: DISPLAY_HEIGHT
+                        value: "768"
+                      - name: DARK_MODE
+                        value: "1"
+                      # --- Système ---
                       - name: KEEP_APP_RUNNING
                         value: "1"
                       - name: TZ
@@ -807,6 +826,12 @@
                         value: "1000"
                       - name: GROUP_ID
                         value: "1000"
+                      - name: UMASK
+                        value: "0000"
+                      - name: JDOWNLOADER_MAX_MEM
+                        value: "{{ nas_config.jdownloader_max_mem }}"
+                      - name: CLEAN_TMP_DIR
+                        value: "1"
                     volumeMounts:
                       - name: nas-data
                         mountPath: /output
@@ -868,9 +893,58 @@
       changed_when: false
       tags: [nas, nas-jdownloader]
 
-    # --- IngressRoute HTTP JDownloader (web UI interne) ---
+    # --- TLS JDownloader (cert-manager + Let's Encrypt) ---
 
-    - name: Écrire l'IngressRoute JDownloader (HTTP interne)
+    - name: Écrire l'Ingress TLS JDownloader
+      ansible.builtin.copy:
+        dest: /tmp/jdownloader-ingress.yml
+        mode: '0644'
+        content: |
+          apiVersion: networking.k8s.io/v1
+          kind: Ingress
+          metadata:
+            name: jdownloader-ingress
+            namespace: {{ target_namespace }}
+            annotations:
+              cert-manager.io/cluster-issuer: "letsencrypt-production"
+              cert-manager.io/private-key-algorithm: "ECDSA"
+              cert-manager.io/private-key-size: "256"
+              traefik.ingress.kubernetes.io/router.entrypoints: "web"
+              traefik.ingress.kubernetes.io/router.middlewares: "traefik-redirect-to-https@kubernetescrd"
+          spec:
+            ingressClassName: traefik
+            tls:
+              - hosts:
+                  - "{{ external_domains.jdownloader }}"
+                secretName: jdownloader-tls
+            rules:
+              - host: "{{ external_domains.jdownloader }}"
+                http:
+                  paths:
+                    - path: /
+                      pathType: Prefix
+                      backend:
+                        service:
+                          name: jdownloader-service
+                          port:
+                            number: 5800
+      tags: [nas, nas-jdownloader, letsencrypt-tls]
+
+    - name: Appliquer l'Ingress TLS JDownloader
+      ansible.builtin.command: k3s kubectl apply -f /tmp/jdownloader-ingress.yml
+      register: jd_ingress_apply
+      changed_when: "'configured' in jd_ingress_apply.stdout or 'created' in jd_ingress_apply.stdout"
+      tags: [nas, nas-jdownloader, letsencrypt-tls]
+
+    - name: Supprimer le fichier Ingress JDownloader temporaire
+      ansible.builtin.file:
+        path: /tmp/jdownloader-ingress.yml
+        state: absent
+      tags: [nas, nas-jdownloader, letsencrypt-tls]
+
+    # --- IngressRoute HTTPS JDownloader (Traefik websecure) ---
+
+    - name: Écrire l'IngressRoute HTTPS JDownloader
       ansible.builtin.copy:
         dest: /tmp/jdownloader-ingressroute.yml
         mode: '0644'
@@ -878,37 +952,40 @@
           apiVersion: traefik.io/v1alpha1
           kind: IngressRoute
           metadata:
-            name: jdownloader-http
+            name: jdownloader-https
             namespace: {{ target_namespace }}
           spec:
             entryPoints:
-              - web
+              - websecure
             routes:
-              - match: "Host(`jdownloader.{{ cluster_network.apps_domain }}`)"
+              - match: "Host(`{{ external_domains.jdownloader }}`)"
                 kind: Rule
                 services:
                   - name: jdownloader-service
                     port: 5800
-      tags: [nas, nas-jdownloader]
+            tls:
+              secretName: jdownloader-tls
+      tags: [nas, nas-jdownloader, letsencrypt-tls]
 
-    - name: Appliquer l'IngressRoute JDownloader
+    - name: Appliquer l'IngressRoute HTTPS JDownloader
       ansible.builtin.command: k3s kubectl apply -f /tmp/jdownloader-ingressroute.yml
       register: jd_ir_apply
       changed_when: "'configured' in jd_ir_apply.stdout or 'created' in jd_ir_apply.stdout"
-      tags: [nas, nas-jdownloader]
+      tags: [nas, nas-jdownloader, letsencrypt-tls]
 
     - name: Supprimer le fichier IngressRoute JDownloader temporaire
       ansible.builtin.file:
         path: /tmp/jdownloader-ingressroute.yml
         state: absent
-      tags: [nas, nas-jdownloader]
+      tags: [nas, nas-jdownloader, letsencrypt-tls]
 
     - name: Résultat JDownloader
       ansible.builtin.debug:
         msg:
           - "JDownloader 2 déployé dans {{ target_namespace }}"
-          - "Web UI       : http://jdownloader.{{ cluster_network.apps_domain }}"
+          - "HTTPS        : https://{{ external_domains.jdownloader }}"
           - "MyJDownloader: {{ nas_config.jdownloader_device_name }} (my.jdownloader.org)"
+          - "Web auth     : admin / {{ nas_config.jdownloader_vnc_password }}"
           - "Downloads    : /output → nas-data/media/download"
       tags: [nas, nas-jdownloader]
 
@@ -996,8 +1073,10 @@
           - ""
           - "  JDOWNLOADER 2"
           - "  ────────────────────────────────────"
-          - "  Web UI  : http://jdownloader.{{ cluster_network.apps_domain }}"
+          - "  HTTPS   : https://{{ external_domains.jdownloader }} (Let's Encrypt)"
           - "  MyJD    : {{ nas_config.jdownloader_device_name }} (my.jdownloader.org)"
+          - "  Web auth: admin / *** (WEB_AUTHENTICATION activé)"
+          - "  VNC pwd : *** (VNC_PASSWORD configuré)"
           - "  Output  : nas-data/media/download (acces direct volume RWX)"
           - "  Config  : jdownloader-config ({{ nas_config.jdownloader_config_storage_class }})"
           - ""
