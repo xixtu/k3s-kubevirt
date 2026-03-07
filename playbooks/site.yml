@@ -68,6 +68,13 @@
   import_playbook: monitoring.yml
   tags: [monitoring]
 
+# UPGRADE : K3s rolling upgrade via System Upgrade Controller
+# Usage standalone : ansible-playbook -i inventory/hosts.yml playbooks/k3s-upgrade.yml
+# ⚠ Ne pas inclure dans un run complet site.yml, exécuter séparément
+# - name: "UPGRADE - K3s Rolling Upgrade"
+#   import_playbook: k3s-upgrade.yml
+#   tags: [k3s-upgrade]
+
 # PHASE 9 : KubeVirt (à venir)
 # - name: "PHASE 9 - KubeVirt"
 #   import_playbook: kubevirt.yml

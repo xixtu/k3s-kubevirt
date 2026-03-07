@@ -1,0 +1,172 @@
+---
+# =============================================================
+# TASKS - Étape d'upgrade K3s (inclus par k3s-upgrade.yml)
+# =============================================================
+# Appelé en boucle pour chaque version dans k3s_upgrade.upgrade_path
+# Variable reçue : target_version (ex: "v1.31.13+k3s1")
+# =============================================================
+
+- name: "═══ Étape {{ step_index + 1 }}/{{ k3s_upgrade.upgrade_path | length }} : Upgrade vers {{ target_version }} ═══"
+  ansible.builtin.debug:
+    msg: "Lancement de l'upgrade vers {{ target_version }}"
+
+# --- Vérifier si cette étape est nécessaire ---
+- name: Récupérer la version actuelle des nœuds
+  ansible.builtin.shell: |
+    kubectl get nodes -o jsonpath='{.items[0].status.nodeInfo.kubeletVersion}'
+  register: current_version
+  changed_when: false
+
+- name: Extraire le mineur actuel et le mineur cible
+  ansible.builtin.set_fact:
+    current_minor: "{{ current_version.stdout | regex_search('v1\\.([0-9]+)', '\\1') | first | int }}"
+    target_minor: "{{ target_version | regex_search('v1\\.([0-9]+)', '\\1') | first | int }}"
+
+- name: Vérifier si l'upgrade est nécessaire
+  ansible.builtin.set_fact:
+    skip_upgrade: "{{ current_minor | int >= target_minor | int }}"
+
+- name: "Skip - Version actuelle (v1.{{ current_minor }}) >= cible (v1.{{ target_minor }})"
+  ansible.builtin.debug:
+    msg: "Version actuelle v1.{{ current_minor }} >= v1.{{ target_minor }}, étape ignorée"
+  when: skip_upgrade | bool
+
+# --- Pré-vérification Longhorn avant drain ---
+- name: Vérifier la santé Longhorn avant upgrade
+  ansible.builtin.shell: |
+    kubectl -n longhorn-system get volumes.longhorn.io -o jsonpath='{range .items[*]}{.status.robustness}{"\n"}{end}' 2>/dev/null || echo "no-volumes"
+  register: longhorn_health_pre
+  changed_when: false
+  when: not (skip_upgrade | bool)
+
+- name: Attendre que Longhorn soit healthy (max 5min)
+  ansible.builtin.shell: |
+    for i in $(seq 1 30); do
+      DEGRADED=$(kubectl -n longhorn-system get volumes.longhorn.io -o jsonpath='{range .items[*]}{.status.robustness}{"\n"}{end}' 2>/dev/null | grep -ci degraded || true)
+      if [ "$DEGRADED" = "0" ]; then
+        echo "healthy"
+        exit 0
+      fi
+      echo "Attente reconstruction réplicas... ($i/30)"
+      sleep 10
+    done
+    echo "timeout"
+    exit 1
+  register: longhorn_wait
+  changed_when: false
+  when:
+    - not (skip_upgrade | bool)
+    - "'degraded' in (longhorn_health_pre.stdout | lower)"
+
+# --- Créer le Plan d'upgrade server (control-plane) ---
+- name: "Appliquer le Plan d'upgrade server vers {{ target_version }}"
+  ansible.builtin.shell: |
+    cat <<'PLAN_EOF' | kubectl apply -f -
+    apiVersion: upgrade.cattle.io/v1
+    kind: Plan
+    metadata:
+      name: k3s-server-{{ target_version | regex_replace('[^a-z0-9]', '-') }}
+      namespace: k3supgrader
+      labels:
+        k3s-upgrade: server
+    spec:
+      concurrency: {{ k3s_upgrade.node_concurrency }}
+      cordon: {{ k3s_upgrade.cordon_before_drain }}
+      drain:
+        force: true
+        skipWaitForDeleteTimeout: 60
+        deleteEmptyDirData: true
+        ignoreDaemonSets: true
+        timeout: {{ k3s_upgrade.drain_timeout }}
+      nodeSelector:
+        matchExpressions:
+          - key: node-role.kubernetes.io/control-plane
+            operator: Exists
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+        - key: node-role.kubernetes.io/master
+          operator: Exists
+          effect: NoSchedule
+        - key: CriticalAddonsOnly
+          operator: Exists
+      serviceAccountName: system-upgrade
+      upgrade:
+        image: rancher/k3s-upgrade
+      version: {{ target_version }}
+    PLAN_EOF
+  when: not (skip_upgrade | bool)
+
+# --- Attendre que TOUS les nœuds soient à la version cible ---
+- name: "Attendre que tous les nœuds soient en {{ target_version }} (max 20min)"
+  ansible.builtin.shell: |
+    # Extraire la version Kubernetes attendue (ex: v1.31.13 depuis v1.31.13+k3s1)
+    EXPECTED_MINOR=$(echo "{{ target_version }}" | grep -oP 'v1\.\d+\.\d+')
+    for i in $(seq 1 120); do
+      # Récupérer les versions de tous les nœuds
+      VERSIONS=$(kubectl get nodes -o jsonpath='{range .items[*]}{.status.nodeInfo.kubeletVersion}{"\n"}{end}')
+      TOTAL=$(echo "$VERSIONS" | wc -l)
+      UPGRADED=$(echo "$VERSIONS" | grep -c "$EXPECTED_MINOR" || true)
+      echo "Nœuds upgradés : $UPGRADED/$TOTAL (attendu: $EXPECTED_MINOR, tentative $i/120)"
+      if [ "$UPGRADED" = "$TOTAL" ]; then
+        echo "success"
+        exit 0
+      fi
+      sleep 10
+    done
+    echo "timeout"
+    exit 1
+  register: upgrade_wait
+  changed_when: false
+  when: not (skip_upgrade | bool)
+
+- name: Valider le résultat de l'upgrade
+  ansible.builtin.assert:
+    that:
+      - "'success' in upgrade_wait.stdout"
+    fail_msg: |
+      ⚠ L'upgrade vers {{ target_version }} n'a pas abouti dans le délai imparti.
+      Vérifiez manuellement : kubectl get nodes -o wide
+      Logs SUC : kubectl -n k3supgrader logs -l upgrade.cattle.io/controller=system-upgrade-controller
+    success_msg: "✓ Tous les nœuds sont en {{ target_version }}"
+  when: not (skip_upgrade | bool)
+
+# --- Nettoyage du Plan terminé ---
+- name: "Supprimer le Plan d'upgrade {{ target_version }}"
+  ansible.builtin.command: >
+    kubectl -n k3supgrader delete plan
+    k3s-server-{{ target_version | regex_replace('[^a-z0-9]', '-') }}
+    --ignore-not-found=true
+  when: not (skip_upgrade | bool)
+
+# --- Post-vérification Longhorn ---
+- name: Attendre la reconstruction des réplicas Longhorn (max 5min)
+  ansible.builtin.shell: |
+    for i in $(seq 1 30); do
+      DEGRADED=$(kubectl -n longhorn-system get volumes.longhorn.io -o jsonpath='{range .items[*]}{.status.robustness}{"\n"}{end}' 2>/dev/null | grep -ci degraded || true)
+      if [ "$DEGRADED" = "0" ]; then
+        echo "healthy"
+        exit 0
+      fi
+      echo "Reconstruction réplicas Longhorn... ($i/30)"
+      sleep 10
+    done
+    echo "timeout-but-continue"
+    exit 0
+  register: longhorn_rebuild
+  changed_when: false
+  when: not (skip_upgrade | bool)
+
+- name: "Afficher l'état des nœuds après upgrade vers {{ target_version }}"
+  ansible.builtin.command: kubectl get nodes -o wide
+  register: nodes_post
+  changed_when: false
+  when: not (skip_upgrade | bool)
+
+- name: Résultat de l'étape
+  ansible.builtin.debug:
+    msg: |
+      ✓ Étape {{ step_index + 1 }}/{{ k3s_upgrade.upgrade_path | length }} terminée : {{ target_version }}
+      {{ nodes_post.stdout | default('') }}
+  when: not (skip_upgrade | bool)

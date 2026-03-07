@@ -1,0 +1,199 @@
+---
+# =============================================================
+# PLAYBOOK - Upgrade K3s via System Upgrade Controller
+# =============================================================
+# Usage :
+#   ansible-playbook -i inventory/hosts.yml playbooks/k3s-upgrade.yml
+#
+# Ce playbook :
+#   1. Déploie le System Upgrade Controller (SUC) dans le namespace k3supgrader
+#   2. Exécute les upgrades séquentiels v1.30 → v1.31 → ... → v1.35
+#   3. Chaque étape attend que TOUS les nœuds soient à la version cible
+#   4. Rolling upgrade : 1 nœud à la fois (critique avec 2 réplicas Longhorn)
+#
+# Prérequis :
+#   - Cluster K3s fonctionnel (3 nœuds Ready)
+#   - Longhorn volumes avec au moins 2 réplicas healthy
+#   - kubectl et accès admin configurés
+#
+# ⚠ IMPORTANT avec 2 réplicas Longhorn :
+#   Pendant le drain d'un nœud, 1 seule réplica sert les I/O.
+#   Le playbook attend la reconstruction complète entre chaque étape.
+# =============================================================
+
+# ---------------------------------------------------------------
+# PHASE 1 : Pré-vérifications
+# ---------------------------------------------------------------
+- name: "K3s Upgrade - Phase 1 : Pré-vérifications"
+  hosts: "{{ groups['k3s_cluster'] | first }}"
+  gather_facts: false
+  tags: [k3s-upgrade, k3s-upgrade-check]
+  tasks:
+    - name: Vérifier que tous les nœuds sont Ready
+      ansible.builtin.command: kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}={range .status.conditions[?(@.type=="Ready")]}{.status}{end}{"\n"}{end}'
+      register: nodes_status
+      changed_when: false
+
+    - name: Valider que tous les nœuds sont Ready
+      ansible.builtin.assert:
+        that:
+          - "'False' not in nodes_status.stdout"
+        fail_msg: |
+          ⚠ Certains nœuds ne sont pas Ready. Corrigez avant de lancer l'upgrade.
+          {{ nodes_status.stdout }}
+        success_msg: "✓ Tous les nœuds sont Ready"
+
+    - name: Récupérer la version K3s actuelle
+      ansible.builtin.command: kubectl get nodes -o jsonpath='{.items[0].status.nodeInfo.kubeletVersion}'
+      register: current_k3s_version
+      changed_when: false
+
+    - name: Afficher la version actuelle
+      ansible.builtin.debug:
+        msg: "Version K3s actuelle : {{ current_k3s_version.stdout }}"
+
+    - name: Vérifier la santé Longhorn
+      ansible.builtin.shell: |
+        kubectl -n longhorn-system get volumes.longhorn.io -o jsonpath='{range .items[*]}{.metadata.name}: {.status.robustness}{"\n"}{end}'
+      register: longhorn_volumes
+      changed_when: false
+      failed_when: false
+
+    - name: Afficher état des volumes Longhorn
+      ansible.builtin.debug:
+        msg: |
+          État des volumes Longhorn :
+          {{ longhorn_volumes.stdout | default('Aucun volume trouvé') }}
+
+    - name: Avertir si volumes dégradés
+      ansible.builtin.assert:
+        that:
+          - "'degraded' not in longhorn_volumes.stdout | lower"
+        fail_msg: |
+          ⚠ Des volumes Longhorn sont dégradés !
+          Attendez la reconstruction des réplicas avant de lancer l'upgrade.
+          {{ longhorn_volumes.stdout }}
+        success_msg: "✓ Tous les volumes Longhorn sont healthy"
+      when: longhorn_volumes.stdout | length > 0
+
+# ---------------------------------------------------------------
+# PHASE 2 : Déploiement du System Upgrade Controller
+# ---------------------------------------------------------------
+- name: "K3s Upgrade - Phase 2 : Déploiement System Upgrade Controller"
+  hosts: "{{ groups['k3s_cluster'] | first }}"
+  gather_facts: false
+  tags: [k3s-upgrade, k3s-upgrade-suc]
+  tasks:
+    - name: Créer le namespace k3supgrader
+      ansible.builtin.command: kubectl create namespace k3supgrader --dry-run=client -o yaml
+      register: ns_yaml
+      changed_when: false
+
+    - name: Appliquer le namespace
+      ansible.builtin.shell: |
+        kubectl create namespace k3supgrader --dry-run=client -o yaml | kubectl apply -f -
+      changed_when: "'created' in ns_apply.stdout or 'configured' in ns_apply.stdout"
+      register: ns_apply
+
+    - name: Télécharger le manifest CRD du System Upgrade Controller
+      ansible.builtin.get_url:
+        url: "https://github.com/rancher/system-upgrade-controller/releases/download/{{ system_upgrade_controller_version }}/crd.yaml"
+        dest: /tmp/suc-crd.yaml
+        mode: '0644'
+
+    - name: Télécharger le manifest du System Upgrade Controller
+      ansible.builtin.get_url:
+        url: "https://github.com/rancher/system-upgrade-controller/releases/download/{{ system_upgrade_controller_version }}/system-upgrade-controller.yaml"
+        dest: /tmp/suc-controller.yaml
+        mode: '0644'
+
+    - name: Patcher le namespace dans le manifest du controller
+      ansible.builtin.replace:
+        path: /tmp/suc-controller.yaml
+        regexp: 'namespace: system-upgrade'
+        replace: 'namespace: k3supgrader'
+
+    - name: Appliquer le CRD
+      ansible.builtin.command: kubectl apply -f /tmp/suc-crd.yaml
+
+    - name: Appliquer le controller
+      ansible.builtin.command: kubectl apply -f /tmp/suc-controller.yaml
+
+    - name: Attendre que le controller soit prêt
+      ansible.builtin.command: >
+        kubectl -n k3supgrader rollout status deployment/system-upgrade-controller
+        --timeout=120s
+      register: suc_status
+      retries: 3
+      delay: 10
+      until: suc_status.rc == 0
+
+    - name: Afficher le statut du controller
+      ansible.builtin.debug:
+        msg: "✓ System Upgrade Controller déployé dans k3supgrader"
+
+# ---------------------------------------------------------------
+# PHASE 3 : Upgrade séquentiel K3s
+# ---------------------------------------------------------------
+- name: "K3s Upgrade - Phase 3 : Upgrades séquentiels"
+  hosts: "{{ groups['k3s_cluster'] | first }}"
+  gather_facts: false
+  tags: [k3s-upgrade, k3s-upgrade-run]
+  tasks:
+    - name: "Upgrade séquentiel K3s"
+      ansible.builtin.include_tasks: k3s-upgrade-step.yml
+      loop: "{{ k3s_upgrade.upgrade_path }}"
+      loop_control:
+        loop_var: target_version
+        index_var: step_index
+
+# ---------------------------------------------------------------
+# PHASE 4 : Post-upgrade et validation
+# ---------------------------------------------------------------
+- name: "K3s Upgrade - Phase 4 : Validation post-upgrade"
+  hosts: "{{ groups['k3s_cluster'] | first }}"
+  gather_facts: false
+  tags: [k3s-upgrade, k3s-upgrade-verify]
+  tasks:
+    - name: Vérifier la version finale de tous les nœuds
+      ansible.builtin.command: kubectl get nodes -o wide
+      register: final_nodes
+      changed_when: false
+
+    - name: Afficher le résultat final
+      ansible.builtin.debug:
+        msg: "{{ final_nodes.stdout_lines }}"
+
+    - name: Vérifier la santé Longhorn post-upgrade
+      ansible.builtin.shell: |
+        kubectl -n longhorn-system get volumes.longhorn.io -o jsonpath='{range .items[*]}{.metadata.name}: {.status.robustness}{"\n"}{end}'
+      register: longhorn_final
+      changed_when: false
+      failed_when: false
+
+    - name: Afficher état final Longhorn
+      ansible.builtin.debug:
+        msg: |
+          État final des volumes Longhorn :
+          {{ longhorn_final.stdout | default('Aucun volume') }}
+
+    - name: Vérifier que tous les pods système sont Running
+      ansible.builtin.shell: |
+        kubectl get pods -A --field-selector=status.phase!=Running,status.phase!=Succeeded -o wide 2>/dev/null || true
+      register: unhealthy_pods
+      changed_when: false
+
+    - name: Afficher les pods non-Running (si présents)
+      ansible.builtin.debug:
+        msg: "{{ unhealthy_pods.stdout_lines }}"
+      when: unhealthy_pods.stdout | length > 0
+
+    - name: Résumé de l'upgrade
+      ansible.builtin.debug:
+        msg: |
+          ═══════════════════════════════════════════════════════
+          ✓ UPGRADE K3s TERMINÉ
+          ═══════════════════════════════════════════════════════
+          Version cible : {{ k3s_upgrade.target_version }}
+          Chemin suivi  : v1.30.0 → {{ k3s_upgrade.upgrade_path | join(' → ') }}
+          ═══════════════════════════════════════════════════════
