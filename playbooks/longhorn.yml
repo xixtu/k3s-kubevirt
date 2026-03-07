@@ -80,6 +80,10 @@
             replicaSoftAntiAffinity: true
             replicaAutoBalance: best-effort
             concurrentAutomaticEngineUpgradePerNodeLimit: 3
+            autoCleanupSystemGeneratedSnapshot: true
+            autoCleanupSnapshotWhenDeleteBackup: true
+            snapshotMaxCount: 5
+            removeSnapshotsInRecurringJobs: true
           longhornUI:
             replicas: 1
           ingress:
@@ -135,6 +139,37 @@
       delay: 15
       until: longhorn_pods_ready.rc == 0
       tags: [longhorn, longhorn-install]
+
+    # ==========================================================
+    # NETTOYAGE SNAPSHOTS - Appliquer les settings sans Helm
+    # Usage : ansible-playbook playbooks/longhorn.yml --tags longhorn-snapshots
+    # ==========================================================
+
+    - name: Configurer le nettoyage automatique des snapshots
+      ansible.builtin.shell: |
+        {% for setting in ['auto-cleanup-system-generated-snapshot:true', 'auto-cleanup-snapshot-when-delete-backup:true', 'snapshot-max-count:5', 'remove-snapshots-in-recurring-jobs:true'] %}
+        kubectl -n longhorn-system patch settings.longhorn.io {{ setting.split(':')[0] }} --type merge -p '{"value": "{{ setting.split(':')[1] }}"}'
+        {% endfor %}
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [longhorn, longhorn-install, longhorn-snapshots]
+
+    - name: Purger les snapshots système existants sur tous les volumes
+      ansible.builtin.shell: |
+        for VOL in $(kubectl -n longhorn-system get volumes.longhorn.io -o jsonpath='{.items[*].metadata.name}'); do
+          for SNAP in $(kubectl -n longhorn-system get snapshots.longhorn.io -l longhornvolume=$VOL -o jsonpath='{range .items[?(@.status.markRemoved==false)]}{.metadata.name}{"\n"}{end}' 2>/dev/null); do
+            # Ne pas supprimer le snapshot "volume-head"
+            if [ "$SNAP" != "volume-head" ]; then
+              echo "Suppression snapshot $SNAP du volume $VOL"
+              kubectl -n longhorn-system delete snapshot $SNAP --ignore-not-found=true 2>/dev/null || true
+            fi
+          done
+        done
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [longhorn-snapshots]
 
     - name: Attendre que le CRD nodes.longhorn.io soit établi
       ansible.builtin.command: >
