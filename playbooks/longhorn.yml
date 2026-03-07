@@ -81,9 +81,7 @@
             replicaAutoBalance: best-effort
             concurrentAutomaticEngineUpgradePerNodeLimit: 3
             autoCleanupSystemGeneratedSnapshot: true
-            autoCleanupSnapshotWhenDeleteBackup: true
             snapshotMaxCount: 5
-            removeSnapshotsInRecurringJobs: true
           longhornUI:
             replicas: 1
           ingress:
@@ -147,7 +145,7 @@
 
     - name: Configurer le nettoyage automatique des snapshots
       ansible.builtin.shell: |
-        {% for setting in ['auto-cleanup-system-generated-snapshot:true', 'auto-cleanup-snapshot-when-delete-backup:true', 'snapshot-max-count:5', 'remove-snapshots-in-recurring-jobs:true'] %}
+        {% for setting in ['auto-cleanup-system-generated-snapshot:true', 'snapshot-max-count:5'] %}
         kubectl -n longhorn-system patch settings.longhorn.io {{ setting.split(':')[0] }} --type merge -p '{"value": "{{ setting.split(':')[1] }}"}'
         {% endfor %}
       environment:
