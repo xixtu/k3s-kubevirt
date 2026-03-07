@@ -153,17 +153,25 @@
       changed_when: false
       tags: [longhorn, longhorn-install, longhorn-snapshots]
 
-    - name: Purger les snapshots système existants sur tous les volumes
+    - name: Purger tous les snapshots existants (système + expand)
       ansible.builtin.shell: |
-        for VOL in $(kubectl -n longhorn-system get volumes.longhorn.io -o jsonpath='{.items[*].metadata.name}'); do
-          for SNAP in $(kubectl -n longhorn-system get snapshots.longhorn.io -l longhornvolume=$VOL -o jsonpath='{range .items[?(@.status.markRemoved==false)]}{.metadata.name}{"\n"}{end}' 2>/dev/null); do
-            # Ne pas supprimer le snapshot "volume-head"
-            if [ "$SNAP" != "volume-head" ]; then
-              echo "Suppression snapshot $SNAP du volume $VOL"
-              kubectl -n longhorn-system delete snapshot $SNAP --ignore-not-found=true 2>/dev/null || true
-            fi
-          done
+        TOTAL=0
+        DELETED=0
+        for SNAP in $(kubectl -n longhorn-system get snapshots.longhorn.io -o jsonpath='{.items[*].metadata.name}' 2>/dev/null); do
+          TOTAL=$((TOTAL + 1))
+          echo "Suppression snapshot: $SNAP"
+          kubectl -n longhorn-system delete snapshot "$SNAP" --ignore-not-found=true 2>/dev/null && DELETED=$((DELETED + 1)) || true
         done
+        echo "Résultat: $DELETED/$TOTAL snapshots supprimés"
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [longhorn-snapshots]
+
+    - name: Vérifier les snapshots restants
+      ansible.builtin.shell: |
+        COUNT=$(kubectl -n longhorn-system get snapshots.longhorn.io --no-headers 2>/dev/null | wc -l)
+        echo "Snapshots restants: $COUNT"
       environment:
         KUBECONFIG: /etc/rancher/k3s/k3s.yaml
       changed_when: false
