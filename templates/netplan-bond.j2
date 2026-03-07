@@ -21,6 +21,9 @@ network:
     {{ iface }}:
       dhcp4: false
       dhcp6: false
+{% if network_mtu is defined %}
+      mtu: {{ network_mtu }}
+{% endif %}
 {% endfor %}
 
   bonds:
@@ -28,6 +31,9 @@ network:
     # Bond0 - LACP 802.3ad
     # ----------------------------------------------------------
     {{ network_bond_name }}:
+{% if network_mtu is defined %}
+      mtu: {{ network_mtu }}
+{% endif %}
       interfaces:
 {% for iface in network_interfaces %}
         - {{ iface }}

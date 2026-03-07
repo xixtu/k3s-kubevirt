@@ -204,11 +204,27 @@
       failed_when: false
       tags: [network, verify]
 
+    - name: Vérifier le MTU du bond0
+      ansible.builtin.command: cat /sys/class/net/{{ network_bond_name }}/mtu
+      register: bond_mtu
+      changed_when: false
+      failed_when: false
+      tags: [network, verify]
+
+    - name: Vérifier le MTU des interfaces esclaves
+      ansible.builtin.command: cat /sys/class/net/{{ item }}/mtu
+      loop: "{{ network_interfaces }}"
+      register: slave_mtus
+      changed_when: false
+      failed_when: false
+      tags: [network, verify]
+
     - name: Résumé de configuration réseau
       ansible.builtin.debug:
         msg:
           - "=== Configuration réseau OK sur {{ inventory_hostname }} ==="
           - "bond0      : {{ bond_ip }}/{{ network_prefix }}"
+          - "MTU        : {{ bond_mtu.stdout | default('N/A') }} (cible: {{ network_mtu | default(1500) }})"
           - "Gateway    : {{ network_gateway }} ({{ 'OK' if ping_gateway.rc == 0 else 'ECHEC' }})"
           - "DNS        : {{ network_dns[0] }} ({{ 'OK' if ping_dns.rc == 0 else 'ECHEC' }})"
           - "Interfaces : {{ network_interfaces | length }} ports LACP"
