@@ -62,8 +62,8 @@ k3s_config:
 # --- Configuration Longhorn globale ---
 longhorn_config:
   default_replica_count: 2
-  storage_minimal_available_percentage: 15
-  storage_over_provisioning_percentage: 150
+  storage_minimal_available_percentage: 25
+  storage_over_provisioning_percentage: 100
   guaranteed_engine_manager_cpu: 5
   guaranteed_replica_manager_cpu: 5
   backup_target: ""                # À configurer si backup S3

@@ -81,7 +81,7 @@
             replicaAutoBalance: best-effort
             concurrentAutomaticEngineUpgradePerNodeLimit: 3
             autoCleanupSystemGeneratedSnapshot: true
-            snapshotMaxCount: 5
+            snapshotMaxCount: 3
           longhornUI:
             replicas: 1
           ingress:
@@ -145,7 +145,7 @@
 
     - name: Configurer le nettoyage automatique des snapshots
       ansible.builtin.shell: |
-        {% for setting in ['auto-cleanup-system-generated-snapshot:true', 'snapshot-max-count:5'] %}
+        {% for setting in ['auto-cleanup-system-generated-snapshot:true', 'snapshot-max-count:3'] %}
         kubectl -n longhorn-system patch settings.longhorn.io {{ setting.split(':')[0] }} --type merge -p '{"value": "{{ setting.split(':')[1] }}"}'
         {% endfor %}
       environment:
@@ -232,21 +232,21 @@
                 allowScheduling: true
                 evictionRequested: false
                 path: "{{ longhorn_config.disk_paths.ultra }}"
-                storageReserved: 0
+                storageReserved: 10737418240
                 tags:
                   - ultra
               disk-fast:
                 allowScheduling: true
                 evictionRequested: false
                 path: "{{ longhorn_config.disk_paths.fast }}"
-                storageReserved: 0
+                storageReserved: 53687091200
                 tags:
                   - fast
               disk-slow:
                 allowScheduling: true
                 evictionRequested: false
                 path: "{{ longhorn_config.disk_paths.slow }}"
-                storageReserved: 0
+                storageReserved: 536870912000
                 tags:
                   - slow
       loop:

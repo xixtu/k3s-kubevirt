@@ -363,6 +363,33 @@
                     annotations:
                       summary: "Noeud Longhorn {{ '{{' }} $labels.node {{ '}}' }} indisponible"
                       description: "Le noeud {{ '{{' }} $labels.node {{ '}}' }} n'est plus Ready depuis 5 minutes."
+
+                  - alert: LonghornDiskUsageWarning
+                    expr: 100 * (longhorn_disk_usage_bytes / longhorn_disk_capacity_bytes) > 70
+                    for: 5m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: "Disque Longhorn {{ '{{' }} $labels.disk {{ '}}' }} sur {{ '{{' }} $labels.node {{ '}}' }} > 70%"
+                      description: "Le disque {{ '{{' }} $labels.disk {{ '}}' }} ({{ '{{' }} $labels.node {{ '}}' }}) utilise {{ '{{' }} $value | printf \"%.1f\" {{ '}}' }}% de sa capacité."
+
+                  - alert: LonghornDiskUsageCritical
+                    expr: 100 * (longhorn_disk_usage_bytes / longhorn_disk_capacity_bytes) > 85
+                    for: 5m
+                    labels:
+                      severity: critical
+                    annotations:
+                      summary: "Disque Longhorn {{ '{{' }} $labels.disk {{ '}}' }} sur {{ '{{' }} $labels.node {{ '}}' }} > 85%"
+                      description: "Le disque {{ '{{' }} $labels.disk {{ '}}' }} ({{ '{{' }} $labels.node {{ '}}' }}) utilise {{ '{{' }} $value | printf \"%.1f\" {{ '}}' }}% — risque de crash volume. Libérer de l'espace immédiatement."
+
+                  - alert: LonghornDiskReservedSpaceLow
+                    expr: (longhorn_disk_capacity_bytes - longhorn_disk_usage_bytes) < 214748364800
+                    for: 5m
+                    labels:
+                      severity: critical
+                    annotations:
+                      summary: "Disque Longhorn {{ '{{' }} $labels.disk {{ '}}' }} sur {{ '{{' }} $labels.node {{ '}}' }} — moins de 200 Go libres"
+                      description: "Espace restant insuffisant pour les opérations de snapshot/coalescing. Intervention urgente requise."
       tags: [monitoring, monitoring-longhorn]
 
     - name: Appliquer les PrometheusRules Longhorn
