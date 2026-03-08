@@ -196,6 +196,29 @@
     # DÉPLOIEMENT KUBERNETES - STOCKAGE
     # ==========================================================
 
+    - name: "DEPLOY | Vérifier que les StorageClasses Longhorn existent"
+      ansible.builtin.shell: |
+        for sc in longhorn-fast longhorn-slow; do
+          if ! k3s kubectl get storageclass "$sc" &>/dev/null; then
+            echo "MISSING: $sc"
+          fi
+        done
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: sc_check
+      changed_when: false
+      failed_when: false
+      tags: [ad, ad-deploy]
+
+    - name: "DEPLOY | Echec si StorageClasses Longhorn absentes"
+      ansible.builtin.fail:
+        msg: |
+          StorageClass(es) manquantes: {{ sc_check.stdout }}
+          → Lancer d'abord : ansible-playbook -i inventory/hosts.yml playbooks/longhorn.yml
+          → Vérifier : k3s kubectl get storageclass
+      when: sc_check.stdout != ""
+      tags: [ad, ad-deploy]
+
     - name: "DEPLOY | Créer les PersistentVolumeClaims Longhorn"
       ansible.builtin.command: >
         k3s kubectl apply -f {{ ad_manifest_dir }}/pvc.yaml
@@ -205,9 +228,20 @@
       changed_when: "'created' in pvc_result.stdout or 'configured' in pvc_result.stdout"
       tags: [ad, ad-deploy]
 
-    - name: "DEPLOY | Attendre que les PVC soient Bound"
+    - name: "DEPLOY | Attendre que les PVC soient Bound (samba-dc-data)"
       ansible.builtin.command: >
         k3s kubectl wait pvc/samba-dc-data
+          -n active-directory
+          --for=condition=Bound
+          --timeout=120s
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [ad, ad-deploy]
+
+    - name: "DEPLOY | Attendre que les PVC soient Bound (samba-dc-logs)"
+      ansible.builtin.command: >
+        k3s kubectl wait pvc/samba-dc-logs
           -n active-directory
           --for=condition=Bound
           --timeout=120s
