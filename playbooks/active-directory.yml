@@ -72,12 +72,18 @@
       failed_when: false
       tags: [ad, ad-build]
 
+    - name: "BUILD | Supprimer l'ancienne image (force rebuild)"
+      ansible.builtin.shell: docker rmi -f {{ ad_image_name }}:{{ ad_image_tag }} || true
+      when: ad_force_rebuild | default(false) | bool
+      changed_when: true
+      tags: [ad, ad-build]
+
     - name: "BUILD | Copier le répertoire Dockerfile sur le nœud"
       ansible.builtin.copy:
         src: "{{ ad_manifest_dir }}/"
         dest: "/tmp/samba-dc-build/"
         mode: preserve
-      when: existing_docker_image.stdout == ""
+      when: existing_docker_image.stdout == "" or ad_force_rebuild | default(false) | bool
       tags: [ad, ad-build]
 
     - name: "BUILD | Construire l'image Samba DC (docker build)"
@@ -85,7 +91,7 @@
         docker build -t {{ ad_image_name }}:{{ ad_image_tag }} /tmp/samba-dc-build/ 2>&1
       register: build_result
       changed_when: true
-      when: existing_docker_image.stdout == ""
+      when: existing_docker_image.stdout == "" or ad_force_rebuild | default(false) | bool
       async: 1800
       poll: 30
       tags: [ad, ad-build]
@@ -107,8 +113,15 @@
       failed_when: false
       tags: [ad, ad-import]
 
+    - name: "IMPORT | Supprimer l'ancienne image de containerd (force rebuild)"
+      ansible.builtin.shell: >
+        k3s ctr images rm docker.io/library/{{ ad_image_name }}:{{ ad_image_tag }} || true
+      when: ad_force_rebuild | default(false) | bool
+      changed_when: true
+      tags: [ad, ad-import]
+
     - name: "IMPORT | Sauvegarder et importer l'image dans k3s"
-      when: k3s_image_count.stdout | int == 0
+      when: k3s_image_count.stdout | int == 0 or ad_force_rebuild | default(false) | bool
       block:
         - name: "IMPORT | Sauvegarder l'image en archive tar"
           ansible.builtin.shell: >
