@@ -198,7 +198,7 @@
 
     - name: "DEPLOY | Vérifier que les StorageClasses Longhorn existent"
       ansible.builtin.shell: |
-        for sc in longhorn-fast longhorn-slow; do
+        for sc in longhorn-fast; do
           if ! k3s kubectl get storageclass "$sc" &>/dev/null; then
             echo "MISSING: $sc"
           fi

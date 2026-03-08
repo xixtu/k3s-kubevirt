@@ -32,7 +32,7 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
-  storageClassName: longhorn-slow   # HDD pour les logs
+  storageClassName: longhorn-fast   # SSD Samsung 870
   resources:
     requests:
       storage: 5Gi
