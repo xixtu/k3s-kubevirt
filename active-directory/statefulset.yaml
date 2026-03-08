@@ -85,6 +85,12 @@ spec:
               value: "49152"
             - name: RPC_HIGH_PORT
               value: "49200"
+            # Compte Admin AD pour la jonction (depuis Secret)
+            - name: ADMIN_USER
+              valueFrom:
+                secretKeyRef:
+                  name: samba-dc-credentials
+                  key: admin-user
             # Mot de passe Admin AD (depuis Secret)
             - name: ADMIN_PASSWORD
               valueFrom:
