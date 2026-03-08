@@ -228,7 +228,7 @@
         k3s kubectl wait pvc/samba-dc-data
           -n active-directory
           --for=condition=Bound
-          --timeout=120s
+          --timeout=600s
       environment:
         KUBECONFIG: /etc/rancher/k3s/k3s.yaml
       changed_when: false
@@ -239,7 +239,7 @@
         k3s kubectl wait pvc/samba-dc-logs
           -n active-directory
           --for=condition=Bound
-          --timeout=120s
+          --timeout=600s
       environment:
         KUBECONFIG: /etc/rancher/k3s/k3s.yaml
       changed_when: false
