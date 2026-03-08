@@ -47,19 +47,18 @@
     # CONSTRUCTION DE L'IMAGE DOCKER SAMBA DC
     # ==========================================================
 
-    - name: "BUILD | Vérifier que nerdctl (k3s) ou docker est disponible"
-      ansible.builtin.command: which nerdctl
-      register: nerdctl_check
-      failed_when: false
-      changed_when: false
+    - name: "BUILD | Installer docker.io si absent (k3s n'inclut pas docker)"
+      ansible.builtin.apt:
+        name: docker.io
+        state: present
+        update_cache: false
       tags: [ad, ad-build]
 
-    - name: "BUILD | Vérifier que docker est disponible si nerdctl absent"
-      ansible.builtin.command: which docker
-      register: docker_check
-      failed_when: false
-      changed_when: false
-      when: nerdctl_check.rc != 0
+    - name: "BUILD | Démarrer et activer le service docker"
+      ansible.builtin.systemd:
+        name: docker
+        state: started
+        enabled: true
       tags: [ad, ad-build]
 
     - name: "BUILD | Copier le répertoire Dockerfile sur le nœud"
@@ -69,61 +68,58 @@
         mode: preserve
       tags: [ad, ad-build]
 
-    - name: "BUILD | Construire l'image Samba DC avec nerdctl"
-      ansible.builtin.command: >
-        nerdctl build
-          --namespace k8s.io
-          -t {{ ad_image_name }}:{{ ad_image_tag }}
-          /tmp/samba-dc-build/
-      environment:
-        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+    - name: "BUILD | Construire l'image Samba DC (docker build)"
+      ansible.builtin.shell: |
+        docker build -t {{ ad_image_name }}:{{ ad_image_tag }} /tmp/samba-dc-build/ 2>&1
+      changed_when: true
       register: build_result
-      changed_when: true
-      when: nerdctl_check.rc == 0
       tags: [ad, ad-build]
 
-    - name: "BUILD | Construire l'image Samba DC avec docker (fallback)"
-      ansible.builtin.command: >
-        docker build
-          -t {{ ad_image_name }}:{{ ad_image_tag }}
-          /tmp/samba-dc-build/
-      register: build_result_docker
-      changed_when: true
-      when: nerdctl_check.rc != 0 and docker_check.rc == 0
-      tags: [ad, ad-build]
-
-    - name: "BUILD | Confirmer la construction de l'image"
+    - name: "BUILD | Résultat de la construction"
       ansible.builtin.debug:
-        msg: "Image {{ ad_image_name }}:{{ ad_image_tag }} construite avec succès"
+        msg: "{{ build_result.stdout_lines[-5:] }}"
       tags: [ad, ad-build]
 
     # ==========================================================
-    # IMPORT DE L'IMAGE SUR TOUS LES NŒUDS
+    # IMPORT DE L'IMAGE DANS K3S CONTAINERD
     # ==========================================================
 
-    - name: "IMPORT | Sauvegarder l'image en archive tar"
+    - name: "IMPORT | Vérifier si l'image est déjà dans k3s containerd"
       ansible.builtin.command: >
-        nerdctl save
-          --namespace k8s.io
-          -o /tmp/samba-dc-image.tar
-          {{ ad_image_name }}:{{ ad_image_tag }}
-      changed_when: true
-      when: nerdctl_check.rc == 0
+        k3s ctr images ls -q
+      register: k3s_images
+      changed_when: false
       tags: [ad, ad-import]
 
-    - name: "IMPORT | Sauvegarder avec docker (fallback)"
-      ansible.builtin.command: >
-        docker save
+    - name: "IMPORT | Sauvegarder l'image en archive tar (docker save)"
+      ansible.builtin.shell: >
+        docker save {{ ad_image_name }}:{{ ad_image_tag }}
           -o /tmp/samba-dc-image.tar
-          {{ ad_image_name }}:{{ ad_image_tag }}
       changed_when: true
-      when: nerdctl_check.rc != 0 and docker_check.rc == 0
-      tags: [ad, ad-import]
+      tags: [ad, ad-build, ad-import]
 
     - name: "IMPORT | Importer l'image dans k3s containerd"
       ansible.builtin.command: >
         k3s ctr images import /tmp/samba-dc-image.tar
       changed_when: true
+      tags: [ad, ad-import]
+
+    - name: "IMPORT | Vérifier la présence de l'image dans k3s"
+      ansible.builtin.shell: k3s ctr images ls | grep samba-dc
+      register: image_check
+      changed_when: false
+      failed_when: false
+      tags: [ad, ad-import]
+
+    - name: "IMPORT | Statut image dans k3s"
+      ansible.builtin.debug:
+        msg: "{{ image_check.stdout_lines | default(['Image samba-dc non trouvée']) }}"
+      tags: [ad, ad-import]
+
+    - name: "IMPORT | Nettoyer le tar temporaire"
+      ansible.builtin.file:
+        path: /tmp/samba-dc-image.tar
+        state: absent
       tags: [ad, ad-import]
 
     - name: "IMPORT | Vérifier la présence de l'image dans k3s"
