@@ -1,0 +1,234 @@
+---
+# =============================================================
+# StatefulSet: samba-dc
+# Contrôleur de Domaine Active Directory (Samba 4)
+# Domaine: corpl.lcl
+#
+# PRÉREQUIS avant premier déploiement:
+#   1. Construire l'image:
+#      nerdctl build -t samba-dc:latest ./active-directory/
+#      nerdctl save samba-dc:latest | k3s ctr images import -
+#   2. Remplir le Secret (secret.yaml) avec les vraies valeurs
+#   3. Vérifier la connectivité vers le DC existant
+#
+# TRANSFERT FSMO après jonction stable (réplication vérifiée):
+#   kubectl exec -it samba-dc-0 -n active-directory -- \
+#     samba-tool fsmo transfer --role=all
+# =============================================================
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: samba-dc
+  namespace: active-directory
+  labels:
+    app: samba-dc
+    app.kubernetes.io/name: samba-dc
+    app.kubernetes.io/component: domain-controller
+    app.kubernetes.io/part-of: active-directory
+spec:
+  serviceName: samba-dc-headless
+  replicas: 1   # UN SEUL DC actif (pas d'actif-actif pour les DC)
+  selector:
+    matchLabels:
+      app: samba-dc
+  template:
+    metadata:
+      labels:
+        app: samba-dc
+        app.kubernetes.io/name: samba-dc
+    spec:
+      # Affinité: préférer k3s-node-1 pour stabilité réseau
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - k3s-node-1
+
+      # DNS interne du cluster (sera écrasé par le DC lui-même via resolv.conf)
+      dnsPolicy: None
+      dnsConfig:
+        nameservers:
+          - 127.0.0.1           # Samba DNS interne (après démarrage)
+          - 192.168.0.11        # Node 1 pour fallback initial
+        searches:
+          - corpl.lcl
+          - cluster.local
+
+      # Hostname stable pour Kerberos (dc2.corpl.lcl)
+      hostname: dc2
+      subdomain: samba-dc-headless
+
+      # Conteneur principal Samba AD DC
+      containers:
+        - name: samba-dc
+          image: samba-dc:latest
+          imagePullPolicy: Never   # Image locale (importée via k3s ctr images import)
+
+          # Variables d'environnement pour la configuration AD
+          env:
+            - name: DOMAIN
+              value: "corpl.lcl"
+            - name: REALM
+              value: "CORPL.LCL"
+            - name: NETBIOS_DOMAIN
+              value: "CORPL"
+            - name: DC_HOSTNAME
+              value: "dc2"
+            - name: DNS_FORWARDER
+              value: "8.8.8.8"
+            - name: RPC_LOW_PORT
+              value: "49152"
+            - name: RPC_HIGH_PORT
+              value: "49200"
+            # Mot de passe Admin AD (depuis Secret)
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: samba-dc-credentials
+                  key: admin-password
+            # IP du DC existant (depuis Secret)
+            - name: EXISTING_DC_IP
+              valueFrom:
+                secretKeyRef:
+                  name: samba-dc-credentials
+                  key: existing-dc-ip
+            # IP du pod injectée via Downward API (pour /etc/hosts)
+            - name: MY_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+
+          ports:
+            - name: dns-tcp
+              containerPort: 53
+              protocol: TCP
+            - name: dns-udp
+              containerPort: 53
+              protocol: UDP
+            - name: kerberos-tcp
+              containerPort: 88
+              protocol: TCP
+            - name: kerberos-udp
+              containerPort: 88
+              protocol: UDP
+            - name: rpc-epmap
+              containerPort: 135
+              protocol: TCP
+            - name: netbios-ssn
+              containerPort: 139
+              protocol: TCP
+            - name: ldap-tcp
+              containerPort: 389
+              protocol: TCP
+            - name: ldap-udp
+              containerPort: 389
+              protocol: UDP
+            - name: smb
+              containerPort: 445
+              protocol: TCP
+            - name: kpasswd-tcp
+              containerPort: 464
+              protocol: TCP
+            - name: kpasswd-udp
+              containerPort: 464
+              protocol: UDP
+            - name: ldaps
+              containerPort: 636
+              protocol: TCP
+            - name: gc-ldap
+              containerPort: 3268
+              protocol: TCP
+            - name: gc-ldaps
+              containerPort: 3269
+              protocol: TCP
+
+          # Ressources allouées (DC léger mais stable)
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "2000m"
+              memory: "2Gi"
+
+          # Vérification de santé: Samba répond sur LDAP local
+          livenessProbe:
+            exec:
+              command:
+                - /bin/bash
+                - -c
+                - "samba-tool domain info 127.0.0.1 > /dev/null 2>&1"
+            initialDelaySeconds: 90    # Laisser le temps à la jonction initiale
+            periodSeconds: 30
+            timeoutSeconds: 15
+            failureThreshold: 3
+
+          readinessProbe:
+            exec:
+              command:
+                - /bin/bash
+                - -c
+                - "samba-tool domain info 127.0.0.1 > /dev/null 2>&1 && smbclient -L localhost -N > /dev/null 2>&1"
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            timeoutSeconds: 10
+            failureThreshold: 3
+
+          # Contexte de sécurité: Samba nécessite des capabilities élevées
+          securityContext:
+            capabilities:
+              add:
+                - NET_ADMIN      # Gestion réseau (interfaces, routing)
+                - NET_BIND_SERVICE  # Binding ports < 1024 (DNS:53, Kerberos:88)
+                - SYS_ADMIN      # Opérations système avancées
+                - SETUID         # Changement d'UID (sécurité Samba)
+                - SETGID         # Changement de GID
+                - DAC_OVERRIDE   # Contournement vérifications permissions (ACLs AD)
+                - CHOWN          # Modification propriétaires fichiers (sysvol)
+                - FOWNER         # Opérations sur fichiers sans égard propriétaire
+                - FSETID         # setuid/setgid bits
+            privileged: false    # On évite privileged:true si possible
+
+          volumeMounts:
+            - name: samba-data
+              mountPath: /var/lib/samba
+            - name: samba-config
+              mountPath: /etc/samba
+            - name: samba-logs
+              mountPath: /var/log/samba
+            # tmpfs pour /tmp (performances)
+            - name: tmp
+              mountPath: /tmp
+            # /run/samba pour les sockets IPC
+            - name: run-samba
+              mountPath: /run/samba
+
+      volumes:
+        # Données principales Samba (base AD, sysvol, netlogon)
+        - name: samba-data
+          persistentVolumeClaim:
+            claimName: samba-dc-data
+        # Configuration Samba (smb.conf)
+        - name: samba-config
+          emptyDir: {}    # Régénéré depuis /var/lib/samba au démarrage
+        # Logs
+        - name: samba-logs
+          persistentVolumeClaim:
+            claimName: samba-dc-logs
+        # Volumes tmpfs temporaires
+        - name: tmp
+          emptyDir:
+            medium: Memory
+        - name: run-samba
+          emptyDir:
+            medium: Memory
+
+      # Délai de grâce pour arrêt propre Samba (réplication en cours)
+      terminationGracePeriodSeconds: 60
+
+      restartPolicy: Always

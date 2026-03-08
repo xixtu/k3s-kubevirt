@@ -1,0 +1,53 @@
+---
+# =============================================================
+# Service UDP: samba-dc-udp
+# IP fixe MetalLB: 192.168.0.29 (partagée avec samba-dc-tcp)
+# Expose tous les ports UDP du contrôleur de domaine
+# =============================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: samba-dc-udp
+  namespace: active-directory
+  labels:
+    app: samba-dc
+  annotations:
+    # Même IP que le service TCP (partagée via allow-shared-ip)
+    metallb.universe.tf/loadBalancerIPs: "192.168.0.29"
+    metallb.universe.tf/allow-shared-ip: "samba-dc-shared"
+spec:
+  type: LoadBalancer
+  selector:
+    app: samba-dc
+  externalTrafficPolicy: Local
+  ports:
+    # DNS (UDP) - critique pour les clients Windows
+    - name: dns-udp
+      port: 53
+      targetPort: 53
+      protocol: UDP
+    # Kerberos (UDP) - authentification
+    - name: kerberos-udp
+      port: 88
+      targetPort: 88
+      protocol: UDP
+    # LDAP (UDP) - découverte de services
+    - name: ldap-udp
+      port: 389
+      targetPort: 389
+      protocol: UDP
+    # Kerberos Password Change (UDP)
+    - name: kpasswd-udp
+      port: 464
+      targetPort: 464
+      protocol: UDP
+    # NetBIOS Name Service (UDP) - résolution NETBIOS
+    - name: netbios-ns
+      port: 137
+      targetPort: 137
+      protocol: UDP
+    # NetBIOS Datagram Service (UDP)
+    - name: netbios-dgm
+      port: 138
+      targetPort: 138
+      protocol: UDP

@@ -1,0 +1,453 @@
+---
+# =============================================================
+# PLAYBOOK : Samba 4 Active Directory Domain Controller
+# =============================================================
+# Usage : ansible-playbook -i inventory/hosts.yml playbooks/active-directory.yml
+# Tags :
+#   ad-build      → Construire l'image Docker Samba DC
+#   ad-import     → Importer l'image dans k3s containerd (tous les nœuds)
+#   ad-deploy     → Déployer les manifestes Kubernetes (namespace, secret, pvc, StatefulSet, services)
+#   ad-status     → Vérifier l'état du DC (pods, services, réplication)
+#   ad-fsmo       → Afficher et/ou transférer les rôles FSMO
+#   ad-verify     → Vérification complète (DNS, Kerberos, LDAP, SMB)
+#
+# Prérequis:
+#   - K3s opérationnel avec MetalLB (pool 192.168.0.21-60)
+#   - Longhorn déployé (longhorn-fast, longhorn-slow)
+#   - Remplir les secrets dans active-directory/secret.yaml
+#   - DC existant corpl.lcl joignable depuis les nœuds k3s
+#
+# Réseau:
+#   IP fixe MetalLB DC: 192.168.0.29
+#   Domaine: corpl.lcl | Realm: CORPL.LCL | NetBIOS: CORPL
+#   Hostname DC container: dc2.corpl.lcl
+#
+# Procédure FSMO (après réplication stable):
+#   1. Vérifier la réplication: samba-tool drs showrepl
+#   2. Transférer FSMO: samba-tool fsmo transfer --role=all
+#   3. Vérifier: samba-tool fsmo show
+# =============================================================
+
+- name: "Active Directory - Samba 4 Domain Controller"
+  hosts: k3s-node-1
+  become: true
+  gather_facts: false
+  vars_files:
+    - "../group_vars/k3s_cluster.yml"
+
+  vars:
+    ad_image_name: "samba-dc"
+    ad_image_tag: "latest"
+    ad_dc_ip: "{{ ad_config.dc_ip }}"
+    ad_manifest_dir: "{{ playbook_dir }}/../active-directory"
+
+  tasks:
+
+    # ==========================================================
+    # CONSTRUCTION DE L'IMAGE DOCKER SAMBA DC
+    # ==========================================================
+
+    - name: "BUILD | Vérifier que nerdctl (k3s) ou docker est disponible"
+      ansible.builtin.command: which nerdctl
+      register: nerdctl_check
+      failed_when: false
+      changed_when: false
+      tags: [ad, ad-build]
+
+    - name: "BUILD | Vérifier que docker est disponible si nerdctl absent"
+      ansible.builtin.command: which docker
+      register: docker_check
+      failed_when: false
+      changed_when: false
+      when: nerdctl_check.rc != 0
+      tags: [ad, ad-build]
+
+    - name: "BUILD | Copier le répertoire Dockerfile sur le nœud"
+      ansible.builtin.copy:
+        src: "{{ ad_manifest_dir }}/"
+        dest: "/tmp/samba-dc-build/"
+        mode: preserve
+      tags: [ad, ad-build]
+
+    - name: "BUILD | Construire l'image Samba DC avec nerdctl"
+      ansible.builtin.command: >
+        nerdctl build
+          --namespace k8s.io
+          -t {{ ad_image_name }}:{{ ad_image_tag }}
+          /tmp/samba-dc-build/
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: build_result
+      changed_when: true
+      when: nerdctl_check.rc == 0
+      tags: [ad, ad-build]
+
+    - name: "BUILD | Construire l'image Samba DC avec docker (fallback)"
+      ansible.builtin.command: >
+        docker build
+          -t {{ ad_image_name }}:{{ ad_image_tag }}
+          /tmp/samba-dc-build/
+      register: build_result_docker
+      changed_when: true
+      when: nerdctl_check.rc != 0 and docker_check.rc == 0
+      tags: [ad, ad-build]
+
+    - name: "BUILD | Confirmer la construction de l'image"
+      ansible.builtin.debug:
+        msg: "Image {{ ad_image_name }}:{{ ad_image_tag }} construite avec succès"
+      tags: [ad, ad-build]
+
+    # ==========================================================
+    # IMPORT DE L'IMAGE SUR TOUS LES NŒUDS
+    # ==========================================================
+
+    - name: "IMPORT | Sauvegarder l'image en archive tar"
+      ansible.builtin.command: >
+        nerdctl save
+          --namespace k8s.io
+          -o /tmp/samba-dc-image.tar
+          {{ ad_image_name }}:{{ ad_image_tag }}
+      changed_when: true
+      when: nerdctl_check.rc == 0
+      tags: [ad, ad-import]
+
+    - name: "IMPORT | Sauvegarder avec docker (fallback)"
+      ansible.builtin.command: >
+        docker save
+          -o /tmp/samba-dc-image.tar
+          {{ ad_image_name }}:{{ ad_image_tag }}
+      changed_when: true
+      when: nerdctl_check.rc != 0 and docker_check.rc == 0
+      tags: [ad, ad-import]
+
+    - name: "IMPORT | Importer l'image dans k3s containerd"
+      ansible.builtin.command: >
+        k3s ctr images import /tmp/samba-dc-image.tar
+      changed_when: true
+      tags: [ad, ad-import]
+
+    - name: "IMPORT | Vérifier la présence de l'image dans k3s"
+      ansible.builtin.command: k3s ctr images ls
+      register: images_list
+      changed_when: false
+      tags: [ad, ad-import]
+
+    - name: "IMPORT | Confirmer image dans containerd"
+      ansible.builtin.debug:
+        msg: "Image samba-dc présente dans k3s: {{ 'samba-dc' in images_list.stdout }}"
+      tags: [ad, ad-import]
+
+    # ==========================================================
+    # DÉPLOIEMENT KUBERNETES - NAMESPACE
+    # ==========================================================
+
+    - name: "DEPLOY | Créer le namespace active-directory"
+      ansible.builtin.command: >
+        k3s kubectl apply -f {{ ad_manifest_dir }}/namespace.yaml
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: ns_result
+      changed_when: "'created' in ns_result.stdout or 'configured' in ns_result.stdout"
+      tags: [ad, ad-deploy]
+
+    # ==========================================================
+    # DÉPLOIEMENT KUBERNETES - SECRETS
+    # ==========================================================
+
+    - name: "DEPLOY | Vérifier que le secret est configuré (pas de CHANGEME)"
+      ansible.builtin.command: >
+        k3s kubectl get secret samba-dc-credentials
+          -n active-directory
+          -o jsonpath='{.data.admin-password}'
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: secret_check
+      failed_when: false
+      changed_when: false
+      tags: [ad, ad-deploy]
+
+    - name: "DEPLOY | Avertissement si secret non configuré"
+      ansible.builtin.debug:
+        msg: |
+          ⚠ ATTENTION: Modifier active-directory/secret.yaml avant de continuer:
+            - admin-password: mot de passe de l'Administrateur AD de corpl.lcl
+            - existing-dc-ip: IP du DC existant (ex: 192.168.1.10)
+          Puis relancer le playbook.
+      when: secret_check.rc != 0
+      tags: [ad, ad-deploy]
+
+    - name: "DEPLOY | Appliquer le Secret des credentials AD"
+      ansible.builtin.command: >
+        k3s kubectl apply -f {{ ad_manifest_dir }}/secret.yaml
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: secret_result
+      changed_when: "'created' in secret_result.stdout or 'configured' in secret_result.stdout"
+      tags: [ad, ad-deploy]
+
+    # ==========================================================
+    # DÉPLOIEMENT KUBERNETES - STOCKAGE
+    # ==========================================================
+
+    - name: "DEPLOY | Créer les PersistentVolumeClaims Longhorn"
+      ansible.builtin.command: >
+        k3s kubectl apply -f {{ ad_manifest_dir }}/pvc.yaml
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: pvc_result
+      changed_when: "'created' in pvc_result.stdout or 'configured' in pvc_result.stdout"
+      tags: [ad, ad-deploy]
+
+    - name: "DEPLOY | Attendre que les PVC soient Bound"
+      ansible.builtin.command: >
+        k3s kubectl wait pvc/samba-dc-data
+          -n active-directory
+          --for=condition=Bound
+          --timeout=120s
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [ad, ad-deploy]
+
+    # ==========================================================
+    # DÉPLOIEMENT KUBERNETES - SERVICES (avant StatefulSet)
+    # ==========================================================
+
+    - name: "DEPLOY | Déployer les Services TCP (LoadBalancer MetalLB)"
+      ansible.builtin.command: >
+        k3s kubectl apply -f {{ ad_manifest_dir }}/service-tcp.yaml
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: svc_tcp_result
+      changed_when: "'created' in svc_tcp_result.stdout or 'configured' in svc_tcp_result.stdout"
+      tags: [ad, ad-deploy]
+
+    - name: "DEPLOY | Déployer les Services UDP (LoadBalancer MetalLB)"
+      ansible.builtin.command: >
+        k3s kubectl apply -f {{ ad_manifest_dir }}/service-udp.yaml
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: svc_udp_result
+      changed_when: "'created' in svc_udp_result.stdout or 'configured' in svc_udp_result.stdout"
+      tags: [ad, ad-deploy]
+
+    # ==========================================================
+    # DÉPLOIEMENT KUBERNETES - STATEFULSET
+    # ==========================================================
+
+    - name: "DEPLOY | Déployer le StatefulSet Samba DC"
+      ansible.builtin.command: >
+        k3s kubectl apply -f {{ ad_manifest_dir }}/statefulset.yaml
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: sts_result
+      changed_when: "'created' in sts_result.stdout or 'configured' in sts_result.stdout"
+      tags: [ad, ad-deploy]
+
+    - name: "DEPLOY | Attendre démarrage du pod samba-dc-0 (peut prendre 3-5 min: jonction AD)"
+      ansible.builtin.command: >
+        k3s kubectl wait pod/samba-dc-0
+          -n active-directory
+          --for=condition=Ready
+          --timeout=600s
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      register: pod_ready
+      failed_when: false
+      tags: [ad, ad-deploy]
+
+    - name: "DEPLOY | Résultat du démarrage du pod"
+      ansible.builtin.debug:
+        msg: "{{ 'Pod samba-dc-0 prêt !' if pod_ready.rc == 0 else 'Pod pas encore prêt - vérifier les logs: kubectl logs samba-dc-0 -n active-directory' }}"
+      tags: [ad, ad-deploy]
+
+    # ==========================================================
+    # VÉRIFICATION DU STATUT
+    # ==========================================================
+
+    - name: "STATUS | Afficher les pods active-directory"
+      ansible.builtin.command: >
+        k3s kubectl get pods -n active-directory -o wide
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: pods_status
+      changed_when: false
+      tags: [ad, ad-status, ad-deploy]
+
+    - name: "STATUS | Pods"
+      ansible.builtin.debug:
+        msg: "{{ pods_status.stdout_lines }}"
+      tags: [ad, ad-status, ad-deploy]
+
+    - name: "STATUS | Afficher les services active-directory"
+      ansible.builtin.command: >
+        k3s kubectl get svc -n active-directory -o wide
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: svc_status
+      changed_when: false
+      tags: [ad, ad-status, ad-deploy]
+
+    - name: "STATUS | Services"
+      ansible.builtin.debug:
+        msg: "{{ svc_status.stdout_lines }}"
+      tags: [ad, ad-status, ad-deploy]
+
+    - name: "STATUS | Vérifier l'IP MetalLB assignée au DC"
+      ansible.builtin.command: >
+        k3s kubectl get svc samba-dc-tcp -n active-directory
+          -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: dc_ip
+      changed_when: false
+      failed_when: false
+      tags: [ad, ad-status]
+
+    - name: "STATUS | IP du DC"
+      ansible.builtin.debug:
+        msg: "IP du DC (MetalLB): {{ dc_ip.stdout | default('non assignée') }}"
+      tags: [ad, ad-status]
+
+    - name: "STATUS | Afficher les logs récents de samba-dc-0"
+      ansible.builtin.command: >
+        k3s kubectl logs samba-dc-0 -n active-directory --tail=30
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: dc_logs
+      changed_when: false
+      failed_when: false
+      tags: [ad, ad-status]
+
+    - name: "STATUS | Logs DC"
+      ansible.builtin.debug:
+        msg: "{{ dc_logs.stdout_lines }}"
+      tags: [ad, ad-status]
+
+    # ==========================================================
+    # VÉRIFICATION FONCTIONNELLE
+    # ==========================================================
+
+    - name: "VERIFY | Test DNS - Résolution du domaine corpl.lcl"
+      ansible.builtin.command: >
+        k3s kubectl exec samba-dc-0 -n active-directory --
+          nslookup corpl.lcl 127.0.0.1
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: dns_test
+      changed_when: false
+      failed_when: false
+      tags: [ad, ad-verify]
+
+    - name: "VERIFY | Résultat DNS"
+      ansible.builtin.debug:
+        msg: "{{ dns_test.stdout_lines | default(['Erreur: ' + dns_test.stderr]) }}"
+      tags: [ad, ad-verify]
+
+    - name: "VERIFY | Test Kerberos - Obtenir un ticket TGT"
+      ansible.builtin.command: >
+        k3s kubectl exec samba-dc-0 -n active-directory --
+          samba-tool domain info 127.0.0.1
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: kerberos_test
+      changed_when: false
+      failed_when: false
+      tags: [ad, ad-verify]
+
+    - name: "VERIFY | Résultat info domaine"
+      ansible.builtin.debug:
+        msg: "{{ kerberos_test.stdout_lines | default(['Erreur: ' + kerberos_test.stderr]) }}"
+      tags: [ad, ad-verify]
+
+    - name: "VERIFY | Test réplication AD"
+      ansible.builtin.command: >
+        k3s kubectl exec samba-dc-0 -n active-directory --
+          samba-tool drs showrepl
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: repl_test
+      changed_when: false
+      failed_when: false
+      tags: [ad, ad-verify]
+
+    - name: "VERIFY | Résultat réplication"
+      ansible.builtin.debug:
+        msg: "{{ repl_test.stdout_lines | default(['Erreur: ' + repl_test.stderr]) }}"
+      tags: [ad, ad-verify]
+
+    - name: "VERIFY | Test ping vers le DC depuis le cluster"
+      ansible.builtin.command: >
+        ping -c 3 {{ ad_config.dc_ip }}
+      register: ping_test
+      changed_when: false
+      failed_when: false
+      tags: [ad, ad-verify]
+
+    - name: "VERIFY | Résultat ping DC"
+      ansible.builtin.debug:
+        msg: "{{ ping_test.stdout_lines }}"
+      tags: [ad, ad-verify]
+
+    # ==========================================================
+    # GESTION DES RÔLES FSMO
+    # ==========================================================
+
+    - name: "FSMO | Afficher les rôles FSMO actuels"
+      ansible.builtin.command: >
+        k3s kubectl exec samba-dc-0 -n active-directory --
+          samba-tool fsmo show
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: fsmo_show
+      changed_when: false
+      failed_when: false
+      tags: [ad, ad-fsmo]
+
+    - name: "FSMO | Rôles FSMO actuels"
+      ansible.builtin.debug:
+        msg: "{{ fsmo_show.stdout_lines | default(['Erreur: ' + fsmo_show.stderr]) }}"
+      tags: [ad, ad-fsmo]
+
+    - name: "FSMO | IMPORTANT - Vérifier réplication avant transfert"
+      ansible.builtin.debug:
+        msg: |
+          ⚠ AVANT de transférer les rôles FSMO:
+          1. Vérifier que la réplication est 100% OK:
+             kubectl exec -it samba-dc-0 -n active-directory -- samba-tool drs showrepl
+          2. Vérifier qu'aucune erreur dans les logs:
+             kubectl logs samba-dc-0 -n active-directory
+          3. Pour transférer TOUS les rôles FSMO vers ce DC:
+             kubectl exec -it samba-dc-0 -n active-directory -- \
+               samba-tool fsmo transfer --role=all
+          4. Pour transférer un rôle spécifique (pdc, rid, infrastructure, naming, schema):
+             kubectl exec -it samba-dc-0 -n active-directory -- \
+               samba-tool fsmo transfer --role=pdc
+          5. Après transfert, l'ancien DC peut être rétrogradé (dcpromo /forceremoval)
+      tags: [ad, ad-fsmo]
+
+    # ==========================================================
+    # RÉSUMÉ FINAL
+    # ==========================================================
+
+    - name: "RÉSUMÉ | Configuration AD DC"
+      ansible.builtin.debug:
+        msg:
+          - "======================================================"
+          - " Samba 4 AD DC déployé dans Kubernetes"
+          - "======================================================"
+          - " Domaine: corpl.lcl"
+          - " Realm:   CORPL.LCL"
+          - " Hostname DC: dc2.corpl.lcl"
+          - " IP MetalLB: {{ ad_config.dc_ip }}"
+          - "------------------------------------------------------"
+          - " Prochaines étapes:"
+          - "  1. Ajouter 192.168.0.29 comme DNS sur vos postes"
+          - "     (en secondaire, le DC existant en primaire)"
+          - "  2. Vérifier la réplication AD (ad-verify)"
+          - "  3. Transférer les FSMO si DC existant doit être retiré"
+          - "     (ad-fsmo tag)"
+          - "  4. Mettre 192.168.0.29 comme DNS primaire"
+          - "======================================================"
+      tags: [ad, ad-status, ad-deploy]

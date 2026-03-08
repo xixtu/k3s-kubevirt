@@ -85,6 +85,25 @@ longhorn_storage_classes:
     reclaim_policy: Delete
     fs_type: ext4
 
+# --- Active Directory Domain Controller (Samba 4 AD DC) ---
+# Contrôleur de domaine en container (StatefulSet) qui rejoint corpl.lcl
+# et peut reprendre les rôles FSMO de l'AD existant
+ad_config:
+  domain: "corpl.lcl"
+  realm: "CORPL.LCL"
+  netbios_domain: "CORPL"
+  dc_hostname: "dc2"            # Hostname du DC container (dc2.corpl.lcl)
+  dc_ip: "192.168.0.29"         # IP fixe MetalLB (dans pool 192.168.0.21-60)
+  dns_forwarder: "8.8.8.8"      # DNS forwarder pour résolution externe
+  # IP du DC existant corpl.lcl (à renseigner avant déploiement)
+  existing_dc_ip: "192.168.X.X" # ⚠ REMPLIR avec l'IP réelle du DC existant
+  # Rôles FSMO disponibles (à transférer après jonction stable):
+  #   pdc, rid, infrastructure (domaine)
+  #   naming, schema (forêt)
+  storage_class: "longhorn-fast"
+  data_size: "50Gi"
+  logs_size: "5Gi"
+
 # --- NAS Configuration (Option C Hybride + Active Directory) ---
 # Architecture :
 #   Longhorn PVC (RWX - longhorn-slow)

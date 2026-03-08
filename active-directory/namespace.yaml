@@ -1,0 +1,16 @@
+---
+# =============================================================
+# Namespace: active-directory
+# PSA en mode "privileged" car Samba AD DC nécessite des
+# capabilities élevées (NET_ADMIN, SYS_ADMIN)
+# =============================================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: active-directory
+  labels:
+    # Mode privileged nécessaire pour Samba (capabilities kernel)
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/audit: privileged
+    pod-security.kubernetes.io/warn: privileged
+    app.kubernetes.io/part-of: active-directory

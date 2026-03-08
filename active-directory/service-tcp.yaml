@@ -1,0 +1,107 @@
+---
+# =============================================================
+# Service TCP: samba-dc-tcp
+# IP fixe MetalLB: 192.168.0.29
+# Expose tous les ports TCP du contrôleur de domaine
+# Note: Les clients AD/Windows doivent utiliser 192.168.0.29
+#       comme serveur DNS secondaire (après le DC existant)
+# =============================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: samba-dc-tcp
+  namespace: active-directory
+  labels:
+    app: samba-dc
+  annotations:
+    # IP fixe MetalLB pour le DC (doit être dans le pool 192.168.0.21-60)
+    metallb.universe.tf/loadBalancerIPs: "192.168.0.29"
+    # Partager cette IP avec le service UDP (même DC, même IP)
+    metallb.universe.tf/allow-shared-ip: "samba-dc-shared"
+spec:
+  type: LoadBalancer
+  selector:
+    app: samba-dc
+  externalTrafficPolicy: Local
+  ports:
+    # DNS (TCP)
+    - name: dns-tcp
+      port: 53
+      targetPort: 53
+      protocol: TCP
+    # Kerberos (TCP)
+    - name: kerberos-tcp
+      port: 88
+      targetPort: 88
+      protocol: TCP
+    # RPC Endpoint Mapper
+    - name: rpc-epmap
+      port: 135
+      targetPort: 135
+      protocol: TCP
+    # NetBIOS Session Service
+    - name: netbios-ssn
+      port: 139
+      targetPort: 139
+      protocol: TCP
+    # LDAP (TCP)
+    - name: ldap-tcp
+      port: 389
+      targetPort: 389
+      protocol: TCP
+    # SMB/CIFS (sysvol, netlogon, GPO)
+    - name: smb
+      port: 445
+      targetPort: 445
+      protocol: TCP
+    # Kerberos Password Change (TCP)
+    - name: kpasswd-tcp
+      port: 464
+      targetPort: 464
+      protocol: TCP
+    # LDAPS (SSL)
+    - name: ldaps
+      port: 636
+      targetPort: 636
+      protocol: TCP
+    # Global Catalog LDAP
+    - name: gc-ldap
+      port: 3268
+      targetPort: 3268
+      protocol: TCP
+    # Global Catalog LDAPS
+    - name: gc-ldaps
+      port: 3269
+      targetPort: 3269
+      protocol: TCP
+    # RPC Dynamique (plage restreinte 49152-49200)
+    # Note: Kubernetes ne supporte pas les plages de ports dans un Service.
+    # Les ports RPC dynamiques passent via le port 135 (EpMapper) qui
+    # redirige vers la plage 49152-49200.
+    # Pour les clients Windows: ajouter une règle firewall autorisant
+    # TCP 49152-49200 vers 192.168.0.29 (non exposé via LoadBalancer).
+---
+# =============================================================
+# Service Headless: samba-dc-headless
+# Pour le StatefulSet (identity DNS stable dans le cluster)
+# dc2.samba-dc-headless.active-directory.svc.cluster.local
+# =============================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: samba-dc-headless
+  namespace: active-directory
+  labels:
+    app: samba-dc
+spec:
+  type: ClusterIP
+  clusterIP: None    # Headless
+  selector:
+    app: samba-dc
+  ports:
+    - name: ldap
+      port: 389
+      protocol: TCP
+    - name: smb
+      port: 445
+      protocol: TCP

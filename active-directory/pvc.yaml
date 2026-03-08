@@ -1,0 +1,38 @@
+---
+# =============================================================
+# PersistentVolumeClaim: Données Samba AD DC
+# - samba-dc-data: base de données AD, sysvol, netlogon (50Gi)
+# - samba-dc-logs: journaux Samba (5Gi)
+# =============================================================
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: samba-dc-data
+  namespace: active-directory
+  labels:
+    app: samba-dc
+  annotations:
+    # Longhorn: snapshot quotidien + rétention 7 jours
+    longhorn.io/backup-policy: "daily-7"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn-fast   # SSD Samsung 870 (2 répliques)
+  resources:
+    requests:
+      storage: 50Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: samba-dc-logs
+  namespace: active-directory
+  labels:
+    app: samba-dc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn-slow   # HDD pour les logs
+  resources:
+    requests:
+      storage: 5Gi
