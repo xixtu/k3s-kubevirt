@@ -170,13 +170,12 @@
       tags: [ad, ad-deploy]
 
     - name: "DEPLOY | Créer/Mettre à jour le Secret des credentials AD depuis les vars"
-      ansible.builtin.shell: >
-        k3s kubectl create secret generic samba-dc-credentials
-          -n active-directory
-          --from-literal=admin-password={{ ad_config.admin_password | quote }}
-          --from-literal=existing-dc-ip={{ ad_config.existing_dc_ip | quote }}
-          --dry-run=client -o yaml
-          | k3s kubectl apply -f -
+      ansible.builtin.shell: |
+        k3s kubectl create secret generic samba-dc-credentials \
+          -n active-directory \
+          --from-literal=admin-password='{{ ad_config.admin_password }}' \
+          --from-literal=existing-dc-ip='{{ ad_config.existing_dc_ip }}' \
+          --dry-run=client -o yaml | k3s kubectl apply -f -
       environment:
         KUBECONFIG: /etc/rancher/k3s/k3s.yaml
       register: secret_result
