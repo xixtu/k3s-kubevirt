@@ -214,6 +214,33 @@
       when: sc_check.rc != 0
       tags: [ad, ad-deploy]
 
+    - name: "DEPLOY | Récupérer les StorageClass actuelles des PVCs"
+      ansible.builtin.command: >
+        k3s kubectl get pvc {{ item }} -n active-directory
+        -o jsonpath='{.spec.storageClassName}'
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: pvc_sc_check
+      changed_when: false
+      failed_when: false
+      loop:
+        - samba-dc-data
+        - samba-dc-logs
+      tags: [ad, ad-deploy]
+
+    - name: "DEPLOY | Supprimer les PVCs avec mauvaise StorageClass"
+      ansible.builtin.command: >
+        k3s kubectl delete pvc {{ item.item }} -n active-directory --wait=true
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      when:
+        - item.rc == 0
+        - item.stdout != "" and item.stdout != "longhorn-fast"
+      loop: "{{ pvc_sc_check.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+      tags: [ad, ad-deploy]
+
     - name: "DEPLOY | Créer les PersistentVolumeClaims Longhorn"
       ansible.builtin.command: >
         k3s kubectl apply -f {{ ad_manifest_dir }}/pvc.yaml
