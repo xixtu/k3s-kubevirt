@@ -51,7 +51,11 @@ setup_hostname() {
 
     # /etc/hosts
     # Supprimer les anciennes entrées pour ce hostname
-    sed -i "/\b${DC_HOSTNAME}\b/d" /etc/hosts
+    # Note: sed -i ne fonctionne pas sur le bind mount Kubernetes (/etc/hosts)
+    # On utilise grep -v + cat pour écrire en place sans rename
+    grep -v "\b${DC_HOSTNAME}\b" /etc/hosts > /tmp/hosts.new || true
+    cat /tmp/hosts.new > /etc/hosts
+    rm -f /tmp/hosts.new
 
     # Ajouter entrée avec IP réelle
     echo "${MY_IP}    ${fqdn} ${DC_HOSTNAME}" >> /etc/hosts

@@ -94,9 +94,9 @@ ad_config:
   netbios_domain: "CORPL"
   dc_hostname: "dc2"            # Hostname du DC container (dc2.corpl.lcl)
   dc_ip: "192.168.0.29"         # IP fixe MetalLB (dans pool 192.168.0.21-60)
-  dns_forwarder: "8.8.8.8"      # DNS forwarder pour résolution externe
-  # IP du DC existant corpl.lcl (à renseigner avant déploiement)
-  existing_dc_ip: "192.168.X.X" # ⚠ REMPLIR avec l'IP réelle du DC existant
+  dns_forwarder: "192.168.0.21" # DNS forwarder pour résolution externe
+  existing_dc_ip: "192.168.0.100" # IP du DC existant corpl.lcl
+  admin_password: "CHANGEME_MOT_DE_PASSE_AD_ADMIN" # ⚠ Remplacer par le vrai mot de passe (ou ansible-vault)
   # Rôles FSMO disponibles (à transférer après jonction stable):
   #   pdc, rid, infrastructure (domaine)
   #   naming, schema (forêt)

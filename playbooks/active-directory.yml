@@ -161,31 +161,22 @@
     # DÉPLOIEMENT KUBERNETES - SECRETS
     # ==========================================================
 
-    - name: "DEPLOY | Vérifier que le secret est configuré (pas de CHANGEME)"
-      ansible.builtin.command: >
-        k3s kubectl get secret samba-dc-credentials
-          -n active-directory
-          -o jsonpath='{.data.admin-password}'
-      environment:
-        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
-      register: secret_check
-      failed_when: false
-      changed_when: false
-      tags: [ad, ad-deploy]
-
-    - name: "DEPLOY | Avertissement si secret non configuré"
-      ansible.builtin.debug:
+    - name: "DEPLOY | Vérifier que admin_password est configuré (pas de CHANGEME)"
+      ansible.builtin.fail:
         msg: |
-          ⚠ ATTENTION: Modifier active-directory/secret.yaml avant de continuer:
-            - admin-password: mot de passe de l'Administrateur AD de corpl.lcl
-            - existing-dc-ip: IP du DC existant (ex: 192.168.1.10)
-          Puis relancer le playbook.
-      when: secret_check.rc != 0
+          ⚠ ERREUR: Configurer ad_config.admin_password dans group_vars/k3s_cluster.yml
+          (ou utiliser ansible-vault pour chiffrer la valeur) puis relancer le playbook.
+      when: ad_config.admin_password == "CHANGEME_MOT_DE_PASSE_AD_ADMIN"
       tags: [ad, ad-deploy]
 
-    - name: "DEPLOY | Appliquer le Secret des credentials AD"
-      ansible.builtin.command: >
-        k3s kubectl apply -f {{ ad_manifest_dir }}/secret.yaml
+    - name: "DEPLOY | Créer/Mettre à jour le Secret des credentials AD depuis les vars"
+      ansible.builtin.shell: >
+        k3s kubectl create secret generic samba-dc-credentials
+          -n active-directory
+          --from-literal=admin-password={{ ad_config.admin_password | quote }}
+          --from-literal=existing-dc-ip={{ ad_config.existing_dc_ip | quote }}
+          --dry-run=client -o yaml
+          | k3s kubectl apply -f -
       environment:
         KUBECONFIG: /etc/rancher/k3s/k3s.yaml
       register: secret_result
