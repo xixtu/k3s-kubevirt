@@ -196,13 +196,8 @@
     # DÉPLOIEMENT KUBERNETES - STOCKAGE
     # ==========================================================
 
-    - name: "DEPLOY | Vérifier que les StorageClasses Longhorn existent"
-      ansible.builtin.shell: |
-        for sc in longhorn-fast; do
-          if ! k3s kubectl get storageclass "$sc" &>/dev/null; then
-            echo "MISSING: $sc"
-          fi
-        done
+    - name: "DEPLOY | Vérifier que la StorageClass longhorn-fast existe"
+      ansible.builtin.command: k3s kubectl get storageclass longhorn-fast
       environment:
         KUBECONFIG: /etc/rancher/k3s/k3s.yaml
       register: sc_check
@@ -210,13 +205,13 @@
       failed_when: false
       tags: [ad, ad-deploy]
 
-    - name: "DEPLOY | Echec si StorageClasses Longhorn absentes"
+    - name: "DEPLOY | Echec si longhorn-fast absente"
       ansible.builtin.fail:
         msg: |
-          StorageClass(es) manquantes: {{ sc_check.stdout }}
+          StorageClass 'longhorn-fast' introuvable dans le cluster.
           → Lancer d'abord : ansible-playbook -i inventory/hosts.yml playbooks/longhorn.yml
           → Vérifier : k3s kubectl get storageclass
-      when: sc_check.stdout != ""
+      when: sc_check.rc != 0
       tags: [ad, ad-deploy]
 
     - name: "DEPLOY | Créer les PersistentVolumeClaims Longhorn"
