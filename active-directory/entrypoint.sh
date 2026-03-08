@@ -93,7 +93,7 @@ join_domain() {
 
     samba-tool domain join "${DOMAIN}" DC \
         --dns-backend=SAMBA_INTERNAL \
-        --username="${ADMIN_USER}" \
+        --username="${ADMIN_USER}@${REALM}" \
         --password="${ADMIN_PASSWORD}" \
         --server="${EXISTING_DC_IP}" \
         --option="interfaces=lo eth0" \
