@@ -96,6 +96,7 @@ ad_config:
   dc_ip: "192.168.0.29"         # IP fixe MetalLB (dans pool 192.168.0.21-60)
   dns_forwarder: "192.168.0.21" # DNS forwarder pour résolution externe
   existing_dc_ip: "192.168.0.100" # IP du DC existant corpl.lcl
+  admin_user: "administrator"     # Compte utilisé pour la jonction au domaine
   admin_password: "P@ssw0rd" # ⚠ Remplacer par le vrai mot de passe (ou ansible-vault)
   # Rôles FSMO disponibles (à transférer après jonction stable):
   #   pdc, rid, infrastructure (domaine)

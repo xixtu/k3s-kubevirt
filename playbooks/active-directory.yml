@@ -186,8 +186,10 @@
       ansible.builtin.shell: |
         k3s kubectl create secret generic samba-dc-credentials \
           -n active-directory \
+          --from-literal=admin-user='{{ ad_config.admin_user | default("administrator") }}' \
           --from-literal=admin-password='{{ ad_config.admin_password }}' \
           --from-literal=existing-dc-ip='{{ ad_config.existing_dc_ip }}' \
+          --from-literal=ntp-server='{{ ad_config.ntp_server | default(ad_config.existing_dc_ip) }}' \
           --dry-run=client -o yaml | k3s kubectl apply -f -
       environment:
         KUBECONFIG: /etc/rancher/k3s/k3s.yaml
