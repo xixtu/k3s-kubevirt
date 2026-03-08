@@ -128,6 +128,10 @@ SMBCONF
         cp /var/lib/samba/private/krb5.conf /etc/krb5.conf
         log "Configuration Kerberos copiée."
     fi
+
+    # Sauvegarder smb.conf sur le PVC pour les redémarrages
+    cp /etc/samba/smb.conf /var/lib/samba/private/smb.conf.bak
+    log "smb.conf sauvegardé dans le PVC."
 }
 
 # --- Mise à jour DNS pour pointer vers soi-même ---
@@ -181,8 +185,16 @@ log "=============================================="
 setup_hostname
 
 # Vérifier si déjà joint au domaine
-if [ -f /var/lib/samba/private/krb5.conf ] && [ -f /etc/samba/smb.conf ]; then
+# On teste uniquement krb5.conf sur le PVC (/var/lib/samba est persistant)
+# smb.conf est sur emptyDir donc toujours absent au redémarrage
+if [ -f /var/lib/samba/private/krb5.conf ]; then
     log "Samba DC déjà configuré (${DOMAIN}), démarrage direct..."
+
+    # Restaurer smb.conf depuis le PVC si présent, sinon depuis private/
+    if [ -f /var/lib/samba/private/smb.conf.bak ]; then
+        cp /var/lib/samba/private/smb.conf.bak /etc/samba/smb.conf
+        log "smb.conf restauré depuis la sauvegarde."
+    fi
 
     # Restaurer la config Kerberos
     cp /var/lib/samba/private/krb5.conf /etc/krb5.conf
