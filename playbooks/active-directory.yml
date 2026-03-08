@@ -227,7 +227,7 @@
       ansible.builtin.command: >
         k3s kubectl wait pvc/samba-dc-data
           -n active-directory
-          --for=condition=Bound
+          --for=jsonpath='{.status.phase}'=Bound
           --timeout=600s
       environment:
         KUBECONFIG: /etc/rancher/k3s/k3s.yaml
@@ -238,7 +238,7 @@
       ansible.builtin.command: >
         k3s kubectl wait pvc/samba-dc-logs
           -n active-directory
-          --for=condition=Bound
+          --for=jsonpath='{.status.phase}'=Bound
           --timeout=600s
       environment:
         KUBECONFIG: /etc/rancher/k3s/k3s.yaml
