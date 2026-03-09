@@ -1,0 +1,828 @@
+---
+# =============================================================
+# PLAYBOOK : Déploiement Barista - Boutique e-commerce capsules café
+# Moteur    : Medusa.js v2 (Node.js, API REST + Admin Dashboard)
+# =============================================================
+# Usage : ansible-playbook -i inventory/hosts.yml playbooks/barista.yml
+# Tags :
+#   barista-install   → Namespace, Secrets, PVC, PostgreSQL, Redis, ConfigMap, Medusa
+#   barista-ingress   → Ingress TLS + IngressRoute HTTPS
+#   letsencrypt-tls   → Renouvellement certificat ECDSA
+#   barista-verify    → Vérification pods, services, ingress, cert
+# Prérequis :
+#   - K3s + MetalLB + Traefik installés
+#   - Longhorn StorageClasses (longhorn-fast, longhorn-slow)
+#   - cert-manager + ClusterIssuer letsencrypt-production
+#   - DNS : barista.app.xixtu.eu → A → <IP publique>
+#
+# Architecture :
+#   barista.app.xixtu.eu        → Medusa API REST (port 9000)
+#   barista.app.xixtu.eu/app    → Medusa Admin Dashboard (intégré)
+#
+# Stack :
+#   Medusa v2 (node:20-slim) + PostgreSQL 16 + Redis 7
+#   Stockage : Longhorn (longhorn-fast pour DB + app, longhorn-slow pour uploads)
+#
+# ⚠ Premier démarrage : 5-10 min (npm install + medusa build)
+#   Démarrages suivants : ~30 sec
+# =============================================================
+
+- name: "Barista - Boutique e-commerce capsules café (Medusa.js v2)"
+  hosts: k3s-node-1
+  become: true
+  gather_facts: false
+  vars_files:
+    - "../group_vars/k3s_cluster.yml"
+  vars:
+    target_namespace: "barista"
+    app_name: "barista"
+    storage_class_fast: "longhorn-fast"
+    storage_class_slow: "longhorn-slow"
+    db_storage_size: "5Gi"
+    app_storage_size: "8Gi"
+    uploads_storage_size: "20Gi"
+    # PostgreSQL
+    db_name: "medusa"
+    db_user: "medusa"
+    db_password: "barista-db-s3cret-ch4nge-me"    # ⚠ ansible-vault en production
+    # Medusa
+    medusa_domain: "{{ external_domains.barista }}"
+    medusa_port: "9000"
+    node_image: "node:20-slim"
+
+  tasks:
+
+    # ==========================================================
+    # NAMESPACE
+    # ==========================================================
+
+    - name: Créer le namespace barista
+      ansible.builtin.command: k3s kubectl create namespace {{ target_namespace }}
+      register: ns_create
+      failed_when: ns_create.rc != 0 and 'already exists' not in ns_create.stderr
+      changed_when: ns_create.rc == 0
+      tags: [barista, barista-install]
+
+    # ==========================================================
+    # SECRETS
+    # ==========================================================
+
+    - name: Créer le Secret PostgreSQL
+      ansible.builtin.shell: |
+        k3s kubectl create secret generic {{ app_name }}-db-secret \
+          --namespace {{ target_namespace }} \
+          --from-literal=POSTGRES_PASSWORD={{ db_password }} \
+          --from-literal=POSTGRES_USER={{ db_user }} \
+          --from-literal=POSTGRES_DB={{ db_name }} \
+          --dry-run=client -o yaml | k3s kubectl apply -f -
+      changed_when: true
+      tags: [barista, barista-install]
+
+    - name: Vérifier si le Secret Medusa existe déjà
+      ansible.builtin.command: >
+        k3s kubectl get secret {{ app_name }}-secret
+        -n {{ target_namespace }} -o name
+      register: medusa_secret_check
+      failed_when: false
+      changed_when: false
+      tags: [barista, barista-install]
+
+    - name: Générer les secrets Medusa (JWT + Cookie)
+      ansible.builtin.shell: |
+        JWT_SECRET=$(openssl rand -base64 48)
+        COOKIE_SECRET=$(openssl rand -base64 48)
+        DATABASE_URL="postgresql://{{ db_user }}:{{ db_password }}@{{ app_name }}-postgres:5432/{{ db_name }}"
+        k3s kubectl create secret generic {{ app_name }}-secret \
+          --namespace {{ target_namespace }} \
+          --from-literal=JWT_SECRET="${JWT_SECRET}" \
+          --from-literal=COOKIE_SECRET="${COOKIE_SECRET}" \
+          --from-literal=DATABASE_URL="${DATABASE_URL}" \
+          --dry-run=client -o yaml | k3s kubectl apply -f -
+      when: medusa_secret_check.rc != 0
+      changed_when: true
+      tags: [barista, barista-install]
+
+    # ==========================================================
+    # PVC
+    # ==========================================================
+
+    - name: Écrire les PVC Barista
+      ansible.builtin.copy:
+        dest: /tmp/barista-pvc.yml
+        mode: '0644'
+        content: |
+          ---
+          # Base de données PostgreSQL
+          apiVersion: v1
+          kind: PersistentVolumeClaim
+          metadata:
+            name: {{ app_name }}-db-data
+            namespace: {{ target_namespace }}
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            storageClassName: {{ storage_class_fast }}
+            resources:
+              requests:
+                storage: {{ db_storage_size }}
+          ---
+          # Installation Medusa (node_modules + build)
+          apiVersion: v1
+          kind: PersistentVolumeClaim
+          metadata:
+            name: {{ app_name }}-app-data
+            namespace: {{ target_namespace }}
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            storageClassName: {{ storage_class_fast }}
+            resources:
+              requests:
+                storage: {{ app_storage_size }}
+          ---
+          # Uploads produits (photos capsules)
+          apiVersion: v1
+          kind: PersistentVolumeClaim
+          metadata:
+            name: {{ app_name }}-uploads
+            namespace: {{ target_namespace }}
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            storageClassName: {{ storage_class_slow }}
+            resources:
+              requests:
+                storage: {{ uploads_storage_size }}
+      tags: [barista, barista-install]
+
+    - name: Appliquer les PVC Barista
+      ansible.builtin.command: k3s kubectl apply -f /tmp/barista-pvc.yml
+      register: pvc_apply
+      changed_when: "'configured' in pvc_apply.stdout or 'created' in pvc_apply.stdout"
+      tags: [barista, barista-install]
+
+    - name: Supprimer le fichier PVC temporaire
+      ansible.builtin.file:
+        path: /tmp/barista-pvc.yml
+        state: absent
+      tags: [barista, barista-install]
+
+    # ==========================================================
+    # POSTGRESQL 16
+    # ==========================================================
+
+    - name: Écrire le Deployment PostgreSQL
+      ansible.builtin.copy:
+        dest: /tmp/barista-postgres.yml
+        mode: '0644'
+        content: |
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: {{ app_name }}-postgres
+            namespace: {{ target_namespace }}
+            labels:
+              app: {{ app_name }}-postgres
+          spec:
+            replicas: 1
+            strategy:
+              type: Recreate
+            selector:
+              matchLabels:
+                app: {{ app_name }}-postgres
+            template:
+              metadata:
+                labels:
+                  app: {{ app_name }}-postgres
+              spec:
+                containers:
+                  - name: postgres
+                    image: postgres:16-alpine
+                    ports:
+                      - containerPort: 5432
+                    envFrom:
+                      - secretRef:
+                          name: {{ app_name }}-db-secret
+                    volumeMounts:
+                      - name: db-data
+                        mountPath: /var/lib/postgresql/data
+                        subPath: pgdata
+                    resources:
+                      requests:
+                        cpu: 100m
+                        memory: 256Mi
+                      limits:
+                        memory: 512Mi
+                    readinessProbe:
+                      exec:
+                        command: ["pg_isready", "-U", "{{ db_user }}", "-d", "{{ db_name }}"]
+                      initialDelaySeconds: 10
+                      periodSeconds: 5
+                      failureThreshold: 10
+                volumes:
+                  - name: db-data
+                    persistentVolumeClaim:
+                      claimName: {{ app_name }}-db-data
+          ---
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: {{ app_name }}-postgres
+            namespace: {{ target_namespace }}
+          spec:
+            selector:
+              app: {{ app_name }}-postgres
+            ports:
+              - protocol: TCP
+                port: 5432
+                targetPort: 5432
+            type: ClusterIP
+      tags: [barista, barista-install]
+
+    - name: Appliquer le Deployment PostgreSQL
+      ansible.builtin.command: k3s kubectl apply -f /tmp/barista-postgres.yml
+      register: pg_apply
+      changed_when: "'configured' in pg_apply.stdout or 'created' in pg_apply.stdout"
+      tags: [barista, barista-install]
+
+    - name: Supprimer le fichier PostgreSQL temporaire
+      ansible.builtin.file:
+        path: /tmp/barista-postgres.yml
+        state: absent
+      tags: [barista, barista-install]
+
+    - name: Attendre que PostgreSQL soit Ready
+      ansible.builtin.command: >
+        k3s kubectl wait --for=condition=Ready pods
+        -l app={{ app_name }}-postgres
+        -n {{ target_namespace }}
+        --timeout=120s
+      changed_when: false
+      tags: [barista, barista-install]
+
+    # ==========================================================
+    # REDIS 7
+    # ==========================================================
+
+    - name: Écrire le Deployment Redis
+      ansible.builtin.copy:
+        dest: /tmp/barista-redis.yml
+        mode: '0644'
+        content: |
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: {{ app_name }}-redis
+            namespace: {{ target_namespace }}
+            labels:
+              app: {{ app_name }}-redis
+          spec:
+            replicas: 1
+            strategy:
+              type: Recreate
+            selector:
+              matchLabels:
+                app: {{ app_name }}-redis
+            template:
+              metadata:
+                labels:
+                  app: {{ app_name }}-redis
+              spec:
+                containers:
+                  - name: redis
+                    image: redis:7-alpine
+                    ports:
+                      - containerPort: 6379
+                    command: ["redis-server", "--save", "", "--appendonly", "no"]
+                    resources:
+                      requests:
+                        cpu: 50m
+                        memory: 64Mi
+                      limits:
+                        memory: 128Mi
+                    readinessProbe:
+                      exec:
+                        command: ["redis-cli", "ping"]
+                      initialDelaySeconds: 5
+                      periodSeconds: 5
+          ---
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: {{ app_name }}-redis
+            namespace: {{ target_namespace }}
+          spec:
+            selector:
+              app: {{ app_name }}-redis
+            ports:
+              - protocol: TCP
+                port: 6379
+                targetPort: 6379
+            type: ClusterIP
+      tags: [barista, barista-install]
+
+    - name: Appliquer le Deployment Redis
+      ansible.builtin.command: k3s kubectl apply -f /tmp/barista-redis.yml
+      register: redis_apply
+      changed_when: "'configured' in redis_apply.stdout or 'created' in redis_apply.stdout"
+      tags: [barista, barista-install]
+
+    - name: Supprimer le fichier Redis temporaire
+      ansible.builtin.file:
+        path: /tmp/barista-redis.yml
+        state: absent
+      tags: [barista, barista-install]
+
+    # ==========================================================
+    # CONFIGMAP : Scripts + Configuration Medusa v2
+    # ==========================================================
+
+    - name: Écrire le ConfigMap Medusa
+      ansible.builtin.copy:
+        dest: /tmp/barista-configmap.yml
+        mode: '0644'
+        content: |
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: {{ app_name }}-medusa-config
+            namespace: {{ target_namespace }}
+          data:
+            # ── package.json ──────────────────────────────────────────
+            package.json: |
+              {
+                "name": "barista-medusa",
+                "version": "1.0.0",
+                "scripts": {
+                  "build": "medusa build",
+                  "start": "medusa start",
+                  "dev": "medusa develop"
+                },
+                "dependencies": {
+                  "@medusajs/medusa": "^2.6.0",
+                  "@medusajs/dashboard": "^2.6.0"
+                }
+              }
+
+            # ── tsconfig.json ─────────────────────────────────────────
+            tsconfig.json: |
+              {
+                "compilerOptions": {
+                  "target": "ES2021",
+                  "module": "CommonJS",
+                  "lib": ["ES2021"],
+                  "declaration": true,
+                  "strict": false,
+                  "moduleResolution": "node",
+                  "skipLibCheck": true,
+                  "esModuleInterop": true,
+                  "experimentalDecorators": true,
+                  "emitDecoratorMetadata": true
+                },
+                "include": ["src", "medusa-config.ts"],
+                "exclude": ["dist", "node_modules", ".medusa"]
+              }
+
+            # ── medusa-config.ts ──────────────────────────────────────
+            medusa-config.ts: |
+              import { defineConfig } from "@medusajs/framework/config"
+
+              export default defineConfig({
+                projectConfig: {
+                  databaseUrl: process.env.DATABASE_URL,
+                  redisUrl: process.env.REDIS_URL,
+                  http: {
+                    adminCors: process.env.ADMIN_CORS || "https://{{ medusa_domain }}",
+                    authCors: process.env.AUTH_CORS || "https://{{ medusa_domain }}",
+                    storeCors: process.env.STORE_CORS || "https://{{ medusa_domain }}",
+                    jwtSecret: process.env.JWT_SECRET || "supersecret",
+                    cookieSecret: process.env.COOKIE_SECRET || "supersecret",
+                  },
+                },
+                admin: {
+                  disable: false,
+                },
+              })
+
+            # ── startup.sh ────────────────────────────────────────────
+            # Gère le premier démarrage (installation) et les redémarrages suivants
+            startup.sh: |
+              #!/bin/sh
+              set -e
+
+              APP_DIR="/medusa-app"
+              CONFIG_DIR="/config"
+
+              echo "==================================================="
+              echo "  Barista - Medusa.js v2"
+              echo "==================================================="
+
+              # ── Premier démarrage : copie des fichiers de config ──
+              if [ ! -f "${APP_DIR}/package.json" ]; then
+                echo "[boot] Premier démarrage détecté."
+                mkdir -p "${APP_DIR}/src"
+                cp "${CONFIG_DIR}/package.json"     "${APP_DIR}/package.json"
+                cp "${CONFIG_DIR}/tsconfig.json"    "${APP_DIR}/tsconfig.json"
+                cp "${CONFIG_DIR}/medusa-config.ts" "${APP_DIR}/medusa-config.ts"
+                echo "[boot] Fichiers de configuration copiés."
+              fi
+
+              cd "${APP_DIR}"
+
+              # ── Installation des dépendances (premier démarrage uniquement) ──
+              if [ ! -d "${APP_DIR}/node_modules/@medusajs" ]; then
+                echo "[boot] Installation des dépendances npm (~3-5 minutes)..."
+                npm install --prefer-offline 2>&1
+                echo "[boot] Dépendances installées."
+              fi
+
+              # ── Build Medusa (premier démarrage ou après mise à jour) ──
+              if [ ! -d "${APP_DIR}/.medusa/server" ]; then
+                echo "[boot] Build Medusa (compilation TypeScript)..."
+                ./node_modules/.bin/medusa build 2>&1
+                echo "[boot] Build terminé."
+              fi
+
+              # ── Migrations base de données (idempotent) ──
+              echo "[boot] Application des migrations PostgreSQL..."
+              ./node_modules/.bin/medusa db:migrate 2>&1 || echo "[boot] Migrations déjà à jour."
+
+              echo "[boot] Démarrage du serveur Medusa sur port {{ medusa_port }}..."
+              exec node .medusa/server/index.js
+      tags: [barista, barista-install]
+
+    - name: Appliquer le ConfigMap Medusa
+      ansible.builtin.command: k3s kubectl apply -f /tmp/barista-configmap.yml
+      register: cm_apply
+      changed_when: "'configured' in cm_apply.stdout or 'created' in cm_apply.stdout"
+      tags: [barista, barista-install]
+
+    - name: Supprimer le fichier ConfigMap temporaire
+      ansible.builtin.file:
+        path: /tmp/barista-configmap.yml
+        state: absent
+      tags: [barista, barista-install]
+
+    # ==========================================================
+    # MEDUSA v2 (Backend + Admin Dashboard)
+    # ==========================================================
+
+    - name: Écrire le Deployment Medusa
+      ansible.builtin.copy:
+        dest: /tmp/barista-medusa.yml
+        mode: '0644'
+        content: |
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: {{ app_name }}-medusa
+            namespace: {{ target_namespace }}
+            labels:
+              app: {{ app_name }}-medusa
+          spec:
+            replicas: 1
+            strategy:
+              type: Recreate
+            selector:
+              matchLabels:
+                app: {{ app_name }}-medusa
+            template:
+              metadata:
+                labels:
+                  app: {{ app_name }}-medusa
+              spec:
+                containers:
+                  - name: medusa
+                    image: {{ node_image }}
+                    command: ["/bin/sh", "/config/startup.sh"]
+                    ports:
+                      - containerPort: {{ medusa_port }}
+                        name: http
+                    env:
+                      - name: PORT
+                        value: "{{ medusa_port }}"
+                      - name: NODE_ENV
+                        value: "production"
+                      - name: REDIS_URL
+                        value: "redis://{{ app_name }}-redis:6379"
+                      - name: ADMIN_CORS
+                        value: "https://{{ medusa_domain }}"
+                      - name: AUTH_CORS
+                        value: "https://{{ medusa_domain }}"
+                      - name: STORE_CORS
+                        value: "https://{{ medusa_domain }}"
+                      - name: DATABASE_URL
+                        valueFrom:
+                          secretKeyRef:
+                            name: {{ app_name }}-secret
+                            key: DATABASE_URL
+                      - name: JWT_SECRET
+                        valueFrom:
+                          secretKeyRef:
+                            name: {{ app_name }}-secret
+                            key: JWT_SECRET
+                      - name: COOKIE_SECRET
+                        valueFrom:
+                          secretKeyRef:
+                            name: {{ app_name }}-secret
+                            key: COOKIE_SECRET
+                    volumeMounts:
+                      - name: app-data
+                        mountPath: /medusa-app
+                      - name: uploads
+                        mountPath: /medusa-app/uploads
+                      - name: medusa-config
+                        mountPath: /config
+                    resources:
+                      requests:
+                        cpu: 200m
+                        memory: 512Mi
+                      limits:
+                        memory: 1Gi
+                    # Startup probe : laisse 15 min pour le premier boot (npm install + build)
+                    startupProbe:
+                      httpGet:
+                        path: /health
+                        port: {{ medusa_port }}
+                      failureThreshold: 90
+                      periodSeconds: 10
+                    readinessProbe:
+                      httpGet:
+                        path: /health
+                        port: {{ medusa_port }}
+                      initialDelaySeconds: 5
+                      periodSeconds: 10
+                      failureThreshold: 3
+                    livenessProbe:
+                      httpGet:
+                        path: /health
+                        port: {{ medusa_port }}
+                      initialDelaySeconds: 30
+                      periodSeconds: 30
+                      failureThreshold: 5
+                volumes:
+                  - name: app-data
+                    persistentVolumeClaim:
+                      claimName: {{ app_name }}-app-data
+                  - name: uploads
+                    persistentVolumeClaim:
+                      claimName: {{ app_name }}-uploads
+                  - name: medusa-config
+                    configMap:
+                      name: {{ app_name }}-medusa-config
+                      defaultMode: 0755
+          ---
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: {{ app_name }}-service
+            namespace: {{ target_namespace }}
+          spec:
+            selector:
+              app: {{ app_name }}-medusa
+            ports:
+              - protocol: TCP
+                port: 80
+                targetPort: {{ medusa_port }}
+            type: ClusterIP
+      tags: [barista, barista-install]
+
+    - name: Appliquer le Deployment Medusa
+      ansible.builtin.command: k3s kubectl apply -f /tmp/barista-medusa.yml
+      register: medusa_apply
+      changed_when: "'configured' in medusa_apply.stdout or 'created' in medusa_apply.stdout"
+      tags: [barista, barista-install]
+
+    - name: Supprimer le fichier Medusa temporaire
+      ansible.builtin.file:
+        path: /tmp/barista-medusa.yml
+        state: absent
+      tags: [barista, barista-install]
+
+    # ==========================================================
+    # TLS - CERTIFICAT LET'S ENCRYPT (barista.app.xixtu.eu)
+    # ==========================================================
+    # Pattern : Ingress K8s (déclenche cert-manager) + IngressRoute HTTPS
+    # ==========================================================
+
+    - name: Écrire l'Ingress TLS Barista
+      ansible.builtin.copy:
+        dest: /tmp/barista-ingress.yml
+        mode: '0644'
+        content: |
+          apiVersion: networking.k8s.io/v1
+          kind: Ingress
+          metadata:
+            name: {{ app_name }}-ingress
+            namespace: {{ target_namespace }}
+            annotations:
+              cert-manager.io/cluster-issuer: "letsencrypt-production"
+              cert-manager.io/private-key-algorithm: "ECDSA"
+              cert-manager.io/private-key-size: "384"
+              cert-manager.io/private-key-rotation-policy: "Always"
+              traefik.ingress.kubernetes.io/router.entrypoints: "web"
+              traefik.ingress.kubernetes.io/router.middlewares: "traefik-redirect-to-https@kubernetescrd"
+          spec:
+            ingressClassName: traefik
+            tls:
+              - hosts:
+                  - "{{ medusa_domain }}"
+                secretName: {{ app_name }}-tls
+            rules:
+              - host: "{{ medusa_domain }}"
+                http:
+                  paths:
+                    - path: /
+                      pathType: Prefix
+                      backend:
+                        service:
+                          name: {{ app_name }}-service
+                          port:
+                            number: 80
+      tags: [barista, barista-ingress, letsencrypt-tls]
+
+    - name: Appliquer l'Ingress TLS Barista
+      ansible.builtin.command: k3s kubectl apply -f /tmp/barista-ingress.yml
+      register: ingress_apply
+      changed_when: "'configured' in ingress_apply.stdout or 'created' in ingress_apply.stdout"
+      tags: [barista, barista-ingress, letsencrypt-tls]
+
+    - name: Supprimer le fichier Ingress temporaire
+      ansible.builtin.file:
+        path: /tmp/barista-ingress.yml
+        state: absent
+      tags: [barista, barista-ingress, letsencrypt-tls]
+
+    # ==========================================================
+    # MIGRATION ECDSA (si ancien certificat RSA)
+    # ==========================================================
+
+    - name: Vérifier le type de clé du certificat actuel
+      ansible.builtin.shell: >
+        k3s kubectl get secret {{ app_name }}-tls -n {{ target_namespace }}
+        -o jsonpath='{.data.tls\.key}' | base64 -d
+        | openssl ec -noout 2>/dev/null && echo "ECDSA" || echo "RSA"
+      register: barista_cert_key_type
+      changed_when: false
+      failed_when: false
+      tags: [barista, barista-ingress, letsencrypt-tls]
+
+    - name: Supprimer l'ancien certificat RSA pour renouvellement ECDSA
+      ansible.builtin.command: >
+        k3s kubectl delete certificate {{ app_name }}-tls
+        -n {{ target_namespace }} --ignore-not-found
+      when: barista_cert_key_type.stdout is defined and 'ECDSA' not in barista_cert_key_type.stdout
+      changed_when: true
+      tags: [barista, barista-ingress, letsencrypt-tls]
+
+    - name: Supprimer l'ancien secret TLS RSA
+      ansible.builtin.command: >
+        k3s kubectl delete secret {{ app_name }}-tls
+        -n {{ target_namespace }} --ignore-not-found
+      when: barista_cert_key_type.stdout is defined and 'ECDSA' not in barista_cert_key_type.stdout
+      changed_when: true
+      tags: [barista, barista-ingress, letsencrypt-tls]
+
+    # ==========================================================
+    # INGRESSROUTE HTTPS (Traefik CRD - router websecure)
+    # ==========================================================
+
+    - name: Écrire l'IngressRoute HTTPS Barista
+      ansible.builtin.copy:
+        dest: /tmp/barista-ingressroute-https.yml
+        mode: '0644'
+        content: |
+          apiVersion: traefik.io/v1alpha1
+          kind: IngressRoute
+          metadata:
+            name: {{ app_name }}-https
+            namespace: {{ target_namespace }}
+          spec:
+            entryPoints:
+              - websecure
+            routes:
+              - match: "Host(`{{ medusa_domain }}`)"
+                kind: Rule
+                services:
+                  - name: {{ app_name }}-service
+                    port: 80
+            tls:
+              secretName: {{ app_name }}-tls
+      tags: [barista, barista-ingress, letsencrypt-tls]
+
+    - name: Appliquer l'IngressRoute HTTPS Barista
+      ansible.builtin.command: k3s kubectl apply -f /tmp/barista-ingressroute-https.yml
+      register: ingressroute_apply
+      changed_when: "'configured' in ingressroute_apply.stdout or 'created' in ingressroute_apply.stdout"
+      tags: [barista, barista-ingress, letsencrypt-tls]
+
+    - name: Supprimer le fichier IngressRoute temporaire
+      ansible.builtin.file:
+        path: /tmp/barista-ingressroute-https.yml
+        state: absent
+      tags: [barista, barista-ingress, letsencrypt-tls]
+
+    # ==========================================================
+    # VÉRIFICATION
+    # ==========================================================
+
+    - name: Vérifier les pods Barista
+      ansible.builtin.command: k3s kubectl get pods -n {{ target_namespace }} -o wide
+      register: barista_pods
+      changed_when: false
+      tags: [barista, barista-verify]
+
+    - name: Vérifier les services Barista
+      ansible.builtin.command: k3s kubectl get svc -n {{ target_namespace }}
+      register: barista_svc
+      changed_when: false
+      tags: [barista, barista-verify]
+
+    - name: Vérifier les PVC Barista
+      ansible.builtin.command: k3s kubectl get pvc -n {{ target_namespace }}
+      register: barista_pvc
+      changed_when: false
+      tags: [barista, barista-verify]
+
+    - name: Vérifier l'Ingress Barista
+      ansible.builtin.command: k3s kubectl get ingress -n {{ target_namespace }}
+      register: barista_ingress
+      changed_when: false
+      tags: [barista, barista-verify]
+
+    - name: Vérifier le certificat Barista
+      ansible.builtin.command: k3s kubectl get certificate -n {{ target_namespace }}
+      register: barista_cert
+      changed_when: false
+      failed_when: false
+      tags: [barista, barista-verify]
+
+    - name: Vérifier les ConfigMap Barista
+      ansible.builtin.command: k3s kubectl get configmap -n {{ target_namespace }}
+      register: barista_cm
+      changed_when: false
+      tags: [barista, barista-verify]
+
+    # ==========================================================
+    # RÉSUMÉ
+    # ==========================================================
+
+    - name: Résumé Barista
+      ansible.builtin.debug:
+        msg:
+          - "================================================"
+          - "  Barista - Boutique Capsules Café (Medusa v2)"
+          - "================================================"
+          - "Namespace     : {{ target_namespace }}"
+          - "URL API       : https://{{ medusa_domain }}"
+          - "URL Admin     : https://{{ medusa_domain }}/app"
+          - "TLS           : cert-manager / letsencrypt-production (ECDSA P-384)"
+          - ""
+          - "  Stack"
+          - "──────────────────────────────────────────────"
+          - "Medusa v2     : node:20-slim (port {{ medusa_port }})"
+          - "PostgreSQL    : postgres:16-alpine ({{ db_storage_size }})"
+          - "Redis         : redis:7-alpine (cache sessions)"
+          - ""
+          - "  Stockage"
+          - "──────────────────────────────────────────────"
+          - "DB            : {{ db_storage_size }} ({{ storage_class_fast }})"
+          - "App (npm)     : {{ app_storage_size }} ({{ storage_class_fast }})"
+          - "Uploads       : {{ uploads_storage_size }} ({{ storage_class_slow }})"
+          - ""
+          - "  ⚠  Premier démarrage"
+          - "──────────────────────────────────────────────"
+          - "Le pod Medusa effectue npm install + medusa build"
+          - "lors du premier démarrage (~5-10 minutes)."
+          - "Surveiller les logs :"
+          - "  k3s kubectl logs -f -l app={{ app_name }}-medusa -n {{ target_namespace }}"
+          - ""
+          - "  Pods"
+          - "──────────────────────────────────────────────"
+          - "{{ barista_pods.stdout_lines }}"
+          - ""
+          - "  Services"
+          - "──────────────────────────────────────────────"
+          - "{{ barista_svc.stdout_lines }}"
+          - ""
+          - "  PVC"
+          - "──────────────────────────────────────────────"
+          - "{{ barista_pvc.stdout_lines }}"
+          - ""
+          - "  Ingress"
+          - "──────────────────────────────────────────────"
+          - "{{ barista_ingress.stdout_lines }}"
+          - ""
+          - "  Certificat TLS"
+          - "──────────────────────────────────────────────"
+          - "{{ barista_cert.stdout_lines | default(['En cours de génération...']) }}"
+          - ""
+          - "================================================"
+          - "  ⚠  ACTIONS POST-DÉPLOIEMENT"
+          - "================================================"
+          - "1. Changer db_password en production (ansible-vault)"
+          - "2. Créer le compte admin via l'interface /app"
+          - "3. Configurer Stripe/Mollie dans Admin > Paramètres"
+          - "4. Ajouter produits capsules dans Admin > Produits"
+          - "================================================"
+      tags: [barista, barista-verify]
