@@ -1536,3 +1536,932 @@ Origin: /home/administrator/git/k3s-kubevirt/playbooks/traefik.yml:189:7
 2026-02-28 00:09:57,886 p=3535921 u=administrator n=ansible INFO| Attendre que tous les pods Nextcloud soient Ready ------------------------------------------------------------------------------------------- 1.00s
 2026-02-28 00:09:57,886 p=3535921 u=administrator n=ansible INFO| Définir le mot de passe à ne jamais expirer ------------------------------------------------------------------------------------------------- 0.99s
 >>>>>>> origin/claude/deploy-longhorn-storage-BcyV5
+2026-03-08 18:20:14,776 p=1291277 u=administrator n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+
+2026-03-08 18:20:14,777 p=1291277 u=administrator n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be removed from collection 'community.general' version 12.0.0.
+
+2026-03-08 18:20:14,872 p=1291277 u=administrator n=ansible INFO| PLAY [Active Directory - Samba 4 Domain Controller] ******************************************************************************************
+2026-03-08 18:20:14,910 p=1291277 u=administrator n=ansible INFO| TASK [BUILD | Installer docker.io si absent] *************************************************************************************************
+2026-03-08 18:20:14,910 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:20:14 +0100 (0:00:00.084)       0:00:00.084 ********* 
+2026-03-08 18:20:37,308 p=1291277 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-03-08 18:20:37,327 p=1291277 u=administrator n=ansible INFO| TASK [BUILD | Démarrer et activer le service docker] *****************************************************************************************
+2026-03-08 18:20:37,328 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:20:37 +0100 (0:00:22.417)       0:00:22.502 ********* 
+2026-03-08 18:20:38,591 p=1291277 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 18:20:38,610 p=1291277 u=administrator n=ansible INFO| TASK [BUILD | Vérifier si l'image docker existe déjà] ****************************************************************************************
+2026-03-08 18:20:38,610 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:20:38 +0100 (0:00:01.282)       0:00:23.785 ********* 
+2026-03-08 18:20:39,190 p=1291277 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 18:20:39,208 p=1291277 u=administrator n=ansible INFO| TASK [BUILD | Supprimer l'ancienne image (force rebuild)] ************************************************************************************
+2026-03-08 18:20:39,208 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:20:39 +0100 (0:00:00.598)       0:00:24.383 ********* 
+2026-03-08 18:20:39,256 p=1291277 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-03-08 18:20:39,274 p=1291277 u=administrator n=ansible INFO| TASK [BUILD | Copier le répertoire Dockerfile sur le nœud] ***********************************************************************************
+2026-03-08 18:20:39,274 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:20:39 +0100 (0:00:00.066)       0:00:24.449 ********* 
+2026-03-08 18:20:39,324 p=1291277 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-03-08 18:20:39,342 p=1291277 u=administrator n=ansible INFO| TASK [BUILD | Construire l'image Samba DC (docker build)] ************************************************************************************
+2026-03-08 18:20:39,342 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:20:39 +0100 (0:00:00.067)       0:00:24.516 ********* 
+2026-03-08 18:20:39,390 p=1291277 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-03-08 18:20:39,409 p=1291277 u=administrator n=ansible INFO| TASK [BUILD | Image déjà présente dans docker (cache)] ***************************************************************************************
+2026-03-08 18:20:39,409 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:20:39 +0100 (0:00:00.066)       0:00:24.583 ********* 
+2026-03-08 18:20:39,451 p=1291277 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg: Image samba-dc:latest déjà construite (b6d7afe15c08)
+2026-03-08 18:20:39,480 p=1291277 u=administrator n=ansible INFO| TASK [IMPORT | Vérifier si l'image est déjà dans k3s containerd] *****************************************************************************
+2026-03-08 18:20:39,480 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:20:39 +0100 (0:00:00.071)       0:00:24.655 ********* 
+2026-03-08 18:20:41,215 p=1291277 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 18:20:41,337 p=1291277 u=administrator n=ansible INFO| TASK [IMPORT | Supprimer l'ancienne image de containerd (force rebuild)] *********************************************************************
+2026-03-08 18:20:41,338 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:20:41 +0100 (0:00:01.857)       0:00:26.512 ********* 
+2026-03-08 18:20:41,394 p=1291277 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-03-08 18:20:41,412 p=1291277 u=administrator n=ansible INFO| TASK [IMPORT | Sauvegarder l'image en archive tar] *******************************************************************************************
+2026-03-08 18:20:41,412 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:20:41 +0100 (0:00:00.074)       0:00:26.587 ********* 
+2026-03-08 18:20:41,469 p=1291277 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-03-08 18:20:41,488 p=1291277 u=administrator n=ansible INFO| TASK [IMPORT | Importer l'image dans k3s containerd] *****************************************************************************************
+2026-03-08 18:20:41,488 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:20:41 +0100 (0:00:00.075)       0:00:26.663 ********* 
+2026-03-08 18:20:41,546 p=1291277 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-03-08 18:20:41,564 p=1291277 u=administrator n=ansible INFO| TASK [IMPORT | Nettoyer le tar temporaire] ***************************************************************************************************
+2026-03-08 18:20:41,564 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:20:41 +0100 (0:00:00.075)       0:00:26.738 ********* 
+2026-03-08 18:20:41,619 p=1291277 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-03-08 18:20:41,638 p=1291277 u=administrator n=ansible INFO| TASK [IMPORT | Image déjà présente dans k3s (skip import)] ***********************************************************************************
+2026-03-08 18:20:41,638 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:20:41 +0100 (0:00:00.074)       0:00:26.812 ********* 
+2026-03-08 18:20:41,708 p=1291277 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg: Image samba-dc:latest déjà dans k3s containerd
+2026-03-08 18:20:41,725 p=1291277 u=administrator n=ansible INFO| TASK [IMPORT | Confirmer image dans containerd] **********************************************************************************************
+2026-03-08 18:20:41,725 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:20:41 +0100 (0:00:00.087)       0:00:26.900 ********* 
+2026-03-08 18:20:43,693 p=1291277 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 18:20:43,722 p=1291277 u=administrator n=ansible INFO| TASK [IMPORT | Résultat] *********************************************************************************************************************
+2026-03-08 18:20:43,722 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:20:43 +0100 (0:00:01.996)       0:00:28.896 ********* 
+2026-03-08 18:20:43,790 p=1291277 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg:
+  - 'docker.io/library/samba-dc:latest                                                                                              application/vnd.oci.image.manifest.v1+json                sha256:d4714506155f3cbb98ebc15574fc5b7f0ae6a4df9ebbcca2aad7a489bf62a970 253.3 MiB linux/amd64                                                                                                                         io.cri-containerd.image=managed                                 '
+2026-03-08 18:20:43,821 p=1291277 u=administrator n=ansible INFO| TASK [DEPLOY | Créer le namespace active-directory] ******************************************************************************************
+2026-03-08 18:20:43,821 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:20:43 +0100 (0:00:00.098)       0:00:28.995 ********* 
+2026-03-08 18:20:44,902 p=1291277 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 18:20:44,933 p=1291277 u=administrator n=ansible INFO| TASK [DEPLOY | Vérifier que admin_password est configuré (pas de CHANGEME)] ******************************************************************
+2026-03-08 18:20:44,933 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:20:44 +0100 (0:00:01.112)       0:00:30.108 ********* 
+2026-03-08 18:20:44,962 p=1291277 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-03-08 18:20:44,989 p=1291277 u=administrator n=ansible INFO| TASK [DEPLOY | Créer/Mettre à jour le Secret des credentials AD depuis les vars] *************************************************************
+2026-03-08 18:20:44,990 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:20:44 +0100 (0:00:00.056)       0:00:30.164 ********* 
+2026-03-08 18:20:46,120 p=1291277 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-03-08 18:20:46,138 p=1291277 u=administrator n=ansible INFO| TASK [DEPLOY | Vérifier que la StorageClass longhorn-fast existe] ****************************************************************************
+2026-03-08 18:20:46,139 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:20:46 +0100 (0:00:01.149)       0:00:31.313 ********* 
+2026-03-08 18:20:46,890 p=1291277 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 18:20:46,909 p=1291277 u=administrator n=ansible INFO| TASK [DEPLOY | Echec si longhorn-fast absente] ***********************************************************************************************
+2026-03-08 18:20:46,910 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:20:46 +0100 (0:00:00.770)       0:00:32.084 ********* 
+2026-03-08 18:20:46,937 p=1291277 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-03-08 18:20:46,962 p=1291277 u=administrator n=ansible INFO| TASK [DEPLOY | Créer les PersistentVolumeClaims Longhorn] ************************************************************************************
+2026-03-08 18:20:46,963 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:20:46 +0100 (0:00:00.053)       0:00:32.137 ********* 
+2026-03-08 18:20:48,299 p=1291277 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 18:20:48,317 p=1291277 u=administrator n=ansible INFO| TASK [DEPLOY | Attendre que les PVC soient Bound (samba-dc-data)] ****************************************************************************
+2026-03-08 18:20:48,317 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:20:48 +0100 (0:00:01.354)       0:00:33.492 ********* 
+2026-03-08 18:20:49,173 p=1291277 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 18:20:49,193 p=1291277 u=administrator n=ansible INFO| TASK [DEPLOY | Attendre que les PVC soient Bound (samba-dc-logs)] ****************************************************************************
+2026-03-08 18:20:49,193 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:20:49 +0100 (0:00:00.875)       0:00:34.367 ********* 
+2026-03-08 18:20:50,037 p=1291277 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 18:20:50,056 p=1291277 u=administrator n=ansible INFO| TASK [DEPLOY | Déployer les Services TCP (LoadBalancer MetalLB)] *****************************************************************************
+2026-03-08 18:20:50,056 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:20:50 +0100 (0:00:00.863)       0:00:35.231 ********* 
+2026-03-08 18:20:51,386 p=1291277 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 18:20:51,416 p=1291277 u=administrator n=ansible INFO| TASK [DEPLOY | Déployer les Services UDP (LoadBalancer MetalLB)] *****************************************************************************
+2026-03-08 18:20:51,416 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:20:51 +0100 (0:00:01.360)       0:00:36.591 ********* 
+2026-03-08 18:20:52,475 p=1291277 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 18:20:52,506 p=1291277 u=administrator n=ansible INFO| TASK [DEPLOY | Déployer le StatefulSet Samba DC] *********************************************************************************************
+2026-03-08 18:20:52,507 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:20:52 +0100 (0:00:01.090)       0:00:37.681 ********* 
+2026-03-08 18:20:53,465 p=1291277 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-03-08 18:20:53,492 p=1291277 u=administrator n=ansible INFO| TASK [DEPLOY | Attendre démarrage du pod samba-dc-0 (peut prendre 3-5 min: jonction AD)] *****************************************************
+2026-03-08 18:20:53,493 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:20:53 +0100 (0:00:00.985)       0:00:38.667 ********* 
+2026-03-08 18:30:54,257 p=1291277 u=administrator n=ansible ERROR| [ERROR]: non-zero return code
+
+2026-03-08 18:30:54,258 p=1291277 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 18:30:54,299 p=1291277 u=administrator n=ansible INFO| TASK [DEPLOY | Résultat du démarrage du pod] *************************************************************************************************
+2026-03-08 18:30:54,300 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:30:54 +0100 (0:10:00.807)       0:10:39.474 ********* 
+2026-03-08 18:30:54,348 p=1291277 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg: 'Pod pas encore prêt - vérifier les logs: kubectl logs samba-dc-0 -n active-directory'
+2026-03-08 18:30:54,368 p=1291277 u=administrator n=ansible INFO| TASK [STATUS | Afficher les pods active-directory] *******************************************************************************************
+2026-03-08 18:30:54,368 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:30:54 +0100 (0:00:00.068)       0:10:39.543 ********* 
+2026-03-08 18:30:55,122 p=1291277 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 18:30:55,150 p=1291277 u=administrator n=ansible INFO| TASK [STATUS | Pods] *************************************************************************************************************************
+2026-03-08 18:30:55,150 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:30:55 +0100 (0:00:00.781)       0:10:40.325 ********* 
+2026-03-08 18:30:55,196 p=1291277 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg:
+  - NAME         READY   STATUS             RESTARTS         AGE   IP            NODE         NOMINATED NODE   READINESS GATES
+  - samba-dc-0   0/1     CrashLoopBackOff   21 (3m45s ago)   85m   10.42.0.172   k3s-node-1   <none>           <none>
+2026-03-08 18:30:55,225 p=1291277 u=administrator n=ansible INFO| TASK [STATUS | Afficher les services active-directory] ***************************************************************************************
+2026-03-08 18:30:55,225 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:30:55 +0100 (0:00:00.075)       0:10:40.400 ********* 
+2026-03-08 18:30:55,971 p=1291277 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 18:30:56,001 p=1291277 u=administrator n=ansible INFO| TASK [STATUS | Services] *********************************************************************************************************************
+2026-03-08 18:30:56,002 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:30:56 +0100 (0:00:00.776)       0:10:41.176 ********* 
+2026-03-08 18:30:56,045 p=1291277 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg:
+  - NAME                TYPE           CLUSTER-IP      EXTERNAL-IP    PORT(S)                                                                                                                                       AGE    SELECTOR
+  - samba-dc-headless   ClusterIP      None            <none>         389/TCP,445/TCP                                                                                                                               116m   app=samba-dc
+  - samba-dc-tcp        LoadBalancer   10.43.242.91    192.168.0.29   53:31517/TCP,88:31469/TCP,135:32429/TCP,139:32415/TCP,389:31861/TCP,445:32704/TCP,464:31208/TCP,636:30281/TCP,3268:30974/TCP,3269:32661/TCP   116m   app=samba-dc
+  - samba-dc-udp        LoadBalancer   10.43.247.213   192.168.0.29   53:31653/UDP,88:32155/UDP,389:32446/UDP,464:31765/UDP,137:32275/UDP,138:32519/UDP                                                             116m   app=samba-dc
+2026-03-08 18:30:56,086 p=1291277 u=administrator n=ansible INFO| TASK [STATUS | Vérifier l'IP MetalLB assignée au DC] *****************************************************************************************
+2026-03-08 18:30:56,086 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:30:56 +0100 (0:00:00.084)       0:10:41.261 ********* 
+2026-03-08 18:30:56,842 p=1291277 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 18:30:56,871 p=1291277 u=administrator n=ansible INFO| TASK [STATUS | IP du DC] *********************************************************************************************************************
+2026-03-08 18:30:56,872 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:30:56 +0100 (0:00:00.785)       0:10:42.046 ********* 
+2026-03-08 18:30:56,941 p=1291277 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg: 'IP du DC (MetalLB): 192.168.0.29'
+2026-03-08 18:30:56,970 p=1291277 u=administrator n=ansible INFO| TASK [STATUS | Afficher les logs récents de samba-dc-0] **************************************************************************************
+2026-03-08 18:30:56,971 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:30:56 +0100 (0:00:00.098)       0:10:42.145 ********* 
+2026-03-08 18:30:57,743 p=1291277 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 18:30:57,765 p=1291277 u=administrator n=ansible INFO| TASK [STATUS | Logs DC] **********************************************************************************************************************
+2026-03-08 18:30:57,765 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:30:57 +0100 (0:00:00.794)       0:10:42.940 ********* 
+2026-03-08 18:30:57,809 p=1291277 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg:
+  - '[2026-03-08 17:27:10] [INFO]   Samba 4 Active Directory Domain Controller'
+  - '[2026-03-08 17:27:10] [INFO]   Domaine: corpl.lcl (CORPL.LCL)'
+  - '[2026-03-08 17:27:10] [INFO]   Hostname: dc2'
+  - '[2026-03-08 17:27:10] [INFO]   Mon IP: 10.42.0.172'
+  - '[2026-03-08 17:27:10] [INFO]  =============================================='
+  - '[2026-03-08 17:27:10] [INFO]  Configuration du hostname: dc2.corpl.lcl'
+  - '[2026-03-08 17:27:10] [INFO]    hostname: dc2, FQDN: dc2.corpl.lcl, IP: 10.42.0.172'
+  - '[2026-03-08 17:27:10] [INFO]  Première initialisation: jonction au domaine corpl.lcl...'
+  - '[2026-03-08 17:27:10] [INFO]  Vérification de la connectivité vers le DC existant 192.168.0.100...'
+  - '[2026-03-08 17:27:10] [INFO]  DC existant 192.168.0.100 joignable.'
+  - '[2026-03-08 17:27:10] [INFO]  Configuration DNS initiale → 192.168.0.100'
+  - '[2026-03-08 17:27:10] [INFO]  Synchronisation NTP avec le DC existant...'
+  - 2026-03-08 17:27:10.210908 (+0000) -0.001059 +/- 0.000272 192.168.0.100 s4 no-leap
+  - 2026-03-08 17:27:10.414006 (+0000) +0.028369 +/- 0.043179 pool.ntp.org 79.143.250.33 s1 no-leap
+  - '[2026-03-08 17:27:10] [WARN]  Synchronisation NTP échouée - Kerberos peut dysfonctionner si décalage > 5 min'
+  - '[2026-03-08 17:27:10] [INFO]  =============================================='
+  - '[2026-03-08 17:27:10] [INFO]   JONCTION AU DOMAINE: corpl.lcl'
+  - '[2026-03-08 17:27:10] [INFO]   En tant que DC supplémentaire'
+  - '[2026-03-08 17:27:10] [INFO]  =============================================='
+  - 'ERROR(<class ''samba.join.DCJoinException''>): uncaught exception - Can''t join, error: 000004DC: LdapErr: DSID-0C090CDE, comment: In order to perform this operation a successful bind must be completed on the connection., data 0, v4563'
+  - '  File "/usr/lib/python3/dist-packages/samba/netcmd/__init__.py", line 185, in _run'
+  - '    return self.run(*args, **kwargs)'
+  - '           ^^^^^^^^^^^^^^^^^^^^^^^^^'
+  - '  File "/usr/lib/python3/dist-packages/samba/netcmd/domain.py", line 702, in run'
+  - '    join_DC(logger=logger, server=server, creds=creds, lp=lp, domain=domain,'
+  - '  File "/usr/lib/python3/dist-packages/samba/join.py", line 1575, in join_DC'
+  - '    ctx = DCJoinContext(logger, server, creds, lp, site, netbios_name,'
+  - '          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^'
+  - '  File "/usr/lib/python3/dist-packages/samba/join.py", line 120, in __init__'
+  - '    raise DCJoinException(estr)'
+2026-03-08 18:30:57,830 p=1291277 u=administrator n=ansible INFO| TASK [VERIFY | Test DNS - Résolution du domaine corpl.lcl] ***********************************************************************************
+2026-03-08 18:30:57,830 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:30:57 +0100 (0:00:00.064)       0:10:43.005 ********* 
+2026-03-08 18:30:58,590 p=1291277 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 18:30:58,619 p=1291277 u=administrator n=ansible INFO| TASK [VERIFY | Résultat DNS] *****************************************************************************************************************
+2026-03-08 18:30:58,619 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:30:58 +0100 (0:00:00.789)       0:10:43.794 ********* 
+2026-03-08 18:30:58,689 p=1291277 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg: []
+2026-03-08 18:30:58,713 p=1291277 u=administrator n=ansible INFO| TASK [VERIFY | Test Kerberos - Obtenir un ticket TGT] ****************************************************************************************
+2026-03-08 18:30:58,713 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:30:58 +0100 (0:00:00.094)       0:10:43.888 ********* 
+2026-03-08 18:30:59,516 p=1291277 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 18:30:59,547 p=1291277 u=administrator n=ansible INFO| TASK [VERIFY | Résultat info domaine] ********************************************************************************************************
+2026-03-08 18:30:59,547 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:30:59 +0100 (0:00:00.833)       0:10:44.721 ********* 
+2026-03-08 18:30:59,614 p=1291277 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg: []
+2026-03-08 18:30:59,640 p=1291277 u=administrator n=ansible INFO| TASK [VERIFY | Test réplication AD] **********************************************************************************************************
+2026-03-08 18:30:59,640 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:30:59 +0100 (0:00:00.093)       0:10:44.815 ********* 
+2026-03-08 18:31:00,419 p=1291277 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 18:31:00,437 p=1291277 u=administrator n=ansible INFO| TASK [VERIFY | Résultat réplication] *********************************************************************************************************
+2026-03-08 18:31:00,437 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:31:00 +0100 (0:00:00.796)       0:10:45.611 ********* 
+2026-03-08 18:31:00,527 p=1291277 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg: []
+2026-03-08 18:31:00,553 p=1291277 u=administrator n=ansible INFO| TASK [VERIFY | Test ping vers le DC depuis le cluster] ***************************************************************************************
+2026-03-08 18:31:00,554 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:31:00 +0100 (0:00:00.116)       0:10:45.728 ********* 
+2026-03-08 18:31:04,210 p=1291277 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 18:31:04,228 p=1291277 u=administrator n=ansible INFO| TASK [VERIFY | Résultat ping DC] *************************************************************************************************************
+2026-03-08 18:31:04,229 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:31:04 +0100 (0:00:03.674)       0:10:49.403 ********* 
+2026-03-08 18:31:04,268 p=1291277 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg:
+  - PING 192.168.0.29 (192.168.0.29) 56(84) bytes of data.
+  - From 192.168.0.11 icmp_seq=1 Destination Host Unreachable
+  - From 192.168.0.11 icmp_seq=2 Destination Host Unreachable
+  - From 192.168.0.11 icmp_seq=3 Destination Host Unreachable
+  - ''
+  - '--- 192.168.0.29 ping statistics ---'
+  - 3 packets transmitted, 0 received, +3 errors, 100% packet loss, time 2078ms
+  - pipe 3
+2026-03-08 18:31:04,294 p=1291277 u=administrator n=ansible INFO| TASK [FSMO | Afficher les rôles FSMO actuels] ************************************************************************************************
+2026-03-08 18:31:04,294 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:31:04 +0100 (0:00:00.065)       0:10:49.469 ********* 
+2026-03-08 18:31:05,078 p=1291277 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 18:31:05,109 p=1291277 u=administrator n=ansible INFO| TASK [FSMO | Rôles FSMO actuels] *************************************************************************************************************
+2026-03-08 18:31:05,110 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:31:05 +0100 (0:00:00.815)       0:10:50.284 ********* 
+2026-03-08 18:31:05,183 p=1291277 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg: []
+2026-03-08 18:31:05,225 p=1291277 u=administrator n=ansible INFO| TASK [FSMO | IMPORTANT - Vérifier réplication avant transfert] *******************************************************************************
+2026-03-08 18:31:05,225 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:31:05 +0100 (0:00:00.115)       0:10:50.400 ********* 
+2026-03-08 18:31:05,266 p=1291277 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg: |-
+    ⚠ AVANT de transférer les rôles FSMO:
+    1. Vérifier que la réplication est 100% OK:
+       kubectl exec -it samba-dc-0 -n active-directory -- samba-tool drs showrepl
+    2. Vérifier qu'aucune erreur dans les logs:
+       kubectl logs samba-dc-0 -n active-directory
+    3. Pour transférer TOUS les rôles FSMO vers ce DC:
+       kubectl exec -it samba-dc-0 -n active-directory -- \
+         samba-tool fsmo transfer --role=all
+    4. Pour transférer un rôle spécifique (pdc, rid, infrastructure, naming, schema):
+       kubectl exec -it samba-dc-0 -n active-directory -- \
+         samba-tool fsmo transfer --role=pdc
+    5. Après transfert, l'ancien DC peut être rétrogradé (dcpromo /forceremoval)
+2026-03-08 18:31:05,297 p=1291277 u=administrator n=ansible INFO| TASK [RÉSUMÉ | Configuration AD DC] **********************************************************************************************************
+2026-03-08 18:31:05,297 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:31:05 +0100 (0:00:00.071)       0:10:50.472 ********* 
+2026-03-08 18:31:05,343 p=1291277 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg:
+  - ======================================================
+  - ' Samba 4 AD DC déployé dans Kubernetes'
+  - ======================================================
+  - ' Domaine: corpl.lcl'
+  - ' Realm:   CORPL.LCL'
+  - ' Hostname DC: dc2.corpl.lcl'
+  - ' IP MetalLB: 192.168.0.29'
+  - '------------------------------------------------------'
+  - ' Prochaines étapes:'
+  - '  1. Ajouter 192.168.0.29 comme DNS sur vos postes'
+  - '     (en secondaire, le DC existant en primaire)'
+  - '  2. Vérifier la réplication AD (ad-verify)'
+  - '  3. Transférer les FSMO si DC existant doit être retiré'
+  - '     (ad-fsmo tag)'
+  - '  4. Mettre 192.168.0.29 comme DNS primaire'
+  - ======================================================
+2026-03-08 18:31:05,345 p=1291277 u=administrator n=ansible INFO| PLAY RECAP ***********************************************************************************************************************************
+2026-03-08 18:31:05,345 p=1291277 u=administrator n=ansible INFO| k3s-node-1                 : ok=39   changed=3    unreachable=0    failed=0    skipped=9    rescued=0    ignored=0   
+2026-03-08 18:31:05,345 p=1291277 u=administrator n=ansible INFO| PLAYBOOK RECAP *******************************************************************************************************************************
+2026-03-08 18:31:05,346 p=1291277 u=administrator n=ansible INFO| Playbook run took 0 days, 0 hours, 10 minutes, 50 seconds
+
+2026-03-08 18:31:05,346 p=1291277 u=administrator n=ansible INFO| TASKS RECAP **********************************************************************************************************************************
+2026-03-08 18:31:05,346 p=1291277 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:31:05 +0100 (0:00:00.048)       0:10:50.520 ********* 
+2026-03-08 18:31:05,346 p=1291277 u=administrator n=ansible INFO| =============================================================================== 
+2026-03-08 18:31:05,347 p=1291277 u=administrator n=ansible INFO| DEPLOY | Attendre démarrage du pod samba-dc-0 (peut prendre 3-5 min: jonction AD) --------------------------------------------------- 600.81s
+2026-03-08 18:31:05,347 p=1291277 u=administrator n=ansible INFO| BUILD | Installer docker.io si absent ------------------------------------------------------------------------------------------------ 22.42s
+2026-03-08 18:31:05,347 p=1291277 u=administrator n=ansible INFO| VERIFY | Test ping vers le DC depuis le cluster --------------------------------------------------------------------------------------- 3.67s
+2026-03-08 18:31:05,347 p=1291277 u=administrator n=ansible INFO| IMPORT | Confirmer image dans containerd ---------------------------------------------------------------------------------------------- 2.00s
+2026-03-08 18:31:05,347 p=1291277 u=administrator n=ansible INFO| IMPORT | Vérifier si l'image est déjà dans k3s containerd ----------------------------------------------------------------------------- 1.86s
+2026-03-08 18:31:05,347 p=1291277 u=administrator n=ansible INFO| DEPLOY | Déployer les Services TCP (LoadBalancer MetalLB) ----------------------------------------------------------------------------- 1.36s
+2026-03-08 18:31:05,348 p=1291277 u=administrator n=ansible INFO| DEPLOY | Créer les PersistentVolumeClaims Longhorn ------------------------------------------------------------------------------------ 1.35s
+2026-03-08 18:31:05,348 p=1291277 u=administrator n=ansible INFO| BUILD | Démarrer et activer le service docker ----------------------------------------------------------------------------------------- 1.28s
+2026-03-08 18:31:05,348 p=1291277 u=administrator n=ansible INFO| DEPLOY | Créer/Mettre à jour le Secret des credentials AD depuis les vars ------------------------------------------------------------- 1.15s
+2026-03-08 18:31:05,348 p=1291277 u=administrator n=ansible INFO| DEPLOY | Créer le namespace active-directory ------------------------------------------------------------------------------------------ 1.11s
+2026-03-08 18:31:05,348 p=1291277 u=administrator n=ansible INFO| DEPLOY | Déployer les Services UDP (LoadBalancer MetalLB) ----------------------------------------------------------------------------- 1.09s
+2026-03-08 18:31:05,348 p=1291277 u=administrator n=ansible INFO| DEPLOY | Déployer le StatefulSet Samba DC --------------------------------------------------------------------------------------------- 0.99s
+2026-03-08 18:31:05,349 p=1291277 u=administrator n=ansible INFO| DEPLOY | Attendre que les PVC soient Bound (samba-dc-data) ---------------------------------------------------------------------------- 0.88s
+2026-03-08 18:31:05,349 p=1291277 u=administrator n=ansible INFO| DEPLOY | Attendre que les PVC soient Bound (samba-dc-logs) ---------------------------------------------------------------------------- 0.86s
+2026-03-08 18:31:05,349 p=1291277 u=administrator n=ansible INFO| VERIFY | Test Kerberos - Obtenir un ticket TGT ---------------------------------------------------------------------------------------- 0.83s
+2026-03-08 18:31:05,349 p=1291277 u=administrator n=ansible INFO| FSMO | Afficher les rôles FSMO actuels ------------------------------------------------------------------------------------------------ 0.82s
+2026-03-08 18:31:05,349 p=1291277 u=administrator n=ansible INFO| VERIFY | Test réplication AD ---------------------------------------------------------------------------------------------------------- 0.80s
+2026-03-08 18:31:05,349 p=1291277 u=administrator n=ansible INFO| STATUS | Afficher les logs récents de samba-dc-0 -------------------------------------------------------------------------------------- 0.79s
+2026-03-08 18:31:05,350 p=1291277 u=administrator n=ansible INFO| VERIFY | Test DNS - Résolution du domaine corpl.lcl ----------------------------------------------------------------------------------- 0.79s
+2026-03-08 18:31:05,350 p=1291277 u=administrator n=ansible INFO| STATUS | Vérifier l'IP MetalLB assignée au DC ----------------------------------------------------------------------------------------- 0.79s
+2026-03-08 18:49:05,388 p=1324457 u=administrator n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+
+2026-03-08 18:49:05,388 p=1324457 u=administrator n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be removed from collection 'community.general' version 12.0.0.
+
+2026-03-08 18:49:05,483 p=1324457 u=administrator n=ansible INFO| PLAY [Active Directory - Samba 4 Domain Controller] ******************************************************************************************
+2026-03-08 18:49:05,520 p=1324457 u=administrator n=ansible INFO| TASK [BUILD | Installer docker.io si absent] *************************************************************************************************
+2026-03-08 18:49:05,520 p=1324457 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:49:05 +0100 (0:00:00.085)       0:00:00.085 ********* 
+2026-03-08 18:49:27,791 p=1324457 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-03-08 18:49:27,809 p=1324457 u=administrator n=ansible INFO| TASK [BUILD | Démarrer et activer le service docker] *****************************************************************************************
+2026-03-08 18:49:27,809 p=1324457 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:49:27 +0100 (0:00:22.288)       0:00:22.373 ********* 
+2026-03-08 18:49:29,210 p=1324457 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 18:49:29,228 p=1324457 u=administrator n=ansible INFO| TASK [BUILD | Vérifier si l'image docker existe déjà] ****************************************************************************************
+2026-03-08 18:49:29,229 p=1324457 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:49:29 +0100 (0:00:01.419)       0:00:23.793 ********* 
+2026-03-08 18:49:29,837 p=1324457 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 18:49:29,862 p=1324457 u=administrator n=ansible INFO| TASK [BUILD | Supprimer l'ancienne image (force rebuild)] ************************************************************************************
+2026-03-08 18:49:29,862 p=1324457 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:49:29 +0100 (0:00:00.633)       0:00:24.426 ********* 
+2026-03-08 18:49:29,917 p=1324457 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-03-08 18:49:29,936 p=1324457 u=administrator n=ansible INFO| TASK [BUILD | Copier le répertoire Dockerfile sur le nœud] ***********************************************************************************
+2026-03-08 18:49:29,937 p=1324457 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:49:29 +0100 (0:00:00.074)       0:00:24.501 ********* 
+2026-03-08 18:49:29,985 p=1324457 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-03-08 18:49:30,003 p=1324457 u=administrator n=ansible INFO| TASK [BUILD | Construire l'image Samba DC (docker build)] ************************************************************************************
+2026-03-08 18:49:30,003 p=1324457 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:49:30 +0100 (0:00:00.066)       0:00:24.568 ********* 
+2026-03-08 18:49:30,053 p=1324457 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-03-08 18:49:30,093 p=1324457 u=administrator n=ansible INFO| TASK [BUILD | Image déjà présente dans docker (cache)] ***************************************************************************************
+2026-03-08 18:49:30,094 p=1324457 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:49:30 +0100 (0:00:00.091)       0:00:24.659 ********* 
+2026-03-08 18:49:30,161 p=1324457 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg: Image samba-dc:latest déjà construite (b6d7afe15c08)
+2026-03-08 18:49:30,201 p=1324457 u=administrator n=ansible INFO| TASK [IMPORT | Vérifier si l'image est déjà dans k3s containerd] *****************************************************************************
+2026-03-08 18:49:30,202 p=1324457 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:49:30 +0100 (0:00:00.107)       0:00:24.766 ********* 
+2026-03-08 18:49:32,450 p=1324457 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 18:49:32,545 p=1324457 u=administrator n=ansible INFO| TASK [IMPORT | Supprimer l'ancienne image de containerd (force rebuild)] *********************************************************************
+2026-03-08 18:49:32,545 p=1324457 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:49:32 +0100 (0:00:02.343)       0:00:27.110 ********* 
+2026-03-08 18:49:32,597 p=1324457 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-03-08 18:49:32,624 p=1324457 u=administrator n=ansible INFO| TASK [IMPORT | Sauvegarder l'image en archive tar] *******************************************************************************************
+2026-03-08 18:49:32,624 p=1324457 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:49:32 +0100 (0:00:00.079)       0:00:27.189 ********* 
+2026-03-08 18:49:32,680 p=1324457 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-03-08 18:49:32,711 p=1324457 u=administrator n=ansible INFO| TASK [IMPORT | Importer l'image dans k3s containerd] *****************************************************************************************
+2026-03-08 18:49:32,711 p=1324457 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:49:32 +0100 (0:00:00.086)       0:00:27.275 ********* 
+2026-03-08 18:49:32,768 p=1324457 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-03-08 18:49:32,787 p=1324457 u=administrator n=ansible INFO| TASK [IMPORT | Nettoyer le tar temporaire] ***************************************************************************************************
+2026-03-08 18:49:32,787 p=1324457 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:49:32 +0100 (0:00:00.076)       0:00:27.352 ********* 
+2026-03-08 18:49:32,845 p=1324457 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-03-08 18:49:32,863 p=1324457 u=administrator n=ansible INFO| TASK [IMPORT | Image déjà présente dans k3s (skip import)] ***********************************************************************************
+2026-03-08 18:49:32,864 p=1324457 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:49:32 +0100 (0:00:00.076)       0:00:27.428 ********* 
+2026-03-08 18:49:32,934 p=1324457 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg: Image samba-dc:latest déjà dans k3s containerd
+2026-03-08 18:49:32,952 p=1324457 u=administrator n=ansible INFO| TASK [IMPORT | Confirmer image dans containerd] **********************************************************************************************
+2026-03-08 18:49:32,952 p=1324457 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:49:32 +0100 (0:00:00.088)       0:00:27.516 ********* 
+2026-03-08 18:49:35,107 p=1324457 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 18:49:35,137 p=1324457 u=administrator n=ansible INFO| TASK [IMPORT | Résultat] *********************************************************************************************************************
+2026-03-08 18:49:35,138 p=1324457 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:49:35 +0100 (0:00:02.185)       0:00:29.702 ********* 
+2026-03-08 18:49:35,205 p=1324457 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg:
+  - 'docker.io/library/samba-dc:latest                                                                                              application/vnd.oci.image.manifest.v1+json                sha256:d4714506155f3cbb98ebc15574fc5b7f0ae6a4df9ebbcca2aad7a489bf62a970 253.3 MiB linux/amd64                                                                                                                         io.cri-containerd.image=managed                                 '
+2026-03-08 18:49:35,237 p=1324457 u=administrator n=ansible INFO| TASK [DEPLOY | Créer le namespace active-directory] ******************************************************************************************
+2026-03-08 18:49:35,237 p=1324457 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:49:35 +0100 (0:00:00.099)       0:00:29.801 ********* 
+2026-03-08 18:49:36,327 p=1324457 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 18:49:36,359 p=1324457 u=administrator n=ansible INFO| TASK [DEPLOY | Vérifier que admin_password est configuré (pas de CHANGEME)] ******************************************************************
+2026-03-08 18:49:36,359 p=1324457 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:49:36 +0100 (0:00:01.121)       0:00:30.923 ********* 
+2026-03-08 18:49:36,387 p=1324457 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-03-08 18:49:36,414 p=1324457 u=administrator n=ansible INFO| TASK [DEPLOY | Créer/Mettre à jour le Secret des credentials AD depuis les vars] *************************************************************
+2026-03-08 18:49:36,414 p=1324457 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:49:36 +0100 (0:00:00.055)       0:00:30.978 ********* 
+2026-03-08 18:49:37,533 p=1324457 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-03-08 18:49:37,555 p=1324457 u=administrator n=ansible INFO| TASK [DEPLOY | Vérifier que la StorageClass longhorn-fast existe] ****************************************************************************
+2026-03-08 18:49:37,556 p=1324457 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:49:37 +0100 (0:00:01.141)       0:00:32.120 ********* 
+2026-03-08 18:49:38,280 p=1324457 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 18:49:38,297 p=1324457 u=administrator n=ansible INFO| TASK [DEPLOY | Echec si longhorn-fast absente] ***********************************************************************************************
+2026-03-08 18:49:38,298 p=1324457 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:49:38 +0100 (0:00:00.742)       0:00:32.862 ********* 
+2026-03-08 18:49:38,323 p=1324457 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-03-08 18:49:38,346 p=1324457 u=administrator n=ansible INFO| TASK [DEPLOY | Créer les PersistentVolumeClaims Longhorn] ************************************************************************************
+2026-03-08 18:49:38,347 p=1324457 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:49:38 +0100 (0:00:00.048)       0:00:32.911 ********* 
+2026-03-08 18:49:39,663 p=1324457 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 18:49:39,692 p=1324457 u=administrator n=ansible INFO| TASK [DEPLOY | Attendre que les PVC soient Bound (samba-dc-data)] ****************************************************************************
+2026-03-08 18:49:39,692 p=1324457 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:49:39 +0100 (0:00:01.345)       0:00:34.256 ********* 
+2026-03-08 18:49:40,539 p=1324457 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 18:49:40,559 p=1324457 u=administrator n=ansible INFO| TASK [DEPLOY | Attendre que les PVC soient Bound (samba-dc-logs)] ****************************************************************************
+2026-03-08 18:49:40,560 p=1324457 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:49:40 +0100 (0:00:00.867)       0:00:35.124 ********* 
+2026-03-08 18:49:41,362 p=1324457 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 18:49:41,381 p=1324457 u=administrator n=ansible INFO| TASK [DEPLOY | Déployer les Services TCP (LoadBalancer MetalLB)] *****************************************************************************
+2026-03-08 18:49:41,381 p=1324457 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:49:41 +0100 (0:00:00.821)       0:00:35.945 ********* 
+2026-03-08 18:49:42,539 p=1324457 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 18:49:42,567 p=1324457 u=administrator n=ansible INFO| TASK [DEPLOY | Déployer les Services UDP (LoadBalancer MetalLB)] *****************************************************************************
+2026-03-08 18:49:42,568 p=1324457 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:49:42 +0100 (0:00:01.186)       0:00:37.132 ********* 
+2026-03-08 18:49:43,609 p=1324457 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 18:49:43,630 p=1324457 u=administrator n=ansible INFO| TASK [DEPLOY | Déployer le StatefulSet Samba DC] *********************************************************************************************
+2026-03-08 18:49:43,630 p=1324457 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:49:43 +0100 (0:00:01.062)       0:00:38.195 ********* 
+2026-03-08 18:49:44,620 p=1324457 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-03-08 18:49:44,642 p=1324457 u=administrator n=ansible INFO| TASK [DEPLOY | Attendre démarrage du pod samba-dc-0 (peut prendre 3-5 min: jonction AD)] *****************************************************
+2026-03-08 18:49:44,643 p=1324457 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:49:44 +0100 (0:00:01.012)       0:00:39.207 ********* 
+2026-03-08 18:55:02,747 p=1324457 u=administrator n=ansible ERROR| [ERROR]: Task failed: process object is closed
+Origin: /home/administrator/git/k3s-kubevirt/playbooks/active-directory.yml:288:7
+
+286       tags: [ad, ad-deploy]
+287
+288     - name: "DEPLOY | Attendre démarrage du pod samba-dc-0 (peut prendre 3-5 min: jonction AD)"
+          ^ column 7
+
+
+2026-03-08 18:55:02,748 p=1324457 u=administrator n=ansible INFO| fatal: [k3s-node-1]: FAILED! => changed=false 
+  msg: 'Task failed: process object is closed'
+2026-03-08 18:55:02,749 p=1324457 u=administrator n=ansible INFO| PLAY RECAP ***********************************************************************************************************************************
+2026-03-08 18:55:02,750 p=1324457 u=administrator n=ansible INFO| k3s-node-1                 : ok=17   changed=3    unreachable=0    failed=1    skipped=9    rescued=0    ignored=0   
+2026-03-08 18:55:02,750 p=1324457 u=administrator n=ansible INFO| PLAYBOOK RECAP *******************************************************************************************************************************
+2026-03-08 18:55:02,750 p=1324457 u=administrator n=ansible INFO| Playbook run took 0 days, 0 hours, 5 minutes, 57 seconds
+
+2026-03-08 18:55:02,750 p=1324457 u=administrator n=ansible INFO| TASKS RECAP **********************************************************************************************************************************
+2026-03-08 18:55:02,750 p=1324457 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:55:02 +0100 (0:05:18.107)       0:05:57.315 ********* 
+2026-03-08 18:55:02,751 p=1324457 u=administrator n=ansible INFO| =============================================================================== 
+2026-03-08 18:55:02,751 p=1324457 u=administrator n=ansible INFO| DEPLOY | Attendre démarrage du pod samba-dc-0 (peut prendre 3-5 min: jonction AD) --------------------------------------------------- 318.11s
+2026-03-08 18:55:02,751 p=1324457 u=administrator n=ansible INFO| BUILD | Installer docker.io si absent ------------------------------------------------------------------------------------------------ 22.29s
+2026-03-08 18:55:02,751 p=1324457 u=administrator n=ansible INFO| IMPORT | Vérifier si l'image est déjà dans k3s containerd ----------------------------------------------------------------------------- 2.34s
+2026-03-08 18:55:02,751 p=1324457 u=administrator n=ansible INFO| IMPORT | Confirmer image dans containerd ---------------------------------------------------------------------------------------------- 2.19s
+2026-03-08 18:55:02,751 p=1324457 u=administrator n=ansible INFO| BUILD | Démarrer et activer le service docker ----------------------------------------------------------------------------------------- 1.42s
+2026-03-08 18:55:02,752 p=1324457 u=administrator n=ansible INFO| DEPLOY | Créer les PersistentVolumeClaims Longhorn ------------------------------------------------------------------------------------ 1.35s
+2026-03-08 18:55:02,752 p=1324457 u=administrator n=ansible INFO| DEPLOY | Déployer les Services TCP (LoadBalancer MetalLB) ----------------------------------------------------------------------------- 1.19s
+2026-03-08 18:55:02,752 p=1324457 u=administrator n=ansible INFO| DEPLOY | Créer/Mettre à jour le Secret des credentials AD depuis les vars ------------------------------------------------------------- 1.14s
+2026-03-08 18:55:02,752 p=1324457 u=administrator n=ansible INFO| DEPLOY | Créer le namespace active-directory ------------------------------------------------------------------------------------------ 1.12s
+2026-03-08 18:55:02,752 p=1324457 u=administrator n=ansible INFO| DEPLOY | Déployer les Services UDP (LoadBalancer MetalLB) ----------------------------------------------------------------------------- 1.06s
+2026-03-08 18:55:02,752 p=1324457 u=administrator n=ansible INFO| DEPLOY | Déployer le StatefulSet Samba DC --------------------------------------------------------------------------------------------- 1.01s
+2026-03-08 18:55:02,752 p=1324457 u=administrator n=ansible INFO| DEPLOY | Attendre que les PVC soient Bound (samba-dc-data) ---------------------------------------------------------------------------- 0.87s
+2026-03-08 18:55:02,753 p=1324457 u=administrator n=ansible INFO| DEPLOY | Attendre que les PVC soient Bound (samba-dc-logs) ---------------------------------------------------------------------------- 0.82s
+2026-03-08 18:55:02,753 p=1324457 u=administrator n=ansible INFO| DEPLOY | Vérifier que la StorageClass longhorn-fast existe ---------------------------------------------------------------------------- 0.74s
+2026-03-08 18:55:02,753 p=1324457 u=administrator n=ansible INFO| BUILD | Vérifier si l'image docker existe déjà ---------------------------------------------------------------------------------------- 0.63s
+2026-03-08 18:55:02,753 p=1324457 u=administrator n=ansible INFO| BUILD | Image déjà présente dans docker (cache) --------------------------------------------------------------------------------------- 0.11s
+2026-03-08 18:55:02,753 p=1324457 u=administrator n=ansible INFO| IMPORT | Résultat --------------------------------------------------------------------------------------------------------------------- 0.10s
+2026-03-08 18:55:02,753 p=1324457 u=administrator n=ansible INFO| BUILD | Construire l'image Samba DC (docker build) ------------------------------------------------------------------------------------ 0.09s
+2026-03-08 18:55:02,753 p=1324457 u=administrator n=ansible INFO| IMPORT | Image déjà présente dans k3s (skip import) ----------------------------------------------------------------------------------- 0.09s
+2026-03-08 18:55:02,753 p=1324457 u=administrator n=ansible INFO| IMPORT | Sauvegarder l'image en archive tar ------------------------------------------------------------------------------------------- 0.09s
+2026-03-08 18:57:14,303 p=1334917 u=administrator n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+
+2026-03-08 18:57:14,304 p=1334917 u=administrator n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be removed from collection 'community.general' version 12.0.0.
+
+2026-03-08 18:57:14,401 p=1334917 u=administrator n=ansible INFO| PLAY [Active Directory - Samba 4 Domain Controller] ******************************************************************************************
+2026-03-08 18:57:14,440 p=1334917 u=administrator n=ansible INFO| TASK [BUILD | Installer docker.io si absent] *************************************************************************************************
+2026-03-08 18:57:14,440 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:57:14 +0100 (0:00:00.088)       0:00:00.088 ********* 
+2026-03-08 18:57:15,354 p=1334917 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-03-08 18:57:15,372 p=1334917 u=administrator n=ansible INFO| TASK [BUILD | Démarrer et activer le service docker] *****************************************************************************************
+2026-03-08 18:57:15,372 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:57:15 +0100 (0:00:00.931)       0:00:01.019 ********* 
+2026-03-08 18:57:16,812 p=1334917 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 18:57:16,830 p=1334917 u=administrator n=ansible INFO| TASK [BUILD | Vérifier si l'image docker existe déjà] ****************************************************************************************
+2026-03-08 18:57:16,830 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:57:16 +0100 (0:00:01.458)       0:00:02.478 ********* 
+2026-03-08 18:57:17,439 p=1334917 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 18:57:17,458 p=1334917 u=administrator n=ansible INFO| TASK [BUILD | Supprimer l'ancienne image (force rebuild)] ************************************************************************************
+2026-03-08 18:57:17,458 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:57:17 +0100 (0:00:00.628)       0:00:03.106 ********* 
+2026-03-08 18:57:17,509 p=1334917 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-03-08 18:57:17,528 p=1334917 u=administrator n=ansible INFO| TASK [BUILD | Copier le répertoire Dockerfile sur le nœud] ***********************************************************************************
+2026-03-08 18:57:17,528 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:57:17 +0100 (0:00:00.069)       0:00:03.176 ********* 
+2026-03-08 18:57:17,580 p=1334917 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-03-08 18:57:17,598 p=1334917 u=administrator n=ansible INFO| TASK [BUILD | Construire l'image Samba DC (docker build)] ************************************************************************************
+2026-03-08 18:57:17,599 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:57:17 +0100 (0:00:00.070)       0:00:03.246 ********* 
+2026-03-08 18:57:17,653 p=1334917 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-03-08 18:57:17,672 p=1334917 u=administrator n=ansible INFO| TASK [BUILD | Image déjà présente dans docker (cache)] ***************************************************************************************
+2026-03-08 18:57:17,672 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:57:17 +0100 (0:00:00.073)       0:00:03.320 ********* 
+2026-03-08 18:57:17,719 p=1334917 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg: Image samba-dc:latest déjà construite (b6d7afe15c08)
+2026-03-08 18:57:17,743 p=1334917 u=administrator n=ansible INFO| TASK [IMPORT | Vérifier si l'image est déjà dans k3s containerd] *****************************************************************************
+2026-03-08 18:57:17,743 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:57:17 +0100 (0:00:00.070)       0:00:03.391 ********* 
+2026-03-08 18:57:19,784 p=1334917 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 18:57:19,855 p=1334917 u=administrator n=ansible INFO| TASK [IMPORT | Supprimer l'ancienne image de containerd (force rebuild)] *********************************************************************
+2026-03-08 18:57:19,855 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:57:19 +0100 (0:00:02.112)       0:00:05.503 ********* 
+2026-03-08 18:57:19,912 p=1334917 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-03-08 18:57:19,930 p=1334917 u=administrator n=ansible INFO| TASK [IMPORT | Sauvegarder l'image en archive tar] *******************************************************************************************
+2026-03-08 18:57:19,930 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:57:19 +0100 (0:00:00.074)       0:00:05.578 ********* 
+2026-03-08 18:57:19,989 p=1334917 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-03-08 18:57:20,007 p=1334917 u=administrator n=ansible INFO| TASK [IMPORT | Importer l'image dans k3s containerd] *****************************************************************************************
+2026-03-08 18:57:20,008 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:57:20 +0100 (0:00:00.077)       0:00:05.655 ********* 
+2026-03-08 18:57:20,067 p=1334917 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-03-08 18:57:20,088 p=1334917 u=administrator n=ansible INFO| TASK [IMPORT | Nettoyer le tar temporaire] ***************************************************************************************************
+2026-03-08 18:57:20,089 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:57:20 +0100 (0:00:00.081)       0:00:05.736 ********* 
+2026-03-08 18:57:20,150 p=1334917 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-03-08 18:57:20,169 p=1334917 u=administrator n=ansible INFO| TASK [IMPORT | Image déjà présente dans k3s (skip import)] ***********************************************************************************
+2026-03-08 18:57:20,169 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:57:20 +0100 (0:00:00.080)       0:00:05.816 ********* 
+2026-03-08 18:57:20,242 p=1334917 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg: Image samba-dc:latest déjà dans k3s containerd
+2026-03-08 18:57:20,260 p=1334917 u=administrator n=ansible INFO| TASK [IMPORT | Confirmer image dans containerd] **********************************************************************************************
+2026-03-08 18:57:20,261 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:57:20 +0100 (0:00:00.091)       0:00:05.908 ********* 
+2026-03-08 18:57:22,503 p=1334917 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 18:57:22,521 p=1334917 u=administrator n=ansible INFO| TASK [IMPORT | Résultat] *********************************************************************************************************************
+2026-03-08 18:57:22,521 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:57:22 +0100 (0:00:02.260)       0:00:08.168 ********* 
+2026-03-08 18:57:22,585 p=1334917 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg:
+  - 'docker.io/library/samba-dc:latest                                                                                              application/vnd.oci.image.manifest.v1+json                sha256:d4714506155f3cbb98ebc15574fc5b7f0ae6a4df9ebbcca2aad7a489bf62a970 253.3 MiB linux/amd64                                                                                                                         io.cri-containerd.image=managed                                 '
+2026-03-08 18:57:22,603 p=1334917 u=administrator n=ansible INFO| TASK [DEPLOY | Créer le namespace active-directory] ******************************************************************************************
+2026-03-08 18:57:22,603 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:57:22 +0100 (0:00:00.082)       0:00:08.251 ********* 
+2026-03-08 18:57:23,527 p=1334917 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-03-08 18:57:23,545 p=1334917 u=administrator n=ansible INFO| TASK [DEPLOY | Vérifier que admin_password est configuré (pas de CHANGEME)] ******************************************************************
+2026-03-08 18:57:23,546 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:57:23 +0100 (0:00:00.942)       0:00:09.193 ********* 
+2026-03-08 18:57:23,576 p=1334917 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-03-08 18:57:23,595 p=1334917 u=administrator n=ansible INFO| TASK [DEPLOY | Créer/Mettre à jour le Secret des credentials AD depuis les vars] *************************************************************
+2026-03-08 18:57:23,596 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:57:23 +0100 (0:00:00.050)       0:00:09.243 ********* 
+2026-03-08 18:57:24,543 p=1334917 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-03-08 18:57:24,562 p=1334917 u=administrator n=ansible INFO| TASK [DEPLOY | Vérifier que la StorageClass longhorn-fast existe] ****************************************************************************
+2026-03-08 18:57:24,562 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:57:24 +0100 (0:00:00.966)       0:00:10.210 ********* 
+2026-03-08 18:57:25,324 p=1334917 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 18:57:25,342 p=1334917 u=administrator n=ansible INFO| TASK [DEPLOY | Echec si longhorn-fast absente] ***********************************************************************************************
+2026-03-08 18:57:25,342 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:57:25 +0100 (0:00:00.780)       0:00:10.990 ********* 
+2026-03-08 18:57:25,370 p=1334917 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-03-08 18:57:25,394 p=1334917 u=administrator n=ansible INFO| TASK [DEPLOY | Créer les PersistentVolumeClaims Longhorn] ************************************************************************************
+2026-03-08 18:57:25,394 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:57:25 +0100 (0:00:00.051)       0:00:11.042 ********* 
+2026-03-08 18:57:26,424 p=1334917 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-03-08 18:57:26,442 p=1334917 u=administrator n=ansible INFO| TASK [DEPLOY | Attendre que les PVC soient Bound (samba-dc-data)] ****************************************************************************
+2026-03-08 18:57:26,442 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:57:26 +0100 (0:00:01.047)       0:00:12.089 ********* 
+2026-03-08 18:57:28,705 p=1334917 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 18:57:28,723 p=1334917 u=administrator n=ansible INFO| TASK [DEPLOY | Attendre que les PVC soient Bound (samba-dc-logs)] ****************************************************************************
+2026-03-08 18:57:28,723 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:57:28 +0100 (0:00:02.281)       0:00:14.371 ********* 
+2026-03-08 18:57:29,583 p=1334917 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 18:57:29,601 p=1334917 u=administrator n=ansible INFO| TASK [DEPLOY | Déployer les Services TCP (LoadBalancer MetalLB)] *****************************************************************************
+2026-03-08 18:57:29,601 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:57:29 +0100 (0:00:00.878)       0:00:15.249 ********* 
+2026-03-08 18:57:30,681 p=1334917 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-03-08 18:57:30,700 p=1334917 u=administrator n=ansible INFO| TASK [DEPLOY | Déployer les Services UDP (LoadBalancer MetalLB)] *****************************************************************************
+2026-03-08 18:57:30,700 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:57:30 +0100 (0:00:01.098)       0:00:16.348 ********* 
+2026-03-08 18:57:31,666 p=1334917 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-03-08 18:57:31,684 p=1334917 u=administrator n=ansible INFO| TASK [DEPLOY | Déployer le StatefulSet Samba DC] *********************************************************************************************
+2026-03-08 18:57:31,684 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:57:31 +0100 (0:00:00.984)       0:00:17.332 ********* 
+2026-03-08 18:57:32,548 p=1334917 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-03-08 18:57:32,569 p=1334917 u=administrator n=ansible INFO| TASK [DEPLOY | Attendre démarrage du pod samba-dc-0 (peut prendre 3-5 min: jonction AD)] *****************************************************
+2026-03-08 18:57:32,569 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  18:57:32 +0100 (0:00:00.884)       0:00:18.217 ********* 
+2026-03-08 19:07:33,327 p=1334917 u=administrator n=ansible ERROR| [ERROR]: non-zero return code
+
+2026-03-08 19:07:33,327 p=1334917 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 19:07:33,346 p=1334917 u=administrator n=ansible INFO| TASK [DEPLOY | Résultat du démarrage du pod] *************************************************************************************************
+2026-03-08 19:07:33,346 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:07:33 +0100 (0:10:00.777)       0:10:18.994 ********* 
+2026-03-08 19:07:33,387 p=1334917 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg: 'Pod pas encore prêt - vérifier les logs: kubectl logs samba-dc-0 -n active-directory'
+2026-03-08 19:07:33,404 p=1334917 u=administrator n=ansible INFO| TASK [STATUS | Afficher les pods active-directory] *******************************************************************************************
+2026-03-08 19:07:33,405 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:07:33 +0100 (0:00:00.058)       0:10:19.052 ********* 
+2026-03-08 19:07:34,180 p=1334917 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 19:07:34,198 p=1334917 u=administrator n=ansible INFO| TASK [STATUS | Pods] *************************************************************************************************************************
+2026-03-08 19:07:34,199 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:07:34 +0100 (0:00:00.793)       0:10:19.846 ********* 
+2026-03-08 19:07:34,245 p=1334917 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg:
+  - NAME         READY   STATUS             RESTARTS        AGE   IP            NODE         NOMINATED NODE   READINESS GATES
+  - samba-dc-0   0/1     CrashLoopBackOff   6 (4m12s ago)   10m   10.42.0.173   k3s-node-1   <none>           <none>
+2026-03-08 19:07:34,263 p=1334917 u=administrator n=ansible INFO| TASK [STATUS | Afficher les services active-directory] ***************************************************************************************
+2026-03-08 19:07:34,264 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:07:34 +0100 (0:00:00.065)       0:10:19.911 ********* 
+2026-03-08 19:07:35,045 p=1334917 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 19:07:35,065 p=1334917 u=administrator n=ansible INFO| TASK [STATUS | Services] *********************************************************************************************************************
+2026-03-08 19:07:35,066 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:07:35 +0100 (0:00:00.801)       0:10:20.713 ********* 
+2026-03-08 19:07:35,111 p=1334917 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg:
+  - NAME                TYPE           CLUSTER-IP     EXTERNAL-IP    PORT(S)                                                                                                                                       AGE   SELECTOR
+  - samba-dc-headless   ClusterIP      None           <none>         389/TCP,445/TCP                                                                                                                               10m   app=samba-dc
+  - samba-dc-tcp        LoadBalancer   10.43.79.207   192.168.0.29   53:32236/TCP,88:30280/TCP,135:32634/TCP,139:32394/TCP,389:32046/TCP,445:31053/TCP,464:31395/TCP,636:31603/TCP,3268:30318/TCP,3269:30118/TCP   10m   app=samba-dc
+  - samba-dc-udp        LoadBalancer   10.43.80.82    192.168.0.29   53:32353/UDP,88:32345/UDP,389:31541/UDP,464:31637/UDP,137:32635/UDP,138:32308/UDP                                                             10m   app=samba-dc
+2026-03-08 19:07:35,135 p=1334917 u=administrator n=ansible INFO| TASK [STATUS | Vérifier l'IP MetalLB assignée au DC] *****************************************************************************************
+2026-03-08 19:07:35,136 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:07:35 +0100 (0:00:00.069)       0:10:20.783 ********* 
+2026-03-08 19:07:35,906 p=1334917 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 19:07:35,924 p=1334917 u=administrator n=ansible INFO| TASK [STATUS | IP du DC] *********************************************************************************************************************
+2026-03-08 19:07:35,925 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:07:35 +0100 (0:00:00.788)       0:10:21.572 ********* 
+2026-03-08 19:07:35,998 p=1334917 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg: 'IP du DC (MetalLB): 192.168.0.29'
+2026-03-08 19:07:36,016 p=1334917 u=administrator n=ansible INFO| TASK [STATUS | Afficher les logs récents de samba-dc-0] **************************************************************************************
+2026-03-08 19:07:36,016 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:07:36 +0100 (0:00:00.091)       0:10:21.664 ********* 
+2026-03-08 19:07:36,816 p=1334917 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 19:07:36,834 p=1334917 u=administrator n=ansible INFO| TASK [STATUS | Logs DC] **********************************************************************************************************************
+2026-03-08 19:07:36,834 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:07:36 +0100 (0:00:00.818)       0:10:22.482 ********* 
+2026-03-08 19:07:36,878 p=1334917 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg:
+  - '[2026-03-08 18:03:22] [INFO]   Samba 4 Active Directory Domain Controller'
+  - '[2026-03-08 18:03:22] [INFO]   Domaine: corpl.lcl (CORPL.LCL)'
+  - '[2026-03-08 18:03:22] [INFO]   Hostname: dc2'
+  - '[2026-03-08 18:03:22] [INFO]   Mon IP: 10.42.0.173'
+  - '[2026-03-08 18:03:22] [INFO]  =============================================='
+  - '[2026-03-08 18:03:22] [INFO]  Configuration du hostname: dc2.corpl.lcl'
+  - '[2026-03-08 18:03:22] [INFO]    hostname: dc2, FQDN: dc2.corpl.lcl, IP: 10.42.0.173'
+  - '[2026-03-08 18:03:22] [INFO]  Première initialisation: jonction au domaine corpl.lcl...'
+  - '[2026-03-08 18:03:22] [INFO]  Vérification de la connectivité vers le DC existant 192.168.0.100...'
+  - '[2026-03-08 18:03:22] [INFO]  DC existant 192.168.0.100 joignable.'
+  - '[2026-03-08 18:03:22] [INFO]  Configuration DNS initiale → 192.168.0.100'
+  - '[2026-03-08 18:03:22] [INFO]  Synchronisation NTP avec le DC existant...'
+  - 2026-03-08 18:03:22.207248 (+0000) -0.000726 +/- 0.000325 192.168.0.100 s4 no-leap
+  - 2026-03-08 18:03:22.403208 (+0000) +0.029799 +/- 0.041195 pool.ntp.org 109.190.177.205 s1 no-leap
+  - '[2026-03-08 18:03:22] [WARN]  Synchronisation NTP échouée - Kerberos peut dysfonctionner si décalage > 5 min'
+  - '[2026-03-08 18:03:22] [INFO]  =============================================='
+  - '[2026-03-08 18:03:22] [INFO]   JONCTION AU DOMAINE: corpl.lcl'
+  - '[2026-03-08 18:03:22] [INFO]   En tant que DC supplémentaire'
+  - '[2026-03-08 18:03:22] [INFO]  =============================================='
+  - 'ERROR(<class ''samba.join.DCJoinException''>): uncaught exception - Can''t join, error: 000004DC: LdapErr: DSID-0C090CDE, comment: In order to perform this operation a successful bind must be completed on the connection., data 0, v4563'
+  - '  File "/usr/lib/python3/dist-packages/samba/netcmd/__init__.py", line 185, in _run'
+  - '    return self.run(*args, **kwargs)'
+  - '           ^^^^^^^^^^^^^^^^^^^^^^^^^'
+  - '  File "/usr/lib/python3/dist-packages/samba/netcmd/domain.py", line 702, in run'
+  - '    join_DC(logger=logger, server=server, creds=creds, lp=lp, domain=domain,'
+  - '  File "/usr/lib/python3/dist-packages/samba/join.py", line 1575, in join_DC'
+  - '    ctx = DCJoinContext(logger, server, creds, lp, site, netbios_name,'
+  - '          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^'
+  - '  File "/usr/lib/python3/dist-packages/samba/join.py", line 120, in __init__'
+  - '    raise DCJoinException(estr)'
+2026-03-08 19:07:36,896 p=1334917 u=administrator n=ansible INFO| TASK [VERIFY | Test DNS - Résolution du domaine corpl.lcl] ***********************************************************************************
+2026-03-08 19:07:36,896 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:07:36 +0100 (0:00:00.061)       0:10:22.544 ********* 
+2026-03-08 19:07:37,676 p=1334917 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 19:07:37,693 p=1334917 u=administrator n=ansible INFO| TASK [VERIFY | Résultat DNS] *****************************************************************************************************************
+2026-03-08 19:07:37,694 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:07:37 +0100 (0:00:00.797)       0:10:23.341 ********* 
+2026-03-08 19:07:37,757 p=1334917 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg: []
+2026-03-08 19:07:37,774 p=1334917 u=administrator n=ansible INFO| TASK [VERIFY | Test Kerberos - Obtenir un ticket TGT] ****************************************************************************************
+2026-03-08 19:07:37,775 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:07:37 +0100 (0:00:00.081)       0:10:23.422 ********* 
+2026-03-08 19:07:38,518 p=1334917 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 19:07:38,537 p=1334917 u=administrator n=ansible INFO| TASK [VERIFY | Résultat info domaine] ********************************************************************************************************
+2026-03-08 19:07:38,537 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:07:38 +0100 (0:00:00.762)       0:10:24.185 ********* 
+2026-03-08 19:07:38,599 p=1334917 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg: []
+2026-03-08 19:07:38,617 p=1334917 u=administrator n=ansible INFO| TASK [VERIFY | Test réplication AD] **********************************************************************************************************
+2026-03-08 19:07:38,617 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:07:38 +0100 (0:00:00.079)       0:10:24.264 ********* 
+2026-03-08 19:07:39,402 p=1334917 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 19:07:39,420 p=1334917 u=administrator n=ansible INFO| TASK [VERIFY | Résultat réplication] *********************************************************************************************************
+2026-03-08 19:07:39,421 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:07:39 +0100 (0:00:00.803)       0:10:25.068 ********* 
+2026-03-08 19:07:39,485 p=1334917 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg: []
+2026-03-08 19:07:39,504 p=1334917 u=administrator n=ansible INFO| TASK [VERIFY | Test ping vers le DC depuis le cluster] ***************************************************************************************
+2026-03-08 19:07:39,504 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:07:39 +0100 (0:00:00.083)       0:10:25.152 ********* 
+2026-03-08 19:07:43,130 p=1334917 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 19:07:43,149 p=1334917 u=administrator n=ansible INFO| TASK [VERIFY | Résultat ping DC] *************************************************************************************************************
+2026-03-08 19:07:43,149 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:07:43 +0100 (0:00:03.645)       0:10:28.797 ********* 
+2026-03-08 19:07:43,190 p=1334917 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg:
+  - PING 192.168.0.29 (192.168.0.29) 56(84) bytes of data.
+  - From 192.168.0.11 icmp_seq=1 Destination Host Unreachable
+  - From 192.168.0.11 icmp_seq=2 Destination Host Unreachable
+  - From 192.168.0.11 icmp_seq=3 Destination Host Unreachable
+  - ''
+  - '--- 192.168.0.29 ping statistics ---'
+  - 3 packets transmitted, 0 received, +3 errors, 100% packet loss, time 2030ms
+  - pipe 3
+2026-03-08 19:07:43,214 p=1334917 u=administrator n=ansible INFO| TASK [FSMO | Afficher les rôles FSMO actuels] ************************************************************************************************
+2026-03-08 19:07:43,215 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:07:43 +0100 (0:00:00.065)       0:10:28.862 ********* 
+2026-03-08 19:07:43,980 p=1334917 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 19:07:43,998 p=1334917 u=administrator n=ansible INFO| TASK [FSMO | Rôles FSMO actuels] *************************************************************************************************************
+2026-03-08 19:07:43,998 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:07:43 +0100 (0:00:00.783)       0:10:29.645 ********* 
+2026-03-08 19:07:44,064 p=1334917 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg: []
+2026-03-08 19:07:44,082 p=1334917 u=administrator n=ansible INFO| TASK [FSMO | IMPORTANT - Vérifier réplication avant transfert] *******************************************************************************
+2026-03-08 19:07:44,083 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:07:44 +0100 (0:00:00.084)       0:10:29.730 ********* 
+2026-03-08 19:07:44,118 p=1334917 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg: |-
+    ⚠ AVANT de transférer les rôles FSMO:
+    1. Vérifier que la réplication est 100% OK:
+       kubectl exec -it samba-dc-0 -n active-directory -- samba-tool drs showrepl
+    2. Vérifier qu'aucune erreur dans les logs:
+       kubectl logs samba-dc-0 -n active-directory
+    3. Pour transférer TOUS les rôles FSMO vers ce DC:
+       kubectl exec -it samba-dc-0 -n active-directory -- \
+         samba-tool fsmo transfer --role=all
+    4. Pour transférer un rôle spécifique (pdc, rid, infrastructure, naming, schema):
+       kubectl exec -it samba-dc-0 -n active-directory -- \
+         samba-tool fsmo transfer --role=pdc
+    5. Après transfert, l'ancien DC peut être rétrogradé (dcpromo /forceremoval)
+2026-03-08 19:07:44,138 p=1334917 u=administrator n=ansible INFO| TASK [RÉSUMÉ | Configuration AD DC] **********************************************************************************************************
+2026-03-08 19:07:44,138 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:07:44 +0100 (0:00:00.055)       0:10:29.785 ********* 
+2026-03-08 19:07:44,187 p=1334917 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg:
+  - ======================================================
+  - ' Samba 4 AD DC déployé dans Kubernetes'
+  - ======================================================
+  - ' Domaine: corpl.lcl'
+  - ' Realm:   CORPL.LCL'
+  - ' Hostname DC: dc2.corpl.lcl'
+  - ' IP MetalLB: 192.168.0.29'
+  - '------------------------------------------------------'
+  - ' Prochaines étapes:'
+  - '  1. Ajouter 192.168.0.29 comme DNS sur vos postes'
+  - '     (en secondaire, le DC existant en primaire)'
+  - '  2. Vérifier la réplication AD (ad-verify)'
+  - '  3. Transférer les FSMO si DC existant doit être retiré'
+  - '     (ad-fsmo tag)'
+  - '  4. Mettre 192.168.0.29 comme DNS primaire'
+  - ======================================================
+2026-03-08 19:07:44,188 p=1334917 u=administrator n=ansible INFO| PLAY RECAP ***********************************************************************************************************************************
+2026-03-08 19:07:44,189 p=1334917 u=administrator n=ansible INFO| k3s-node-1                 : ok=39   changed=7    unreachable=0    failed=0    skipped=9    rescued=0    ignored=0   
+2026-03-08 19:07:44,189 p=1334917 u=administrator n=ansible INFO| PLAYBOOK RECAP *******************************************************************************************************************************
+2026-03-08 19:07:44,189 p=1334917 u=administrator n=ansible INFO| Playbook run took 0 days, 0 hours, 10 minutes, 29 seconds
+
+2026-03-08 19:07:44,189 p=1334917 u=administrator n=ansible INFO| TASKS RECAP **********************************************************************************************************************************
+2026-03-08 19:07:44,190 p=1334917 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:07:44 +0100 (0:00:00.051)       0:10:29.837 ********* 
+2026-03-08 19:07:44,190 p=1334917 u=administrator n=ansible INFO| =============================================================================== 
+2026-03-08 19:07:44,190 p=1334917 u=administrator n=ansible INFO| DEPLOY | Attendre démarrage du pod samba-dc-0 (peut prendre 3-5 min: jonction AD) --------------------------------------------------- 600.78s
+2026-03-08 19:07:44,190 p=1334917 u=administrator n=ansible INFO| VERIFY | Test ping vers le DC depuis le cluster --------------------------------------------------------------------------------------- 3.65s
+2026-03-08 19:07:44,190 p=1334917 u=administrator n=ansible INFO| DEPLOY | Attendre que les PVC soient Bound (samba-dc-data) ---------------------------------------------------------------------------- 2.28s
+2026-03-08 19:07:44,190 p=1334917 u=administrator n=ansible INFO| IMPORT | Confirmer image dans containerd ---------------------------------------------------------------------------------------------- 2.26s
+2026-03-08 19:07:44,191 p=1334917 u=administrator n=ansible INFO| IMPORT | Vérifier si l'image est déjà dans k3s containerd ----------------------------------------------------------------------------- 2.12s
+2026-03-08 19:07:44,191 p=1334917 u=administrator n=ansible INFO| BUILD | Démarrer et activer le service docker ----------------------------------------------------------------------------------------- 1.46s
+2026-03-08 19:07:44,191 p=1334917 u=administrator n=ansible INFO| DEPLOY | Déployer les Services TCP (LoadBalancer MetalLB) ----------------------------------------------------------------------------- 1.10s
+2026-03-08 19:07:44,191 p=1334917 u=administrator n=ansible INFO| DEPLOY | Créer les PersistentVolumeClaims Longhorn ------------------------------------------------------------------------------------ 1.05s
+2026-03-08 19:07:44,191 p=1334917 u=administrator n=ansible INFO| DEPLOY | Déployer les Services UDP (LoadBalancer MetalLB) ----------------------------------------------------------------------------- 0.98s
+2026-03-08 19:07:44,191 p=1334917 u=administrator n=ansible INFO| DEPLOY | Créer/Mettre à jour le Secret des credentials AD depuis les vars ------------------------------------------------------------- 0.97s
+2026-03-08 19:07:44,191 p=1334917 u=administrator n=ansible INFO| DEPLOY | Créer le namespace active-directory ------------------------------------------------------------------------------------------ 0.94s
+2026-03-08 19:07:44,191 p=1334917 u=administrator n=ansible INFO| BUILD | Installer docker.io si absent ------------------------------------------------------------------------------------------------- 0.93s
+2026-03-08 19:07:44,192 p=1334917 u=administrator n=ansible INFO| DEPLOY | Déployer le StatefulSet Samba DC --------------------------------------------------------------------------------------------- 0.88s
+2026-03-08 19:07:44,192 p=1334917 u=administrator n=ansible INFO| DEPLOY | Attendre que les PVC soient Bound (samba-dc-logs) ---------------------------------------------------------------------------- 0.88s
+2026-03-08 19:07:44,192 p=1334917 u=administrator n=ansible INFO| STATUS | Afficher les logs récents de samba-dc-0 -------------------------------------------------------------------------------------- 0.82s
+2026-03-08 19:07:44,192 p=1334917 u=administrator n=ansible INFO| VERIFY | Test réplication AD ---------------------------------------------------------------------------------------------------------- 0.80s
+2026-03-08 19:07:44,192 p=1334917 u=administrator n=ansible INFO| STATUS | Afficher les services active-directory --------------------------------------------------------------------------------------- 0.80s
+2026-03-08 19:07:44,192 p=1334917 u=administrator n=ansible INFO| VERIFY | Test DNS - Résolution du domaine corpl.lcl ----------------------------------------------------------------------------------- 0.80s
+2026-03-08 19:07:44,192 p=1334917 u=administrator n=ansible INFO| STATUS | Afficher les pods active-directory ------------------------------------------------------------------------------------------- 0.79s
+2026-03-08 19:07:44,192 p=1334917 u=administrator n=ansible INFO| STATUS | Vérifier l'IP MetalLB assignée au DC ----------------------------------------------------------------------------------------- 0.79s
+2026-03-08 19:19:23,599 p=1362603 u=administrator n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+
+2026-03-08 19:19:23,599 p=1362603 u=administrator n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be removed from collection 'community.general' version 12.0.0.
+
+2026-03-08 19:19:23,680 p=1362603 u=administrator n=ansible INFO| PLAY [Active Directory - Samba 4 Domain Controller] ******************************************************************************************
+2026-03-08 19:19:23,711 p=1362603 u=administrator n=ansible INFO| TASK [BUILD | Installer docker.io si absent] *************************************************************************************************
+2026-03-08 19:19:23,712 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:19:23 +0100 (0:00:00.071)       0:00:00.071 ********* 
+2026-03-08 19:19:46,553 p=1362603 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-03-08 19:19:46,572 p=1362603 u=administrator n=ansible INFO| TASK [BUILD | Démarrer et activer le service docker] *****************************************************************************************
+2026-03-08 19:19:46,572 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:19:46 +0100 (0:00:22.860)       0:00:22.932 ********* 
+2026-03-08 19:19:48,035 p=1362603 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 19:19:48,053 p=1362603 u=administrator n=ansible INFO| TASK [BUILD | Vérifier si l'image docker existe déjà] ****************************************************************************************
+2026-03-08 19:19:48,053 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:19:48 +0100 (0:00:01.480)       0:00:24.413 ********* 
+2026-03-08 19:19:48,668 p=1362603 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 19:19:48,687 p=1362603 u=administrator n=ansible INFO| TASK [BUILD | Supprimer l'ancienne image (force rebuild)] ************************************************************************************
+2026-03-08 19:19:48,687 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:19:48 +0100 (0:00:00.634)       0:00:25.047 ********* 
+2026-03-08 19:19:48,738 p=1362603 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-03-08 19:19:48,757 p=1362603 u=administrator n=ansible INFO| TASK [BUILD | Copier le répertoire Dockerfile sur le nœud] ***********************************************************************************
+2026-03-08 19:19:48,758 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:19:48 +0100 (0:00:00.070)       0:00:25.117 ********* 
+2026-03-08 19:19:48,815 p=1362603 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-03-08 19:19:48,833 p=1362603 u=administrator n=ansible INFO| TASK [BUILD | Construire l'image Samba DC (docker build)] ************************************************************************************
+2026-03-08 19:19:48,833 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:19:48 +0100 (0:00:00.075)       0:00:25.193 ********* 
+2026-03-08 19:19:48,887 p=1362603 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-03-08 19:19:48,906 p=1362603 u=administrator n=ansible INFO| TASK [BUILD | Image déjà présente dans docker (cache)] ***************************************************************************************
+2026-03-08 19:19:48,907 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:19:48 +0100 (0:00:00.073)       0:00:25.266 ********* 
+2026-03-08 19:19:48,950 p=1362603 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg: Image samba-dc:latest déjà construite (b6d7afe15c08)
+2026-03-08 19:19:48,972 p=1362603 u=administrator n=ansible INFO| TASK [IMPORT | Vérifier si l'image est déjà dans k3s containerd] *****************************************************************************
+2026-03-08 19:19:48,972 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:19:48 +0100 (0:00:00.065)       0:00:25.332 ********* 
+2026-03-08 19:19:51,192 p=1362603 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 19:19:51,260 p=1362603 u=administrator n=ansible INFO| TASK [IMPORT | Supprimer l'ancienne image de containerd (force rebuild)] *********************************************************************
+2026-03-08 19:19:51,260 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:19:51 +0100 (0:00:02.287)       0:00:27.620 ********* 
+2026-03-08 19:19:51,312 p=1362603 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-03-08 19:19:51,330 p=1362603 u=administrator n=ansible INFO| TASK [IMPORT | Sauvegarder l'image en archive tar] *******************************************************************************************
+2026-03-08 19:19:51,331 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:19:51 +0100 (0:00:00.070)       0:00:27.690 ********* 
+2026-03-08 19:19:51,387 p=1362603 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-03-08 19:19:51,406 p=1362603 u=administrator n=ansible INFO| TASK [IMPORT | Importer l'image dans k3s containerd] *****************************************************************************************
+2026-03-08 19:19:51,407 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:19:51 +0100 (0:00:00.075)       0:00:27.766 ********* 
+2026-03-08 19:19:51,460 p=1362603 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-03-08 19:19:51,478 p=1362603 u=administrator n=ansible INFO| TASK [IMPORT | Nettoyer le tar temporaire] ***************************************************************************************************
+2026-03-08 19:19:51,478 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:19:51 +0100 (0:00:00.071)       0:00:27.838 ********* 
+2026-03-08 19:19:51,533 p=1362603 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-03-08 19:19:51,551 p=1362603 u=administrator n=ansible INFO| TASK [IMPORT | Image déjà présente dans k3s (skip import)] ***********************************************************************************
+2026-03-08 19:19:51,552 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:19:51 +0100 (0:00:00.073)       0:00:27.911 ********* 
+2026-03-08 19:19:51,621 p=1362603 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg: Image samba-dc:latest déjà dans k3s containerd
+2026-03-08 19:19:51,647 p=1362603 u=administrator n=ansible INFO| TASK [IMPORT | Confirmer image dans containerd] **********************************************************************************************
+2026-03-08 19:19:51,647 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:19:51 +0100 (0:00:00.095)       0:00:28.007 ********* 
+2026-03-08 19:19:53,823 p=1362603 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 19:19:53,842 p=1362603 u=administrator n=ansible INFO| TASK [IMPORT | Résultat] *********************************************************************************************************************
+2026-03-08 19:19:53,843 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:19:53 +0100 (0:00:02.195)       0:00:30.202 ********* 
+2026-03-08 19:19:53,919 p=1362603 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg:
+  - 'docker.io/library/samba-dc:latest                                                                                              application/vnd.oci.image.manifest.v1+json                sha256:d4714506155f3cbb98ebc15574fc5b7f0ae6a4df9ebbcca2aad7a489bf62a970 253.3 MiB linux/amd64                                                                                                                         io.cri-containerd.image=managed                                 '
+2026-03-08 19:19:53,939 p=1362603 u=administrator n=ansible INFO| TASK [DEPLOY | Créer le namespace active-directory] ******************************************************************************************
+2026-03-08 19:19:53,940 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:19:53 +0100 (0:00:00.096)       0:00:30.299 ********* 
+2026-03-08 19:19:54,873 p=1362603 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-03-08 19:19:54,892 p=1362603 u=administrator n=ansible INFO| TASK [DEPLOY | Vérifier que admin_password est configuré (pas de CHANGEME)] ******************************************************************
+2026-03-08 19:19:54,892 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:19:54 +0100 (0:00:00.952)       0:00:31.252 ********* 
+2026-03-08 19:19:54,919 p=1362603 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-03-08 19:19:54,937 p=1362603 u=administrator n=ansible INFO| TASK [DEPLOY | Créer/Mettre à jour le Secret des credentials AD depuis les vars] *************************************************************
+2026-03-08 19:19:54,938 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:19:54 +0100 (0:00:00.045)       0:00:31.297 ********* 
+2026-03-08 19:19:55,912 p=1362603 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-03-08 19:19:55,930 p=1362603 u=administrator n=ansible INFO| TASK [DEPLOY | Vérifier que la StorageClass longhorn-fast existe] ****************************************************************************
+2026-03-08 19:19:55,931 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:19:55 +0100 (0:00:00.993)       0:00:32.290 ********* 
+2026-03-08 19:19:56,685 p=1362603 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 19:19:56,704 p=1362603 u=administrator n=ansible INFO| TASK [DEPLOY | Echec si longhorn-fast absente] ***********************************************************************************************
+2026-03-08 19:19:56,704 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:19:56 +0100 (0:00:00.773)       0:00:33.064 ********* 
+2026-03-08 19:19:56,732 p=1362603 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-03-08 19:19:56,757 p=1362603 u=administrator n=ansible INFO| TASK [DEPLOY | Créer les PersistentVolumeClaims Longhorn] ************************************************************************************
+2026-03-08 19:19:56,758 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:19:56 +0100 (0:00:00.053)       0:00:33.117 ********* 
+2026-03-08 19:19:57,796 p=1362603 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-03-08 19:19:57,824 p=1362603 u=administrator n=ansible INFO| TASK [DEPLOY | Attendre que les PVC soient Bound (samba-dc-data)] ****************************************************************************
+2026-03-08 19:19:57,825 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:19:57 +0100 (0:00:01.066)       0:00:34.184 ********* 
+2026-03-08 19:19:59,994 p=1362603 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 19:20:00,013 p=1362603 u=administrator n=ansible INFO| TASK [DEPLOY | Attendre que les PVC soient Bound (samba-dc-logs)] ****************************************************************************
+2026-03-08 19:20:00,013 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:20:00 +0100 (0:00:02.188)       0:00:36.372 ********* 
+2026-03-08 19:20:00,859 p=1362603 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 19:20:00,877 p=1362603 u=administrator n=ansible INFO| TASK [DEPLOY | Déployer les Services TCP (LoadBalancer MetalLB)] *****************************************************************************
+2026-03-08 19:20:00,878 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:20:00 +0100 (0:00:00.864)       0:00:37.237 ********* 
+2026-03-08 19:20:02,010 p=1362603 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-03-08 19:20:02,029 p=1362603 u=administrator n=ansible INFO| TASK [DEPLOY | Déployer les Services UDP (LoadBalancer MetalLB)] *****************************************************************************
+2026-03-08 19:20:02,029 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:20:02 +0100 (0:00:01.151)       0:00:38.389 ********* 
+2026-03-08 19:20:02,979 p=1362603 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-03-08 19:20:02,997 p=1362603 u=administrator n=ansible INFO| TASK [DEPLOY | Déployer le StatefulSet Samba DC] *********************************************************************************************
+2026-03-08 19:20:02,997 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:20:02 +0100 (0:00:00.967)       0:00:39.357 ********* 
+2026-03-08 19:20:03,843 p=1362603 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-03-08 19:20:03,864 p=1362603 u=administrator n=ansible INFO| TASK [DEPLOY | Attendre démarrage du pod samba-dc-0 (peut prendre 3-5 min: jonction AD)] *****************************************************
+2026-03-08 19:20:03,864 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:20:03 +0100 (0:00:00.866)       0:00:40.224 ********* 
+2026-03-08 19:30:04,658 p=1362603 u=administrator n=ansible ERROR| [ERROR]: non-zero return code
+
+2026-03-08 19:30:04,658 p=1362603 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 19:30:04,679 p=1362603 u=administrator n=ansible INFO| TASK [DEPLOY | Résultat du démarrage du pod] *************************************************************************************************
+2026-03-08 19:30:04,679 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:30:04 +0100 (0:10:00.815)       0:10:41.039 ********* 
+2026-03-08 19:30:04,723 p=1362603 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg: 'Pod pas encore prêt - vérifier les logs: kubectl logs samba-dc-0 -n active-directory'
+2026-03-08 19:30:04,742 p=1362603 u=administrator n=ansible INFO| TASK [STATUS | Afficher les pods active-directory] *******************************************************************************************
+2026-03-08 19:30:04,742 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:30:04 +0100 (0:00:00.062)       0:10:41.102 ********* 
+2026-03-08 19:30:05,546 p=1362603 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 19:30:05,565 p=1362603 u=administrator n=ansible INFO| TASK [STATUS | Pods] *************************************************************************************************************************
+2026-03-08 19:30:05,565 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:30:05 +0100 (0:00:00.822)       0:10:41.925 ********* 
+2026-03-08 19:30:05,608 p=1362603 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg:
+  - NAME         READY   STATUS             RESTARTS        AGE   IP            NODE         NOMINATED NODE   READINESS GATES
+  - samba-dc-0   0/1     CrashLoopBackOff   6 (3m47s ago)   10m   10.42.0.174   k3s-node-1   <none>           <none>
+2026-03-08 19:30:05,626 p=1362603 u=administrator n=ansible INFO| TASK [STATUS | Afficher les services active-directory] ***************************************************************************************
+2026-03-08 19:30:05,626 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:30:05 +0100 (0:00:00.061)       0:10:41.986 ********* 
+2026-03-08 19:30:06,363 p=1362603 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 19:30:06,388 p=1362603 u=administrator n=ansible INFO| TASK [STATUS | Services] *********************************************************************************************************************
+2026-03-08 19:30:06,388 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:30:06 +0100 (0:00:00.761)       0:10:42.748 ********* 
+2026-03-08 19:30:06,430 p=1362603 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg:
+  - NAME                TYPE           CLUSTER-IP     EXTERNAL-IP    PORT(S)                                                                                                                                       AGE   SELECTOR
+  - samba-dc-headless   ClusterIP      None           <none>         389/TCP,445/TCP                                                                                                                               10m   app=samba-dc
+  - samba-dc-tcp        LoadBalancer   10.43.163.42   192.168.0.29   53:32331/TCP,88:30229/TCP,135:31062/TCP,139:31521/TCP,389:30171/TCP,445:31727/TCP,464:31240/TCP,636:30878/TCP,3268:31372/TCP,3269:32655/TCP   10m   app=samba-dc
+  - samba-dc-udp        LoadBalancer   10.43.153.14   192.168.0.29   53:32358/UDP,88:31026/UDP,389:31529/UDP,464:31126/UDP,137:31752/UDP,138:31905/UDP                                                             10m   app=samba-dc
+2026-03-08 19:30:06,462 p=1362603 u=administrator n=ansible INFO| TASK [STATUS | Vérifier l'IP MetalLB assignée au DC] *****************************************************************************************
+2026-03-08 19:30:06,462 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:30:06 +0100 (0:00:00.074)       0:10:42.822 ********* 
+2026-03-08 19:30:07,207 p=1362603 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 19:30:07,231 p=1362603 u=administrator n=ansible INFO| TASK [STATUS | IP du DC] *********************************************************************************************************************
+2026-03-08 19:30:07,232 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:30:07 +0100 (0:00:00.769)       0:10:43.591 ********* 
+2026-03-08 19:30:07,299 p=1362603 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg: 'IP du DC (MetalLB): 192.168.0.29'
+2026-03-08 19:30:07,324 p=1362603 u=administrator n=ansible INFO| TASK [STATUS | Afficher les logs récents de samba-dc-0] **************************************************************************************
+2026-03-08 19:30:07,324 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:30:07 +0100 (0:00:00.092)       0:10:43.684 ********* 
+2026-03-08 19:30:08,106 p=1362603 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 19:30:08,132 p=1362603 u=administrator n=ansible INFO| TASK [STATUS | Logs DC] **********************************************************************************************************************
+2026-03-08 19:30:08,132 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:30:08 +0100 (0:00:00.808)       0:10:44.492 ********* 
+2026-03-08 19:30:08,177 p=1362603 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg:
+  - '[2026-03-08 18:26:18] [INFO]   Samba 4 Active Directory Domain Controller'
+  - '[2026-03-08 18:26:18] [INFO]   Domaine: corpl.lcl (CORPL.LCL)'
+  - '[2026-03-08 18:26:18] [INFO]   Hostname: dc2'
+  - '[2026-03-08 18:26:18] [INFO]   Mon IP: 10.42.0.174'
+  - '[2026-03-08 18:26:18] [INFO]  =============================================='
+  - '[2026-03-08 18:26:18] [INFO]  Configuration du hostname: dc2.corpl.lcl'
+  - '[2026-03-08 18:26:18] [INFO]    hostname: dc2, FQDN: dc2.corpl.lcl, IP: 10.42.0.174'
+  - '[2026-03-08 18:26:18] [INFO]  Première initialisation: jonction au domaine corpl.lcl...'
+  - '[2026-03-08 18:26:18] [INFO]  Vérification de la connectivité vers le DC existant 192.168.0.100...'
+  - '[2026-03-08 18:26:18] [INFO]  DC existant 192.168.0.100 joignable.'
+  - '[2026-03-08 18:26:18] [INFO]  Configuration DNS initiale → 192.168.0.100'
+  - '[2026-03-08 18:26:18] [INFO]  Synchronisation NTP avec le DC existant...'
+  - 2026-03-08 18:26:18.217796 (+0000) -0.000440 +/- 0.000306 192.168.0.100 s4 no-leap
+  - 2026-03-08 18:26:18.367967 (+0000) +0.010979 +/- 0.022173 pool.ntp.org 79.143.250.33 s1 no-leap
+  - '[2026-03-08 18:26:18] [WARN]  Synchronisation NTP échouée - Kerberos peut dysfonctionner si décalage > 5 min'
+  - '[2026-03-08 18:26:18] [INFO]  =============================================='
+  - '[2026-03-08 18:26:18] [INFO]   JONCTION AU DOMAINE: corpl.lcl'
+  - '[2026-03-08 18:26:18] [INFO]   En tant que DC supplémentaire'
+  - '[2026-03-08 18:26:18] [INFO]  =============================================='
+  - 'ERROR(<class ''samba.join.DCJoinException''>): uncaught exception - Can''t join, error: 000004DC: LdapErr: DSID-0C090CDE, comment: In order to perform this operation a successful bind must be completed on the connection., data 0, v4563'
+  - '  File "/usr/lib/python3/dist-packages/samba/netcmd/__init__.py", line 185, in _run'
+  - '    return self.run(*args, **kwargs)'
+  - '           ^^^^^^^^^^^^^^^^^^^^^^^^^'
+  - '  File "/usr/lib/python3/dist-packages/samba/netcmd/domain.py", line 702, in run'
+  - '    join_DC(logger=logger, server=server, creds=creds, lp=lp, domain=domain,'
+  - '  File "/usr/lib/python3/dist-packages/samba/join.py", line 1575, in join_DC'
+  - '    ctx = DCJoinContext(logger, server, creds, lp, site, netbios_name,'
+  - '          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^'
+  - '  File "/usr/lib/python3/dist-packages/samba/join.py", line 120, in __init__'
+  - '    raise DCJoinException(estr)'
+2026-03-08 19:30:08,195 p=1362603 u=administrator n=ansible INFO| TASK [VERIFY | Test DNS - Résolution du domaine corpl.lcl] ***********************************************************************************
+2026-03-08 19:30:08,195 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:30:08 +0100 (0:00:00.063)       0:10:44.555 ********* 
+2026-03-08 19:30:08,974 p=1362603 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 19:30:08,992 p=1362603 u=administrator n=ansible INFO| TASK [VERIFY | Résultat DNS] *****************************************************************************************************************
+2026-03-08 19:30:08,992 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:30:08 +0100 (0:00:00.796)       0:10:45.352 ********* 
+2026-03-08 19:30:09,061 p=1362603 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg: []
+2026-03-08 19:30:09,079 p=1362603 u=administrator n=ansible INFO| TASK [VERIFY | Test Kerberos - Obtenir un ticket TGT] ****************************************************************************************
+2026-03-08 19:30:09,079 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:30:09 +0100 (0:00:00.086)       0:10:45.439 ********* 
+2026-03-08 19:30:09,849 p=1362603 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 19:30:09,867 p=1362603 u=administrator n=ansible INFO| TASK [VERIFY | Résultat info domaine] ********************************************************************************************************
+2026-03-08 19:30:09,867 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:30:09 +0100 (0:00:00.787)       0:10:46.227 ********* 
+2026-03-08 19:30:09,931 p=1362603 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg: []
+2026-03-08 19:30:09,948 p=1362603 u=administrator n=ansible INFO| TASK [VERIFY | Test réplication AD] **********************************************************************************************************
+2026-03-08 19:30:09,949 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:30:09 +0100 (0:00:00.081)       0:10:46.308 ********* 
+2026-03-08 19:30:10,712 p=1362603 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 19:30:10,729 p=1362603 u=administrator n=ansible INFO| TASK [VERIFY | Résultat réplication] *********************************************************************************************************
+2026-03-08 19:30:10,729 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:30:10 +0100 (0:00:00.780)       0:10:47.089 ********* 
+2026-03-08 19:30:10,792 p=1362603 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg: []
+2026-03-08 19:30:10,810 p=1362603 u=administrator n=ansible INFO| TASK [VERIFY | Test ping vers le DC depuis le cluster] ***************************************************************************************
+2026-03-08 19:30:10,811 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:30:10 +0100 (0:00:00.081)       0:10:47.170 ********* 
+2026-03-08 19:30:14,493 p=1362603 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 19:30:14,512 p=1362603 u=administrator n=ansible INFO| TASK [VERIFY | Résultat ping DC] *************************************************************************************************************
+2026-03-08 19:30:14,512 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:30:14 +0100 (0:00:03.701)       0:10:50.871 ********* 
+2026-03-08 19:30:14,555 p=1362603 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg:
+  - PING 192.168.0.29 (192.168.0.29) 56(84) bytes of data.
+  - From 192.168.0.11 icmp_seq=1 Destination Host Unreachable
+  - From 192.168.0.11 icmp_seq=2 Destination Host Unreachable
+  - From 192.168.0.11 icmp_seq=3 Destination Host Unreachable
+  - ''
+  - '--- 192.168.0.29 ping statistics ---'
+  - 3 packets transmitted, 0 received, +3 errors, 100% packet loss, time 2087ms
+  - pipe 3
+2026-03-08 19:30:14,579 p=1362603 u=administrator n=ansible INFO| TASK [FSMO | Afficher les rôles FSMO actuels] ************************************************************************************************
+2026-03-08 19:30:14,579 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:30:14 +0100 (0:00:00.066)       0:10:50.938 ********* 
+2026-03-08 19:30:15,390 p=1362603 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-08 19:30:15,408 p=1362603 u=administrator n=ansible INFO| TASK [FSMO | Rôles FSMO actuels] *************************************************************************************************************
+2026-03-08 19:30:15,408 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:30:15 +0100 (0:00:00.829)       0:10:51.768 ********* 
+2026-03-08 19:30:15,475 p=1362603 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg: []
+2026-03-08 19:30:15,493 p=1362603 u=administrator n=ansible INFO| TASK [FSMO | IMPORTANT - Vérifier réplication avant transfert] *******************************************************************************
+2026-03-08 19:30:15,494 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:30:15 +0100 (0:00:00.085)       0:10:51.853 ********* 
+2026-03-08 19:30:15,530 p=1362603 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg: |-
+    ⚠ AVANT de transférer les rôles FSMO:
+    1. Vérifier que la réplication est 100% OK:
+       kubectl exec -it samba-dc-0 -n active-directory -- samba-tool drs showrepl
+    2. Vérifier qu'aucune erreur dans les logs:
+       kubectl logs samba-dc-0 -n active-directory
+    3. Pour transférer TOUS les rôles FSMO vers ce DC:
+       kubectl exec -it samba-dc-0 -n active-directory -- \
+         samba-tool fsmo transfer --role=all
+    4. Pour transférer un rôle spécifique (pdc, rid, infrastructure, naming, schema):
+       kubectl exec -it samba-dc-0 -n active-directory -- \
+         samba-tool fsmo transfer --role=pdc
+    5. Après transfert, l'ancien DC peut être rétrogradé (dcpromo /forceremoval)
+2026-03-08 19:30:15,548 p=1362603 u=administrator n=ansible INFO| TASK [RÉSUMÉ | Configuration AD DC] **********************************************************************************************************
+2026-03-08 19:30:15,548 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:30:15 +0100 (0:00:00.054)       0:10:51.908 ********* 
+2026-03-08 19:30:15,593 p=1362603 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg:
+  - ======================================================
+  - ' Samba 4 AD DC déployé dans Kubernetes'
+  - ======================================================
+  - ' Domaine: corpl.lcl'
+  - ' Realm:   CORPL.LCL'
+  - ' Hostname DC: dc2.corpl.lcl'
+  - ' IP MetalLB: 192.168.0.29'
+  - '------------------------------------------------------'
+  - ' Prochaines étapes:'
+  - '  1. Ajouter 192.168.0.29 comme DNS sur vos postes'
+  - '     (en secondaire, le DC existant en primaire)'
+  - '  2. Vérifier la réplication AD (ad-verify)'
+  - '  3. Transférer les FSMO si DC existant doit être retiré'
+  - '     (ad-fsmo tag)'
+  - '  4. Mettre 192.168.0.29 comme DNS primaire'
+  - ======================================================
+2026-03-08 19:30:15,595 p=1362603 u=administrator n=ansible INFO| PLAY RECAP ***********************************************************************************************************************************
+2026-03-08 19:30:15,596 p=1362603 u=administrator n=ansible INFO| k3s-node-1                 : ok=39   changed=7    unreachable=0    failed=0    skipped=9    rescued=0    ignored=0   
+2026-03-08 19:30:15,596 p=1362603 u=administrator n=ansible INFO| PLAYBOOK RECAP *******************************************************************************************************************************
+2026-03-08 19:30:15,596 p=1362603 u=administrator n=ansible INFO| Playbook run took 0 days, 0 hours, 10 minutes, 51 seconds
+
+2026-03-08 19:30:15,596 p=1362603 u=administrator n=ansible INFO| TASKS RECAP **********************************************************************************************************************************
+2026-03-08 19:30:15,596 p=1362603 u=administrator n=ansible INFO| dimanche 08 mars 2026  19:30:15 +0100 (0:00:00.048)       0:10:51.956 ********* 
+2026-03-08 19:30:15,596 p=1362603 u=administrator n=ansible INFO| =============================================================================== 
+2026-03-08 19:30:15,597 p=1362603 u=administrator n=ansible INFO| DEPLOY | Attendre démarrage du pod samba-dc-0 (peut prendre 3-5 min: jonction AD) --------------------------------------------------- 600.82s
+2026-03-08 19:30:15,597 p=1362603 u=administrator n=ansible INFO| BUILD | Installer docker.io si absent ------------------------------------------------------------------------------------------------ 22.86s
+2026-03-08 19:30:15,597 p=1362603 u=administrator n=ansible INFO| VERIFY | Test ping vers le DC depuis le cluster --------------------------------------------------------------------------------------- 3.70s
+2026-03-08 19:30:15,597 p=1362603 u=administrator n=ansible INFO| IMPORT | Vérifier si l'image est déjà dans k3s containerd ----------------------------------------------------------------------------- 2.29s
+2026-03-08 19:30:15,597 p=1362603 u=administrator n=ansible INFO| IMPORT | Confirmer image dans containerd ---------------------------------------------------------------------------------------------- 2.20s
+2026-03-08 19:30:15,597 p=1362603 u=administrator n=ansible INFO| DEPLOY | Attendre que les PVC soient Bound (samba-dc-data) ---------------------------------------------------------------------------- 2.19s
+2026-03-08 19:30:15,598 p=1362603 u=administrator n=ansible INFO| BUILD | Démarrer et activer le service docker ----------------------------------------------------------------------------------------- 1.48s
+2026-03-08 19:30:15,598 p=1362603 u=administrator n=ansible INFO| DEPLOY | Déployer les Services TCP (LoadBalancer MetalLB) ----------------------------------------------------------------------------- 1.15s
+2026-03-08 19:30:15,598 p=1362603 u=administrator n=ansible INFO| DEPLOY | Créer les PersistentVolumeClaims Longhorn ------------------------------------------------------------------------------------ 1.07s
+2026-03-08 19:30:15,598 p=1362603 u=administrator n=ansible INFO| DEPLOY | Créer/Mettre à jour le Secret des credentials AD depuis les vars ------------------------------------------------------------- 0.99s
+2026-03-08 19:30:15,598 p=1362603 u=administrator n=ansible INFO| DEPLOY | Déployer les Services UDP (LoadBalancer MetalLB) ----------------------------------------------------------------------------- 0.97s
+2026-03-08 19:30:15,598 p=1362603 u=administrator n=ansible INFO| DEPLOY | Créer le namespace active-directory ------------------------------------------------------------------------------------------ 0.95s
+2026-03-08 19:30:15,598 p=1362603 u=administrator n=ansible INFO| DEPLOY | Déployer le StatefulSet Samba DC --------------------------------------------------------------------------------------------- 0.87s
+2026-03-08 19:30:15,598 p=1362603 u=administrator n=ansible INFO| DEPLOY | Attendre que les PVC soient Bound (samba-dc-logs) ---------------------------------------------------------------------------- 0.86s
+2026-03-08 19:30:15,599 p=1362603 u=administrator n=ansible INFO| FSMO | Afficher les rôles FSMO actuels ------------------------------------------------------------------------------------------------ 0.83s
+2026-03-08 19:30:15,599 p=1362603 u=administrator n=ansible INFO| STATUS | Afficher les pods active-directory ------------------------------------------------------------------------------------------- 0.82s
+2026-03-08 19:30:15,599 p=1362603 u=administrator n=ansible INFO| STATUS | Afficher les logs récents de samba-dc-0 -------------------------------------------------------------------------------------- 0.81s
+2026-03-08 19:30:15,599 p=1362603 u=administrator n=ansible INFO| VERIFY | Test DNS - Résolution du domaine corpl.lcl ----------------------------------------------------------------------------------- 0.80s
+2026-03-08 19:30:15,599 p=1362603 u=administrator n=ansible INFO| VERIFY | Test Kerberos - Obtenir un ticket TGT ---------------------------------------------------------------------------------------- 0.79s
+2026-03-08 19:30:15,599 p=1362603 u=administrator n=ansible INFO| VERIFY | Test réplication AD ---------------------------------------------------------------------------------------------------------- 0.78s
