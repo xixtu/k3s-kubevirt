@@ -376,7 +376,7 @@
                   "lib": ["ES2021"],
                   "declaration": true,
                   "strict": false,
-                  "moduleResolution": "node",
+                  "moduleResolution": "bundler",
                   "skipLibCheck": true,
                   "esModuleInterop": true,
                   "experimentalDecorators": true,
