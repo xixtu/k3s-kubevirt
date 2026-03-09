@@ -450,24 +450,25 @@
               fi
 
               # ── Compilation medusa-config.ts → medusa-config.js ──
-              # Medusa CLI (build + db:migrate) cherche medusa-config.js (CJS),
-              # pas le source TypeScript. On le compile une fois avec esbuild.
-              if [ ! -f "${APP_DIR}/medusa-config.js" ]; then
-                echo "[setup] Compilation medusa-config.ts → medusa-config.js (esbuild)..."
-                cd "${APP_DIR}"
-                ./node_modules/.bin/esbuild medusa-config.ts \
-                  --bundle=false --platform=node --format=cjs \
-                  --outfile=medusa-config.js 2>&1 || {
-                  echo "[setup] ERREUR: compilation medusa-config.ts échouée"
-                  exit 1
-                }
-                echo "[setup] medusa-config.js créé."
-              fi
+              # Medusa CLI (build + db:migrate) cherche medusa-config.js (CJS).
+              # --bundle=true : inline defineConfig depuis @medusajs/framework/config
+              # (nécessaire car ce package est ESM-only → require() retournerait undefined)
+              # Toujours régénéré (esbuild est rapide, ~1 sec)
+              echo "[setup] Compilation medusa-config.ts → medusa-config.js (esbuild --bundle)..."
+              ./node_modules/.bin/esbuild medusa-config.ts \
+                --bundle=true --platform=node --format=cjs \
+                --outfile=medusa-config.js 2>&1 || {
+                echo "[setup] ERREUR: compilation medusa-config.ts échouée"
+                exit 1
+              }
+              echo "[setup] medusa-config.js créé."
 
               # ── Build Medusa (compilation TypeScript → .medusa/server) ──
-              # Sentinel file : créé UNIQUEMENT après un medusa build complet
-              if [ ! -f "${APP_DIR}/.medusa-build-complete" ]; then
+              # Double vérification : sentinel ET présence réelle de l'output
+              # (évite le cas d'un sentinel créé après un build qui a exit 0 mais échoué)
+              if [ ! -f "${APP_DIR}/.medusa-build-complete" ] || [ ! -f "${APP_DIR}/.medusa/server/index.js" ]; then
                 echo "[setup] Build Medusa (compilation TypeScript)..."
+                rm -f "${APP_DIR}/.medusa-build-complete"
                 rm -rf "${APP_DIR}/.medusa"
                 export NODE_OPTIONS="--max-old-space-size=1536"
                 ./node_modules/.bin/medusa build 2>&1 || {
@@ -475,18 +476,31 @@
                   rm -rf "${APP_DIR}/.medusa"
                   exit 1
                 }
+                if [ ! -f "${APP_DIR}/.medusa/server/index.js" ]; then
+                  echo "[setup] ERREUR: medusa build a exit 0 mais .medusa/server/index.js manquant"
+                  rm -rf "${APP_DIR}/.medusa"
+                  exit 1
+                fi
                 unset NODE_OPTIONS
                 touch "${APP_DIR}/.medusa-build-complete"
                 echo "[setup] Build terminé."
               else
-                echo "[setup] Build déjà présent (.medusa-build-complete), skip."
+                echo "[setup] Build déjà présent (.medusa-build-complete + index.js), skip."
               fi
 
-              echo "[setup] Setup OK. Passage au container principal."
+              # ── Migrations PostgreSQL (idempotent, toujours exécuté) ──
+              echo "[setup] Application des migrations PostgreSQL..."
+              ./node_modules/.bin/medusa db:migrate 2>&1 || {
+                echo "[setup] ERREUR: migrations échouées"
+                exit 1
+              }
+              echo "[setup] Migrations OK."
+
+              echo "[setup] Setup terminé. Démarrage du container principal."
 
             # ── start.sh ──────────────────────────────────────────────
             # Exécuté dans le container principal (après l'initContainer)
-            # Migrations + démarrage du serveur (~15-30 sec)
+            # Setup complet (npm + build + migrations) déjà fait → démarrage immédiat
             start.sh: |
               #!/bin/sh
               set -e
@@ -498,9 +512,6 @@
               echo "==================================================="
 
               cd "${APP_DIR}"
-
-              echo "[start] Application des migrations PostgreSQL..."
-              ./node_modules/.bin/medusa db:migrate 2>&1
 
               echo "[start] Démarrage du serveur Medusa sur port {{ medusa_port }}..."
               exec node .medusa/server/index.js
