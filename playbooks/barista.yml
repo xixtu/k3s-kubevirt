@@ -430,9 +430,13 @@
               cd "${APP_DIR}"
 
               # ── Installation des dépendances (premier démarrage uniquement) ──
-              if [ ! -d "${APP_DIR}/node_modules/@medusajs" ]; then
-                echo "[boot] Installation des dépendances npm (~3-5 minutes)..."
+              # Vérifier que l'installation est complète (pas une install partielle crashée)
+              if [ ! -f "${APP_DIR}/node_modules/.bin/medusa" ]; then
+                echo "[boot] Installation des dépendances npm (~5-8 minutes)..."
+                # Allouer 1536MB de heap pour éviter l'OOM sur le package-lock.json de Medusa
+                export NODE_OPTIONS="--max-old-space-size=1536"
                 npm install --prefer-offline 2>&1
+                unset NODE_OPTIONS
                 echo "[boot] Dépendances installées."
               fi
 
@@ -538,7 +542,7 @@
                         cpu: 200m
                         memory: 512Mi
                       limits:
-                        memory: 1Gi
+                        memory: 2Gi
                     # Startup probe : laisse 15 min pour le premier boot (npm install + build)
                     startupProbe:
                       httpGet:
