@@ -430,11 +430,12 @@
 
               cd "${APP_DIR}"
 
-              # ── Installation des dépendances (si absentes ou incomplètes) ──
-              if [ ! -f "${APP_DIR}/node_modules/.bin/medusa" ]; then
+              # ── Installation des dépendances ──
+              # Sentinel file : créé UNIQUEMENT après un npm install complet
+              # Évite de réutiliser un node_modules partiel (install interrompue)
+              if [ ! -f "${APP_DIR}/.npm-install-complete" ]; then
                 echo "[setup] Installation des dépendances npm (~5-10 minutes)..."
-                # --max-old-space-size=1536 : évite l'OOM sur le package-lock.json de Medusa
-                # --no-audit --no-fund : supprime les appels réseau non essentiels
+                rm -rf "${APP_DIR}/node_modules"
                 export NODE_OPTIONS="--max-old-space-size=1536"
                 npm install --no-audit --no-fund --loglevel=http 2>&1 || {
                   echo "[setup] ERREUR: npm install a échoué - nettoyage..."
@@ -442,14 +443,17 @@
                   exit 1
                 }
                 unset NODE_OPTIONS
+                touch "${APP_DIR}/.npm-install-complete"
                 echo "[setup] Dépendances installées."
               else
-                echo "[setup] Dépendances déjà installées, skip."
+                echo "[setup] Dépendances déjà installées (.npm-install-complete), skip."
               fi
 
               # ── Build Medusa (compilation TypeScript → .medusa/server) ──
-              if [ ! -d "${APP_DIR}/.medusa/server" ]; then
+              # Sentinel file : créé UNIQUEMENT après un medusa build complet
+              if [ ! -f "${APP_DIR}/.medusa-build-complete" ]; then
                 echo "[setup] Build Medusa (compilation TypeScript)..."
+                rm -rf "${APP_DIR}/.medusa"
                 export NODE_OPTIONS="--max-old-space-size=1536"
                 ./node_modules/.bin/medusa build 2>&1 || {
                   echo "[setup] ERREUR: medusa build a échoué - nettoyage..."
@@ -457,9 +461,10 @@
                   exit 1
                 }
                 unset NODE_OPTIONS
+                touch "${APP_DIR}/.medusa-build-complete"
                 echo "[setup] Build terminé."
               else
-                echo "[setup] Build déjà présent, skip."
+                echo "[setup] Build déjà présent (.medusa-build-complete), skip."
               fi
 
               echo "[setup] Setup OK. Passage au container principal."
