@@ -432,10 +432,18 @@
               # ── Installation des dépendances (premier démarrage uniquement) ──
               # Vérifier que l'installation est complète (pas une install partielle crashée)
               if [ ! -f "${APP_DIR}/node_modules/.bin/medusa" ]; then
-                echo "[boot] Installation des dépendances npm (~5-8 minutes)..."
-                # Allouer 1536MB de heap pour éviter l'OOM sur le package-lock.json de Medusa
+                echo "[boot] Installation des dépendances npm (~5-10 minutes)..."
+                echo "[boot] Téléchargement en cours, logs sparse pendant la résolution..."
+                # --max-old-space-size=1536 : évite l'OOM sur le package-lock.json de Medusa
+                # --no-audit --no-fund : supprime les appels réseau non essentiels
+                # --loglevel=http : affiche les téléchargements en cours
                 export NODE_OPTIONS="--max-old-space-size=1536"
-                npm install --prefer-offline 2>&1
+                npm install --no-audit --no-fund --loglevel=http 2>&1 || {
+                  echo "[boot] ERREUR: npm install a échoué (code $?)"
+                  echo "[boot] Nettoyage node_modules partiel..."
+                  rm -rf "${APP_DIR}/node_modules"
+                  exit 1
+                }
                 unset NODE_OPTIONS
                 echo "[boot] Dépendances installées."
               fi
