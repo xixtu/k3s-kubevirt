@@ -359,8 +359,11 @@
                   "dev": "medusa develop"
                 },
                 "dependencies": {
-                  "@medusajs/medusa": "^2.6.0",
-                  "@medusajs/dashboard": "^2.6.0"
+                  "@medusajs/medusa": "^2.13.0",
+                  "@medusajs/dashboard": "^2.13.0"
+                },
+                "devDependencies": {
+                  "typescript": "^5.0.0"
                 }
               }
 
@@ -443,15 +446,19 @@
               echo "  Barista - Setup (initContainer)"
               echo "==================================================="
 
-              # ── Premier démarrage : copie des fichiers de config ──
-              if [ ! -f "${APP_DIR}/package.json" ]; then
-                echo "[setup] Premier démarrage : copie des fichiers de config..."
-                mkdir -p "${APP_DIR}/src"
-                cp "${CONFIG_DIR}/package.json"     "${APP_DIR}/package.json"
-                cp "${CONFIG_DIR}/tsconfig.json"    "${APP_DIR}/tsconfig.json"
-                cp "${CONFIG_DIR}/medusa-config.ts" "${APP_DIR}/medusa-config.ts"
-                echo "[setup] Fichiers de configuration copiés."
+              # ── Copie des fichiers de config (toujours, pour prendre en compte les mises à jour) ──
+              mkdir -p "${APP_DIR}/src"
+              # Si package.json change (nouvelles deps), invalider le sentinel npm
+              if [ -f "${APP_DIR}/package.json" ]; then
+                if ! diff -q "${CONFIG_DIR}/package.json" "${APP_DIR}/package.json" > /dev/null 2>&1; then
+                  echo "[setup] package.json modifié → invalidation sentinel npm et build..."
+                  rm -f "${APP_DIR}/.npm-install-complete" "${APP_DIR}/.medusa-build-complete"
+                fi
               fi
+              cp "${CONFIG_DIR}/package.json"     "${APP_DIR}/package.json"
+              cp "${CONFIG_DIR}/tsconfig.json"    "${APP_DIR}/tsconfig.json"
+              cp "${CONFIG_DIR}/medusa-config.ts" "${APP_DIR}/medusa-config.ts"
+              echo "[setup] Fichiers de configuration copiés."
 
               cd "${APP_DIR}"
 
