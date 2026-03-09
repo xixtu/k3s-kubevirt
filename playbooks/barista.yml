@@ -404,6 +404,31 @@
                 },
               })
 
+            # ── medusa-config.js ──────────────────────────────────────
+            # Version CJS pré-compilée de medusa-config.ts
+            # defineConfig() dans Medusa v2 est un no-op (return config)
+            # On exporte la config directement sans compiler le TypeScript
+            # dynamicImport() charge ce fichier via ESM import() → result.default
+            medusa-config.js: |
+              "use strict";
+              Object.defineProperty(exports, "__esModule", { value: true });
+              exports.default = {
+                projectConfig: {
+                  databaseUrl: process.env.DATABASE_URL,
+                  redisUrl: process.env.REDIS_URL,
+                  http: {
+                    adminCors: process.env.ADMIN_CORS || "https://{{ medusa_domain }}",
+                    authCors: process.env.AUTH_CORS || "https://{{ medusa_domain }}",
+                    storeCors: process.env.STORE_CORS || "https://{{ medusa_domain }}",
+                    jwtSecret: process.env.JWT_SECRET || "supersecret",
+                    cookieSecret: process.env.COOKIE_SECRET || "supersecret",
+                  },
+                },
+                admin: {
+                  disable: false,
+                },
+              };
+
             # ── setup.sh ──────────────────────────────────────────────
             # Exécuté dans l'initContainer (pas de probe timeout)
             # Gère npm install + medusa build une seule fois (persisté sur PVC)
@@ -449,19 +474,13 @@
                 echo "[setup] Dépendances déjà installées (.npm-install-complete), skip."
               fi
 
-              # ── Compilation medusa-config.ts → medusa-config.js ──
-              # Medusa CLI (build + db:migrate) cherche medusa-config.js (CJS).
-              # --bundle=true : inline defineConfig depuis @medusajs/framework/config
-              # (nécessaire car ce package est ESM-only → require() retournerait undefined)
-              # Toujours régénéré (esbuild est rapide, ~1 sec)
-              echo "[setup] Compilation medusa-config.ts → medusa-config.js (esbuild --bundle)..."
-              ./node_modules/.bin/esbuild medusa-config.ts \
-                --bundle=true --platform=node --format=cjs \
-                --outfile=medusa-config.js 2>&1 || {
-                echo "[setup] ERREUR: compilation medusa-config.ts échouée"
-                exit 1
-              }
-              echo "[setup] medusa-config.js créé."
+              # ── Copie de medusa-config.js (CJS pré-écrit dans le ConfigMap) ──
+              # Medusa CLI (build + db:migrate) charge ce fichier via dynamicImport()
+              # (ESM import()) → result.default. defineConfig() est un no-op dans
+              # Medusa v2, donc on exporte la config directement en CJS sans compilation.
+              echo "[setup] Copie de medusa-config.js depuis le ConfigMap..."
+              cp "${CONFIG_DIR}/medusa-config.js" "${APP_DIR}/medusa-config.js"
+              echo "[setup] medusa-config.js copié."
 
               # ── Build Medusa (compilation TypeScript → .medusa/server) ──
               # Double vérification : sentinel ET présence réelle de l'output
