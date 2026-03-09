@@ -404,9 +404,10 @@
                 },
               })
 
-            # ── startup.sh ────────────────────────────────────────────
-            # Gère le premier démarrage (installation) et les redémarrages suivants
-            startup.sh: |
+            # ── setup.sh ──────────────────────────────────────────────
+            # Exécuté dans l'initContainer (pas de probe timeout)
+            # Gère npm install + medusa build une seule fois (persisté sur PVC)
+            setup.sh: |
               #!/bin/sh
               set -e
 
@@ -414,52 +415,74 @@
               CONFIG_DIR="/config"
 
               echo "==================================================="
-              echo "  Barista - Medusa.js v2"
+              echo "  Barista - Setup (initContainer)"
               echo "==================================================="
 
               # ── Premier démarrage : copie des fichiers de config ──
               if [ ! -f "${APP_DIR}/package.json" ]; then
-                echo "[boot] Premier démarrage détecté."
+                echo "[setup] Premier démarrage : copie des fichiers de config..."
                 mkdir -p "${APP_DIR}/src"
                 cp "${CONFIG_DIR}/package.json"     "${APP_DIR}/package.json"
                 cp "${CONFIG_DIR}/tsconfig.json"    "${APP_DIR}/tsconfig.json"
                 cp "${CONFIG_DIR}/medusa-config.ts" "${APP_DIR}/medusa-config.ts"
-                echo "[boot] Fichiers de configuration copiés."
+                echo "[setup] Fichiers de configuration copiés."
               fi
 
               cd "${APP_DIR}"
 
-              # ── Installation des dépendances (premier démarrage uniquement) ──
-              # Vérifier que l'installation est complète (pas une install partielle crashée)
+              # ── Installation des dépendances (si absentes ou incomplètes) ──
               if [ ! -f "${APP_DIR}/node_modules/.bin/medusa" ]; then
-                echo "[boot] Installation des dépendances npm (~5-10 minutes)..."
-                echo "[boot] Téléchargement en cours, logs sparse pendant la résolution..."
+                echo "[setup] Installation des dépendances npm (~5-10 minutes)..."
                 # --max-old-space-size=1536 : évite l'OOM sur le package-lock.json de Medusa
                 # --no-audit --no-fund : supprime les appels réseau non essentiels
-                # --loglevel=http : affiche les téléchargements en cours
                 export NODE_OPTIONS="--max-old-space-size=1536"
                 npm install --no-audit --no-fund --loglevel=http 2>&1 || {
-                  echo "[boot] ERREUR: npm install a échoué (code $?)"
-                  echo "[boot] Nettoyage node_modules partiel..."
+                  echo "[setup] ERREUR: npm install a échoué - nettoyage..."
                   rm -rf "${APP_DIR}/node_modules"
                   exit 1
                 }
                 unset NODE_OPTIONS
-                echo "[boot] Dépendances installées."
+                echo "[setup] Dépendances installées."
+              else
+                echo "[setup] Dépendances déjà installées, skip."
               fi
 
-              # ── Build Medusa (premier démarrage ou après mise à jour) ──
+              # ── Build Medusa (compilation TypeScript → .medusa/server) ──
               if [ ! -d "${APP_DIR}/.medusa/server" ]; then
-                echo "[boot] Build Medusa (compilation TypeScript)..."
-                ./node_modules/.bin/medusa build 2>&1
-                echo "[boot] Build terminé."
+                echo "[setup] Build Medusa (compilation TypeScript)..."
+                export NODE_OPTIONS="--max-old-space-size=1536"
+                ./node_modules/.bin/medusa build 2>&1 || {
+                  echo "[setup] ERREUR: medusa build a échoué - nettoyage..."
+                  rm -rf "${APP_DIR}/.medusa"
+                  exit 1
+                }
+                unset NODE_OPTIONS
+                echo "[setup] Build terminé."
+              else
+                echo "[setup] Build déjà présent, skip."
               fi
 
-              # ── Migrations base de données (idempotent) ──
-              echo "[boot] Application des migrations PostgreSQL..."
-              ./node_modules/.bin/medusa db:migrate 2>&1 || echo "[boot] Migrations déjà à jour."
+              echo "[setup] Setup OK. Passage au container principal."
 
-              echo "[boot] Démarrage du serveur Medusa sur port {{ medusa_port }}..."
+            # ── start.sh ──────────────────────────────────────────────
+            # Exécuté dans le container principal (après l'initContainer)
+            # Migrations + démarrage du serveur (~15-30 sec)
+            start.sh: |
+              #!/bin/sh
+              set -e
+
+              APP_DIR="/medusa-app"
+
+              echo "==================================================="
+              echo "  Barista - Start (container principal)"
+              echo "==================================================="
+
+              cd "${APP_DIR}"
+
+              echo "[start] Application des migrations PostgreSQL..."
+              ./node_modules/.bin/medusa db:migrate 2>&1
+
+              echo "[start] Démarrage du serveur Medusa sur port {{ medusa_port }}..."
               exec node .medusa/server/index.js
       tags: [barista, barista-install]
 
@@ -503,10 +526,30 @@
                 labels:
                   app: {{ app_name }}-medusa
               spec:
+                # ── initContainer : npm install + medusa build (sans probe timeout) ──
+                initContainers:
+                  - name: medusa-setup
+                    image: {{ node_image }}
+                    command: ["/bin/sh", "/config/setup.sh"]
+                    env:
+                      - name: NODE_ENV
+                        value: "production"
+                    volumeMounts:
+                      - name: app-data
+                        mountPath: /medusa-app
+                      - name: medusa-config
+                        mountPath: /config
+                    resources:
+                      requests:
+                        cpu: 500m
+                        memory: 512Mi
+                      limits:
+                        memory: 2Gi
+                # ── Container principal : migrations + démarrage serveur (~15 sec) ──
                 containers:
                   - name: medusa
                     image: {{ node_image }}
-                    command: ["/bin/sh", "/config/startup.sh"]
+                    command: ["/bin/sh", "/config/start.sh"]
                     ports:
                       - containerPort: {{ medusa_port }}
                         name: http
@@ -548,16 +591,16 @@
                     resources:
                       requests:
                         cpu: 200m
-                        memory: 512Mi
+                        memory: 256Mi
                       limits:
-                        memory: 2Gi
-                    # Startup probe : laisse 15 min pour le premier boot (npm install + build)
+                        memory: 1Gi
+                    # Setup fait par initContainer → startup rapide (~30 sec)
                     startupProbe:
                       httpGet:
                         path: /health
                         port: {{ medusa_port }}
-                      failureThreshold: 90
-                      periodSeconds: 10
+                      failureThreshold: 12
+                      periodSeconds: 5
                     readinessProbe:
                       httpGet:
                         path: /health
