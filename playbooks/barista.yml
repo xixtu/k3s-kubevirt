@@ -449,6 +449,21 @@
                 echo "[setup] Dépendances déjà installées (.npm-install-complete), skip."
               fi
 
+              # ── Compilation medusa-config.ts → medusa-config.js ──
+              # Medusa CLI (build + db:migrate) cherche medusa-config.js (CJS),
+              # pas le source TypeScript. On le compile une fois avec esbuild.
+              if [ ! -f "${APP_DIR}/medusa-config.js" ]; then
+                echo "[setup] Compilation medusa-config.ts → medusa-config.js (esbuild)..."
+                cd "${APP_DIR}"
+                ./node_modules/.bin/esbuild medusa-config.ts \
+                  --bundle=false --platform=node --format=cjs \
+                  --outfile=medusa-config.js 2>&1 || {
+                  echo "[setup] ERREUR: compilation medusa-config.ts échouée"
+                  exit 1
+                }
+                echo "[setup] medusa-config.js créé."
+              fi
+
               # ── Build Medusa (compilation TypeScript → .medusa/server) ──
               # Sentinel file : créé UNIQUEMENT après un medusa build complet
               if [ ! -f "${APP_DIR}/.medusa-build-complete" ]; then
@@ -539,6 +554,23 @@
                     env:
                       - name: NODE_ENV
                         value: "production"
+                      - name: REDIS_URL
+                        value: "redis://{{ app_name }}-redis:6379"
+                      - name: DATABASE_URL
+                        valueFrom:
+                          secretKeyRef:
+                            name: {{ app_name }}-secret
+                            key: DATABASE_URL
+                      - name: JWT_SECRET
+                        valueFrom:
+                          secretKeyRef:
+                            name: {{ app_name }}-secret
+                            key: JWT_SECRET
+                      - name: COOKIE_SECRET
+                        valueFrom:
+                          secretKeyRef:
+                            name: {{ app_name }}-secret
+                            key: COOKIE_SECRET
                     volumeMounts:
                       - name: app-data
                         mountPath: /medusa-app
