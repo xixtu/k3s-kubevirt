@@ -382,8 +382,8 @@
                   "experimentalDecorators": true,
                   "emitDecoratorMetadata": true
                 },
-                "include": ["src", "medusa-config.ts"],
-                "exclude": ["dist", "node_modules", ".medusa"]
+                "include": ["src"],
+                "exclude": ["dist", "node_modules", ".medusa", "medusa-config.ts"]
               }
 
             # ── medusa-config.ts ──────────────────────────────────────
