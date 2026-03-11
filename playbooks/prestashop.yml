@@ -4,28 +4,33 @@
 # =============================================================
 # Usage : ansible-playbook -i inventory/hosts.yml playbooks/prestashop.yml
 # Tags :
-#   prestashop-install → Installer PrestaShop + MariaDB via Helm (Bitnami)
+#   prestashop-install → Déployer PrestaShop + MariaDB (manifests kubectl)
 #   prestashop-tls     → Forcer renouvellement certificat ECDSA P-384
 #   prestashop-verify  → Vérifier pods, PVCs, Ingress, certificat, HPA
 #
+# Images Docker officielles (Docker Hub - gratuites) :
+#   prestashop/prestashop:{{ prestashop_version }}  (officiel PrestaShop)
+#   mariadb:{{ prestashop_config.mariadb_image_tag }}          (officiel MariaDB)
+#   busybox:1.36                                    (init container wait DB)
+#
 # Architecture :
-#   PrestaShop (Bitnami)  → ClusterIP :80  → IngressRoute (websecure)
-#   MariaDB 10.11         → ClusterIP :3306 (interne uniquement)
-#   Ingress standard      → HTTP-01 solver cert-manager (port 80)
-#   IngressRoute CRD      → HTTPS websecure TLS + security-headers
-#   HPA                   → min=1 max=3 CPU=70% Memory=80%
+#   [init] busybox wait-for-mariadb (nc -z :3306)
+#   MariaDB Deployment  → ClusterIP :3306 (interne uniquement)
+#   PrestaShop Deployment → ClusterIP :80  → Ingress + IngressRoute
+#   Ingress standard    → HTTP-01 challenge cert-manager (port 80)
+#   IngressRoute CRD    → HTTPS websecure + security-headers middleware
+#   HPA                 → min=1 max=3 CPU=70% Memory=80%
 #
 # Fonctionnalités e-commerce incluses :
-#   ✓ Catalogue        : variantes (mouture), collections (origine), images multiples
-#   ✓ Stock            : inventaire par variante, alertes seuil
-#   ✓ Commandes        : pipeline complet panier → paiement → expédition → livré
-#   ✓ Paiements natifs : virement bancaire, chèque, cash (à la livraison)
-#   ✓ Paiements module : Wero (module Marketplace), Stripe (module officiel)
-#   ✓ Clients          : comptes, historique, groupes (pro/particulier)
-#   ✓ Livraison        : zones, transporteurs, calcul frais de port
-#   ✓ Retours          : RMA natif, remboursements
-#   ✓ Promotions       : codes promo, réductions automatiques
-#   ✓ SEO              : URLs rewriting, meta, sitemap
+#   ✓ Catalogue   : variantes (mouture), collections (origine), images multiples
+#   ✓ Stock       : inventaire par variante, alertes seuil
+#   ✓ Commandes   : pipeline complet panier → paiement → expédition → livré
+#   ✓ Paiements   : virement, chèque, cash natifs + Wero/Stripe via modules
+#   ✓ Clients     : comptes, historique, groupes (pro/particulier)
+#   ✓ Livraison   : zones, transporteurs, calcul frais de port
+#   ✓ Retours     : RMA natif, remboursements
+#   ✓ Promotions  : codes promo, réductions automatiques
+#   ✓ SEO         : URLs rewriting, meta, sitemap
 #
 # URL publique  : https://barista.app.xixtu.eu
 # Admin panel   : https://barista.app.xixtu.eu/admin-barista
@@ -35,18 +40,24 @@
 #   - DNS : barista.app.xixtu.eu → <IP publique Traefik>
 #   - Ports 80 et 443 accessibles depuis Internet (challenge HTTP-01)
 #
-# ⚠ IMPORTANT HTTPS / SSL Offloading :
-#   Traefik termine TLS et forward en HTTP vers PrestaShop.
-#   prestashopEnableHttps=true configure l'URL de la boutique en https://
-#   mais PrestaShop reçoit les requêtes en HTTP (port 80) depuis Traefik.
-#   Le header X-Forwarded-Proto: https est envoyé par Traefik.
+# ⚠ PSA (Pod Security Admission) :
+#   PrestaShop tourne via Apache en tant que www-data (uid 33).
+#   Le namespace est labellisé 'baseline' pour autoriser ce mode de
+#   fonctionnement tout en bloquant les usages réellement privilégiés.
+#
+# ⚠ SSL Offloading :
+#   Traefik termine TLS et forward en HTTP vers PrestaShop (port 80).
+#   PS_ENABLE_SSL=1 configure l'URL de la boutique en https://.
+#   Apache reçoit les requêtes HTTP avec X-Forwarded-Proto: https.
+#
+# ⚠ Premier démarrage :
+#   PS_INSTALL_AUTO=1 + PS_INSTALL_DB=1 lancent l'installation complète.
+#   Durée estimée : 5 à 15 minutes selon les ressources disponibles.
+#   PS_ERASE_DB=0 garantit que les redémarrages ne réinstallent pas.
 #
 # ⚠ HPA et scaling horizontal :
-#   Le scaling multi-pods nécessite :
-#     1. Sessions Redis (PS_CACHE_ENABLED + Redis) - voir modules cache
-#     2. PVC media en ReadWriteMany (Longhorn RWX via NFS gateway)
-#   Par défaut : 1 replica, HPA actif mais limité par RWO storage.
-#   Migration vers RWX : changer accessModes + activer Redis sessions.
+#   Scaling multi-pods nécessite sessions Redis + PVC ReadWriteMany.
+#   Par défaut : 1 replica, HPA actif mais borné par RWO storage.
 # =============================================================
 
 - name: "PrestaShop - Boutique e-commerce café capsules Barista"
@@ -59,23 +70,8 @@
   tasks:
 
     # ==========================================================
-    # PRÉPARATION
+    # NAMESPACE + PSA LABEL
     # ==========================================================
-
-    - name: Ajouter le repo Helm Bitnami
-      ansible.builtin.command: >
-        helm repo add bitnami https://charts.bitnami.com/bitnami
-      environment:
-        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
-      changed_when: false
-      tags: [prestashop, prestashop-install, prestashop-tls]
-
-    - name: Mettre à jour les repos Helm
-      ansible.builtin.command: helm repo update
-      environment:
-        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
-      changed_when: false
-      tags: [prestashop, prestashop-install, prestashop-tls]
 
     - name: Créer le namespace prestashop (si absent)
       ansible.builtin.command: k3s kubectl create namespace prestashop
@@ -86,221 +82,425 @@
       changed_when: ns_create.rc == 0
       tags: [prestashop, prestashop-install, prestashop-tls]
 
+    - name: Labelliser le namespace prestashop (PSA baseline - Apache www-data)
+      ansible.builtin.command: >
+        k3s kubectl label namespace prestashop
+        pod-security.kubernetes.io/enforce=baseline
+        pod-security.kubernetes.io/warn=baseline
+        pod-security.kubernetes.io/audit=baseline
+        --overwrite
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [prestashop, prestashop-install, prestashop-tls]
+
     # ==========================================================
-    # FICHIER DE VALEURS HELM
+    # MANIFESTS KUBERNETES (Secrets, PVCs, Deployments, Services)
     # ==========================================================
 
-    - name: Écrire le fichier de valeurs PrestaShop
+    - name: Écrire les manifests PrestaShop (Secret + PVCs + MariaDB + App)
       ansible.builtin.copy:
-        dest: /tmp/prestashop-values.yml
+        dest: /tmp/prestashop-stack.yml
         mode: '0600'
         content: |
           # ==========================================================
-          # PrestaShop Helm values - Boutique café capsules Barista
-          # Chart : bitnami/prestashop
-          # Docs  : https://github.com/bitnami/charts/tree/main/bitnami/prestashop
+          # SECRET : Mots de passe (base64 via stringData → Opaque)
           # ==========================================================
-
-          ## --- Storage class globale ---
-          global:
-            storageClass: "longhorn-fast"
-
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: prestashop-secret
+            namespace: prestashop
+            labels:
+              app: prestashop
+          type: Opaque
+          stringData:
+            db-root-password: "{{ prestashop_config.db_root_password }}"
+            db-password: "{{ prestashop_config.db_password }}"
+            admin-password: "{{ prestashop_config.admin_password }}"
+          ---
           # ==========================================================
-          # APPLICATION PRESTASHOP
+          # PVC : Base de données MariaDB (longhorn-fast)
           # ==========================================================
-
-          ## Domaine public de la boutique (doit correspondre au DNS)
-          prestashopHost: "{{ external_domains.barista }}"
-
-          ## HTTPS activé (SSL offloading via Traefik)
-          ## PrestaShop configure son URL de base en https://
-          prestashopEnableHttps: true
-
-          ## Compte administrateur backoffice
-          prestashopUsername: "{{ prestashop_config.admin_user }}"
-          prestashopPassword: "{{ prestashop_config.admin_password }}"
-          prestashopEmail: "{{ letsencrypt_email }}"
-          prestashopFirstName: "Admin"
-          prestashopLastName: "Barista"
-
-          ## Localisation boutique (France)
-          prestashopCountry: "fr"
-          prestashopLanguage: "fr"
-
-          ## Sécurité session : désactiver vérification IP (breaks behind proxy)
-          prestashopCookieCheckIP: "false"
-
-          ## Ne pas ré-installer si déjà configuré (idempotent)
-          prestashopSkipInstall: false
-
-          ## Variables d'environnement supplémentaires
-          extraEnvVars:
-            ## Dossier admin custom (masquer /admin pour sécurité)
-            - name: PS_FOLDER_ADMIN
-              value: "admin-barista"
-            ## Dossier install custom
-            - name: PS_FOLDER_INSTALL
-              value: "install-barista"
-            ## Activer SSL côté PrestaShop
-            - name: PS_ENABLE_SSL
-              value: "1"
-            ## Activer la réécriture d'URL (URLs SEO)
-            - name: PS_REWRITE_ENGINES
-              value: "1"
-            ## Faire confiance au proxy Traefik (plage CIDR pods K3s)
-            ## Permet de lire correctement X-Forwarded-Proto: https
-            - name: _PS_TRUST_IP_
-              value: "10.42.0.0/16"
-
+          apiVersion: v1
+          kind: PersistentVolumeClaim
+          metadata:
+            name: prestashop-db-pvc
+            namespace: prestashop
+            labels:
+              app: prestashop
+              tier: database
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            storageClassName: longhorn-fast
+            resources:
+              requests:
+                storage: "{{ prestashop_config.db_storage_size }}"
+          ---
           # ==========================================================
-          # SERVICE (ClusterIP - Traefik expose via Ingress)
+          # PVC : Données applicatives PrestaShop (thèmes, modules, médias)
           # ==========================================================
-
-          service:
+          apiVersion: v1
+          kind: PersistentVolumeClaim
+          metadata:
+            name: prestashop-data-pvc
+            namespace: prestashop
+            labels:
+              app: prestashop
+              tier: app
+          spec:
+            accessModes:
+              ## ReadWriteOnce (1 pod) - migrer en ReadWriteMany pour HPA multi-pod
+              ## Longhorn RWX disponible depuis v1.6 (NFS gateway)
+              - ReadWriteOnce
+            storageClassName: longhorn-fast
+            resources:
+              requests:
+                storage: "{{ prestashop_config.data_storage_size }}"
+          ---
+          # ==========================================================
+          # DEPLOYMENT : MariaDB 10.11 (base de données officielle)
+          # ==========================================================
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: prestashop-mariadb
+            namespace: prestashop
+            labels:
+              app: prestashop-mariadb
+          spec:
+            replicas: 1
+            strategy:
+              type: Recreate  # Recreate car RWO - un seul pod à la fois
+            selector:
+              matchLabels:
+                app: prestashop-mariadb
+            template:
+              metadata:
+                labels:
+                  app: prestashop-mariadb
+              spec:
+                containers:
+                  - name: mariadb
+                    image: mariadb:{{ prestashop_config.mariadb_image_tag }}
+                    ports:
+                      - containerPort: 3306
+                    env:
+                      - name: MYSQL_ROOT_PASSWORD
+                        valueFrom:
+                          secretKeyRef:
+                            name: prestashop-secret
+                            key: db-root-password
+                      - name: MYSQL_DATABASE
+                        value: "{{ prestashop_config.db_name }}"
+                      - name: MYSQL_USER
+                        value: "{{ prestashop_config.db_user }}"
+                      - name: MYSQL_PASSWORD
+                        valueFrom:
+                          secretKeyRef:
+                            name: prestashop-secret
+                            key: db-password
+                      ## Encodage UTF-8 complet (emojis, caractères spéciaux)
+                      - name: MARIADB_CHARACTER_SET_SERVER
+                        value: "utf8mb4"
+                      - name: MARIADB_COLLATION_SERVER
+                        value: "utf8mb4_unicode_ci"
+                    volumeMounts:
+                      - name: db-data
+                        mountPath: /var/lib/mysql
+                    resources:
+                      requests:
+                        cpu: "100m"
+                        memory: "256Mi"
+                      limits:
+                        cpu: "500m"
+                        memory: "1Gi"
+                    readinessProbe:
+                      exec:
+                        command:
+                          - bash
+                          - -c
+                          - "mysqladmin ping -h localhost -u root -p${MYSQL_ROOT_PASSWORD} --silent"
+                      initialDelaySeconds: 30
+                      periodSeconds: 10
+                      timeoutSeconds: 5
+                      failureThreshold: 6
+                    livenessProbe:
+                      exec:
+                        command:
+                          - bash
+                          - -c
+                          - "mysqladmin ping -h localhost -u root -p${MYSQL_ROOT_PASSWORD} --silent"
+                      initialDelaySeconds: 60
+                      periodSeconds: 30
+                      timeoutSeconds: 5
+                      failureThreshold: 3
+                volumes:
+                  - name: db-data
+                    persistentVolumeClaim:
+                      claimName: prestashop-db-pvc
+          ---
+          # ==========================================================
+          # SERVICE : MariaDB (ClusterIP interne uniquement)
+          # ==========================================================
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: prestashop-mariadb
+            namespace: prestashop
+            labels:
+              app: prestashop-mariadb
+          spec:
+            selector:
+              app: prestashop-mariadb
+            ports:
+              - name: mysql
+                port: 3306
+                targetPort: 3306
             type: ClusterIP
-            port: 80
-
+          ---
           # ==========================================================
-          # INGRESS TRAEFIK
+          # DEPLOYMENT : PrestaShop (image officielle Docker Hub)
           # ==========================================================
-          # L'Ingress standard est requis pour que cert-manager génère
-          # le certificat TLS via le challenge HTTP-01.
-          # La route HTTPS websecure est gérée par l'IngressRoute CRD
-          # créé séparément dans ce playbook.
-          #
-          # Stratégie redirection HTTP → HTTPS :
-          #   - Middleware redirect-to-https appliqué sur entrypoint: web
-          #   - cert-manager utilise son propre Ingress temporaire (pas redirigé)
-          #   - Cf. playbooks/letsencrypt.yml commentaire ⚠
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: prestashop
+            namespace: prestashop
+            labels:
+              app: prestashop
+          spec:
+            replicas: 1
+            strategy:
+              type: Recreate  # Recreate car PVC RWO (1 seul pod à la fois)
+            selector:
+              matchLabels:
+                app: prestashop
+            template:
+              metadata:
+                labels:
+                  app: prestashop
+              spec:
+                ## Init container : attendre que MariaDB accepte les connexions
+                initContainers:
+                  - name: wait-for-mariadb
+                    image: busybox:1.36
+                    command:
+                      - sh
+                      - -c
+                      - |
+                        echo "Attente MariaDB sur prestashop-mariadb:3306..."
+                        until nc -z prestashop-mariadb 3306; do
+                          echo "MariaDB pas encore prête, nouvelle tentative dans 3s..."
+                          sleep 3
+                        done
+                        echo "MariaDB prête."
+                containers:
+                  - name: prestashop
+                    image: prestashop/prestashop:{{ prestashop_version }}
+                    ports:
+                      - containerPort: 80
+                    env:
+                      ## --- Connexion base de données ---
+                      - name: DB_SERVER
+                        value: "prestashop-mariadb"
+                      - name: DB_PORT
+                        value: "3306"
+                      - name: DB_NAME
+                        value: "{{ prestashop_config.db_name }}"
+                      - name: DB_USER
+                        value: "{{ prestashop_config.db_user }}"
+                      - name: DB_PASSWD
+                        valueFrom:
+                          secretKeyRef:
+                            name: prestashop-secret
+                            key: db-password
+                      - name: DB_PREFIX
+                        value: "ps_"
+                      ## --- Installation automatique ---
+                      - name: PS_INSTALL_AUTO
+                        value: "1"
+                      - name: PS_INSTALL_DB
+                        value: "1"
+                      - name: PS_ERASE_DB
+                        ## ⚠ NE PAS PASSER À 1 EN PRODUCTION
+                        ## (efface toutes les données de la boutique)
+                        value: "0"
+                      ## --- Configuration boutique ---
+                      - name: PS_DOMAIN
+                        value: "{{ external_domains.barista }}"
+                      - name: PS_LANGUAGE
+                        value: "fr"
+                      - name: PS_COUNTRY
+                        value: "fr"
+                      - name: PS_ENABLE_SSL
+                        value: "1"
+                      - name: PS_REWRITE_ENGINES
+                        value: "1"
+                      ## Dossier admin masqué (sécurité)
+                      - name: PS_FOLDER_ADMIN
+                        value: "admin-barista"
+                      - name: PS_FOLDER_INSTALL
+                        value: "install-barista"
+                      ## --- Compte administrateur ---
+                      - name: ADMIN_MAIL
+                        value: "{{ letsencrypt_email }}"
+                      - name: ADMIN_PASSWD
+                        valueFrom:
+                          secretKeyRef:
+                            name: prestashop-secret
+                            key: admin-password
+                    volumeMounts:
+                      ## Tout /var/www/html est persisté
+                      ## (code PS, modules, thèmes, images produits, cache)
+                      - name: prestashop-data
+                        mountPath: /var/www/html
+                    resources:
+                      requests:
+                        cpu: "{{ prestashop_config.resources.requests.cpu }}"
+                        memory: "{{ prestashop_config.resources.requests.memory }}"
+                      limits:
+                        cpu: "{{ prestashop_config.resources.limits.cpu }}"
+                        memory: "{{ prestashop_config.resources.limits.memory }}"
+                    ## Probe liveness : délai long (installation DB au premier boot)
+                    livenessProbe:
+                      httpGet:
+                        path: /
+                        port: 80
+                      initialDelaySeconds: 600
+                      periodSeconds: 30
+                      timeoutSeconds: 10
+                      failureThreshold: 6
+                    ## Probe readiness : délai moyen (attendre que Apache réponde)
+                    readinessProbe:
+                      httpGet:
+                        path: /
+                        port: 80
+                      initialDelaySeconds: 120
+                      periodSeconds: 15
+                      timeoutSeconds: 10
+                      failureThreshold: 10
+                volumes:
+                  - name: prestashop-data
+                    persistentVolumeClaim:
+                      claimName: prestashop-data-pvc
+          ---
           # ==========================================================
-
-          ingress:
-            enabled: true
-            ingressClassName: traefik
+          # SERVICE : PrestaShop (ClusterIP - Traefik expose via Ingress)
+          # ==========================================================
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: prestashop
+            namespace: prestashop
+            labels:
+              app: prestashop
+          spec:
+            selector:
+              app: prestashop
+            ports:
+              - name: http
+                port: 80
+                targetPort: 80
+            type: ClusterIP
+          ---
+          # ==========================================================
+          # INGRESS : Standard Kubernetes (HTTP-01 cert-manager + redirect)
+          # ==========================================================
+          # Rôle : déclarer le certificat TLS via annotations cert-manager
+          # et servir de cible au solver HTTP-01 de Let's Encrypt (port 80).
+          # La redirection HTTP→HTTPS est appliquée via le middleware Traefik
+          # redirect-to-https (pas au niveau entrypoint pour ne pas bloquer
+          # le solver cert-manager - cf. commentaire playbooks/letsencrypt.yml)
+          # ==========================================================
+          apiVersion: networking.k8s.io/v1
+          kind: Ingress
+          metadata:
+            name: prestashop
+            namespace: prestashop
+            labels:
+              app: prestashop
             annotations:
-              ## Entrypoint HTTP (web) + redirect vers HTTPS
+              ## Entrypoint HTTP + redirect HTTPS via middleware
               traefik.ingress.kubernetes.io/router.entrypoints: web
               traefik.ingress.kubernetes.io/router.middlewares: traefik-redirect-to-https@kubernetescrd
-              ## cert-manager : génération certificat ECDSA P-384
+              ## cert-manager : certificat ECDSA P-384 (Let's Encrypt production)
               cert-manager.io/cluster-issuer: letsencrypt-production
               cert-manager.io/private-key-algorithm: "ECDSA"
               cert-manager.io/private-key-size: "384"
               cert-manager.io/private-key-rotation-policy: "Always"
-            hostname: "{{ external_domains.barista }}"
-            tls: true
-            ## Secret TLS généré par cert-manager
-            tlsSecret: prestashop-tls
-
+          spec:
+            ingressClassName: traefik
+            rules:
+              - host: "{{ external_domains.barista }}"
+                http:
+                  paths:
+                    - path: /
+                      pathType: Prefix
+                      backend:
+                        service:
+                          name: prestashop
+                          port:
+                            number: 80
+            tls:
+              - hosts:
+                  - "{{ external_domains.barista }}"
+                secretName: prestashop-tls
+          ---
           # ==========================================================
-          # PERSISTANCE DONNÉES PRESTASHOP
+          # HPA : HorizontalPodAutoscaler
           # ==========================================================
-          # Contient : thèmes, modules, images produits, uploads,
-          #            override, translations, mails
-
-          persistence:
-            enabled: true
-            storageClass: "longhorn-fast"
-            size: "{{ prestashop_config.data_storage_size }}"
-            ## ReadWriteOnce (1 pod) - migrer vers RWX pour HPA multi-pod
-            ## Longhorn RWX disponible via NFS gateway (longhorn v1.6+)
-            accessModes:
-              - ReadWriteOnce
-
+          # ⚠ Scaling réel multi-pods nécessite :
+          #   1. PVC ReadWriteMany (Longhorn RWX NFS gateway)
+          #   2. Sessions Redis (module PrestaShop Redis cache)
+          #   Sans ces deux prérequis, laisser minReplicas=maxReplicas=1
           # ==========================================================
-          # MARIADB (base de données intégrée)
-          # ==========================================================
-
-          mariadb:
-            enabled: true
-            auth:
-              rootPassword: "{{ prestashop_config.db_root_password }}"
-              database: "{{ prestashop_config.db_name }}"
-              username: "{{ prestashop_config.db_user }}"
-              password: "{{ prestashop_config.db_password }}"
-            primary:
-              ## Ressources MariaDB
-              resources:
-                requests:
-                  cpu: "100m"
-                  memory: "256Mi"
-                limits:
-                  cpu: "500m"
-                  memory: "1Gi"
-              persistence:
-                enabled: true
-                storageClass: "longhorn-fast"
-                size: "{{ prestashop_config.db_storage_size }}"
-
-          # ==========================================================
-          # RESSOURCES PRESTASHOP
-          # ==========================================================
-
-          resources:
-            requests:
-              cpu: "{{ prestashop_config.resources.requests.cpu }}"
-              memory: "{{ prestashop_config.resources.requests.memory }}"
-            limits:
-              cpu: "{{ prestashop_config.resources.limits.cpu }}"
-              memory: "{{ prestashop_config.resources.limits.memory }}"
-
-          # ==========================================================
-          # AUTOSCALING (HPA)
-          # ==========================================================
-          # ⚠ Pour un scaling réel multi-pod, voir commentaire en tête
-          #   de playbook : sessions Redis + PVC ReadWriteMany requis.
-
-          autoscaling:
-            enabled: true
+          apiVersion: autoscaling/v2
+          kind: HorizontalPodAutoscaler
+          metadata:
+            name: prestashop
+            namespace: prestashop
+            labels:
+              app: prestashop
+          spec:
+            scaleTargetRef:
+              apiVersion: apps/v1
+              kind: Deployment
+              name: prestashop
             minReplicas: 1
             maxReplicas: 3
-            targetCPU: 70
-            targetMemory: 80
-
-          # ==========================================================
-          # PROBE DE LIVENESS / READINESS
-          # ==========================================================
-          # PrestaShop met du temps au premier démarrage (install DB)
-          # Augmenter les délais pour éviter les redémarrages prématurés
-
-          livenessProbe:
-            enabled: true
-            initialDelaySeconds: 600
-            periodSeconds: 30
-            timeoutSeconds: 10
-            failureThreshold: 6
-            successThreshold: 1
-
-          readinessProbe:
-            enabled: true
-            initialDelaySeconds: 60
-            periodSeconds: 15
-            timeoutSeconds: 10
-            failureThreshold: 10
-            successThreshold: 1
-      tags: [prestashop, prestashop-install, prestashop-tls]
-
-    # ==========================================================
-    # INSTALLATION PRESTASHOP VIA HELM
-    # ==========================================================
-
-    - name: Installer / Mettre à jour PrestaShop via Helm (Bitnami)
-      ansible.builtin.command: >
-        helm upgrade --install prestashop bitnami/prestashop
-        --namespace prestashop
-        --create-namespace
-        --version {{ prestashop_version }}
-        --values /tmp/prestashop-values.yml
-        --wait
-        --timeout 20m
-      environment:
-        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+            metrics:
+              - type: Resource
+                resource:
+                  name: cpu
+                  target:
+                    type: Utilization
+                    averageUtilization: 70
+              - type: Resource
+                resource:
+                  name: memory
+                  target:
+                    type: Utilization
+                    averageUtilization: 80
       tags: [prestashop, prestashop-install]
 
-    - name: Supprimer le fichier de valeurs temporaire
+    # ==========================================================
+    # APPLIQUER LES MANIFESTS
+    # ==========================================================
+
+    - name: Appliquer les manifests PrestaShop (Secret, PVCs, Deployments, Services, Ingress, HPA)
+      ansible.builtin.command: k3s kubectl apply -f /tmp/prestashop-stack.yml
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [prestashop, prestashop-install]
+
+    - name: Supprimer le fichier manifests temporaire
       ansible.builtin.file:
-        path: /tmp/prestashop-values.yml
+        path: /tmp/prestashop-stack.yml
         state: absent
-      tags: [prestashop, prestashop-install, prestashop-tls]
+      tags: [prestashop, prestashop-install]
 
     # ==========================================================
     # RENOUVELLEMENT CERTIFICAT ECDSA (si ancien certificat RSA)
@@ -339,8 +539,8 @@
     # INGRESSROUTE HTTPS (Traefik CRD - router websecure explicite)
     # ==========================================================
     # L'IngressRoute CRD Traefik gère le routage HTTPS (entrypoint websecure)
-    # avec TLS terminé par Traefik + security headers (HSTS, XSS, etc.)
-    # Complément du standard Ingress ci-dessus (qui gère HTTP-01 + redirect)
+    # avec TLS terminé par Traefik + security-headers (HSTS 2 ans, X-Frame, XSS).
+    # Complément du standard Ingress qui gère HTTP-01 cert-manager + redirect.
     # ==========================================================
 
     - name: Écrire l'IngressRoute HTTPS PrestaShop
@@ -362,7 +562,7 @@
               - match: Host(`{{ external_domains.barista }}`)
                 kind: Rule
                 middlewares:
-                  ## Security headers : HSTS 2 ans, X-Frame-Options, XSS, etc.
+                  ## HSTS 2 ans, X-Frame-Options, XSS filter, nosniff, referrer
                   - name: security-headers
                     namespace: traefik
                 services:
@@ -389,14 +589,27 @@
     # VÉRIFICATION
     # ==========================================================
 
-    - name: Attendre que les pods PrestaShop soient Ready
+    - name: Attendre que MariaDB soit Ready
       ansible.builtin.command: >
         k3s kubectl wait --for=condition=Ready pods
-        --all -n prestashop
+        -l app=prestashop-mariadb
+        -n prestashop
+        --timeout=300s
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: mariadb_ready
+      changed_when: false
+      tags: [prestashop, prestashop-verify]
+
+    - name: Attendre que PrestaShop soit Ready (installation DB au 1er boot = ~10min)
+      ansible.builtin.command: >
+        k3s kubectl wait --for=condition=Ready pods
+        -l app=prestashop
+        -n prestashop
         --timeout=1200s
       environment:
         KUBECONFIG: /etc/rancher/k3s/k3s.yaml
-      register: prestashop_pods_ready
+      register: prestashop_ready
       changed_when: false
       tags: [prestashop, prestashop-verify]
 
@@ -424,6 +637,14 @@
       changed_when: false
       tags: [prestashop, prestashop-verify]
 
+    - name: Vérifier l'IngressRoute HTTPS
+      ansible.builtin.command: k3s kubectl get ingressroute -n prestashop
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: prestashop_ir
+      changed_when: false
+      tags: [prestashop, prestashop-verify]
+
     - name: Vérifier le certificat TLS
       ansible.builtin.command: k3s kubectl get certificate -n prestashop
       environment:
@@ -448,14 +669,6 @@
       changed_when: false
       tags: [prestashop, prestashop-verify]
 
-    - name: Vérifier l'IngressRoute HTTPS
-      ansible.builtin.command: k3s kubectl get ingressroute -n prestashop
-      environment:
-        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
-      register: prestashop_ir
-      changed_when: false
-      tags: [prestashop, prestashop-verify]
-
     # ==========================================================
     # RÉSUMÉ
     # ==========================================================
@@ -469,48 +682,52 @@
           - "============================================================"
           - "URL boutique  : https://{{ external_domains.barista }}"
           - "Admin panel   : https://{{ external_domains.barista }}/admin-barista"
-          - "Admin user    : {{ prestashop_config.admin_user }}"
+          - "Admin user    : {{ letsencrypt_email }}"
           - "Langue        : Français (fr) | Pays : France"
           - "------------------------------------------------------------"
-          - "Ingress       : traefik (web → redirect HTTPS, websecure TLS)"
-          - "TLS           : cert-manager / letsencrypt-production"
-          - "Certificat    : ECDSA P-384 (rotation automatique)"
-          - "Headers       : security-headers (HSTS 2 ans, X-Frame, XSS)"
+          - "Images Docker  : prestashop/prestashop:{{ prestashop_version }}"
+          - "               : mariadb:{{ prestashop_config.mariadb_image_tag }}"
+          - "Ingress        : traefik (web → redirect HTTPS, websecure TLS)"
+          - "TLS            : cert-manager / letsencrypt-production"
+          - "Certificat     : ECDSA P-384 (rotation automatique)"
+          - "Headers        : security-headers (HSTS 2 ans, X-Frame, XSS)"
+          - "PSA namespace  : baseline (Apache www-data)"
           - "------------------------------------------------------------"
-          - "Storage       : longhorn-fast (répliques: 2)"
-          - "Données app   : {{ prestashop_config.data_storage_size }} (médias, modules, thèmes)"
+          - "Storage        : longhorn-fast (répliques: 2)"
+          - "Données app    : {{ prestashop_config.data_storage_size }} (/var/www/html)"
           - "Base de données: MariaDB {{ prestashop_config.db_storage_size }}"
-          - "HPA           : min=1 max=3 | CPU=70% | Memory=80%"
+          - "HPA            : min=1 max=3 | CPU=70% | Memory=80%"
           - "------------------------------------------------------------"
           - "Pods    : {{ prestashop_pods.stdout_lines }}"
           - "Services: {{ prestashop_svc.stdout_lines }}"
           - "Ingress : {{ prestashop_ingress.stdout_lines }}"
+          - "IR HTTPS: {{ prestashop_ir.stdout_lines }}"
           - "Certs   : {{ prestashop_cert.stdout_lines }}"
           - "PVCs    : {{ prestashop_pvc.stdout_lines }}"
           - "HPA     : {{ prestashop_hpa.stdout_lines }}"
-          - "IR HTTPS: {{ prestashop_ir.stdout_lines }}"
           - "============================================================"
           - "ÉTAPES POST-DÉPLOIEMENT :"
-          - "  1. Vérifier DNS : barista.app.xixtu.eu → IP publique"
+          - "  1. DNS : barista.app.xixtu.eu → IP publique (Netim)"
           - "  2. Attendre certificat Let's Encrypt (~2 min)"
-          - "  3. Accéder au backoffice et finaliser la configuration"
+          - "  3. Attendre installation PrestaShop (~5-15 min au 1er boot)"
+          - "  4. Accéder au backoffice et configurer la boutique"
           - "------------------------------------------------------------"
           - "MODULES PAIEMENT À INSTALLER (Marketplace PrestaShop) :"
-          - "  ✓ Virement bancaire  → natif (Modules > Paiements)"
-          - "  ✓ Chèque             → natif (Modules > Paiements)"
-          - "  ✓ Cash à la livraison→ natif (ps_cashondelivery)"
-          - "  ★ Wero               → module 'Wero by Hello bank!'"
-          - "    ou 'Lyra Collect' (intègre Wero + CB)"
-          - "  ★ Stripe             → module officiel Stripe"
+          - "  ✓ Virement bancaire   → natif (Paiements > Préférences)"
+          - "  ✓ Chèque              → natif (ps_checkpayment)"
+          - "  ✓ Cash à la livraison → natif (ps_cashondelivery)"
+          - "  ★ Wero                → 'Wero by Hello bank!' (Marketplace)"
+          - "    ou 'Lyra Collect' (Wero + CB + virement en un seul module)"
+          - "  ★ Stripe              → module officiel PrestaShop"
           - "------------------------------------------------------------"
           - "MODULES LIVRAISON RECOMMANDÉS :"
-          - "  ★ Colissimo          → module officiel La Poste"
-          - "  ★ Mondial Relay      → module officiel"
-          - "  ★ Chronopost         → module officiel"
+          - "  ★ Colissimo    → module officiel La Poste"
+          - "  ★ Mondial Relay → module officiel"
+          - "  ★ Chronopost   → module officiel"
           - "------------------------------------------------------------"
-          - "SCALING HORIZONTAL (si trafic élevé) :"
-          - "  1. Migrer PVC vers ReadWriteMany (Longhorn NFS gateway)"
-          - "  2. Activer module Redis : 'Redis cache' dans le backoffice"
-          - "  3. Augmenter HPA maxReplicas dans group_vars"
+          - "SCALING HORIZONTAL (si fort trafic) :"
+          - "  1. Migrer PVC data vers ReadWriteMany (Longhorn RWX NFS)"
+          - "  2. Activer module Redis cache dans le backoffice"
+          - "  3. Augmenter maxReplicas dans le manifest HPA"
           - "============================================================"
       tags: [prestashop, prestashop-verify]
