@@ -11,6 +11,7 @@ metallb_version: "v0.13.12"
 cert_manager_version: "v1.13.0"
 traefik_version: "34.2.0"
 headlamp_version: "0.40.0"
+prestashop_version: "22.0.6"     # helm search repo bitnami/prestashop pour vérifier la dernière version
 prometheus_stack_version: "55.5.0"
 rancher_version: "2.8.0"
 
@@ -172,6 +173,37 @@ external_domains:
   nextcloud: "nextcloud.app.xixtu.eu"
   collabora: "collabora.app.xixtu.eu"
   plex: "plex.app.xixtu.eu"
+  barista: "barista.app.xixtu.eu"
+
+# --- PrestaShop e-commerce café capsules ---
+# Boutique : https://barista.app.xixtu.eu
+# Admin    : https://barista.app.xixtu.eu/admin-barista
+#
+# ⚠ Changer les mots de passe en production :
+#   ansible-vault encrypt_string '<password>' --name 'prestashop_config'
+prestashop_config:
+  # Compte administrateur backoffice PrestaShop
+  admin_user: "admin"
+  admin_password: "ch4nge-me-barista"      # ⚠ Changer en production (ou ansible-vault)
+
+  # Base de données MariaDB
+  db_name: "prestashop"
+  db_user: "prestashop"
+  db_password: "ps-db-s3cret"             # ⚠ Changer en production (ou ansible-vault)
+  db_root_password: "ps-root-s3cret"      # ⚠ Changer en production (ou ansible-vault)
+
+  # Stockage Longhorn (longhorn-fast par défaut)
+  data_storage_size: "20Gi"               # Médias, modules, thèmes, uploads
+  db_storage_size: "10Gi"                 # Base de données MariaDB
+
+  # Ressources applicatives PrestaShop (PHP-FPM + Apache)
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+    limits:
+      cpu: "1000m"
+      memory: "2Gi"
 
 # --- Monitoring ---
 monitoring_config:

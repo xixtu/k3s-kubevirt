@@ -1,0 +1,516 @@
+---
+# =============================================================
+# PLAYBOOK : PrestaShop - Boutique e-commerce café capsules
+# =============================================================
+# Usage : ansible-playbook -i inventory/hosts.yml playbooks/prestashop.yml
+# Tags :
+#   prestashop-install → Installer PrestaShop + MariaDB via Helm (Bitnami)
+#   prestashop-tls     → Forcer renouvellement certificat ECDSA P-384
+#   prestashop-verify  → Vérifier pods, PVCs, Ingress, certificat, HPA
+#
+# Architecture :
+#   PrestaShop (Bitnami)  → ClusterIP :80  → IngressRoute (websecure)
+#   MariaDB 10.11         → ClusterIP :3306 (interne uniquement)
+#   Ingress standard      → HTTP-01 solver cert-manager (port 80)
+#   IngressRoute CRD      → HTTPS websecure TLS + security-headers
+#   HPA                   → min=1 max=3 CPU=70% Memory=80%
+#
+# Fonctionnalités e-commerce incluses :
+#   ✓ Catalogue        : variantes (mouture), collections (origine), images multiples
+#   ✓ Stock            : inventaire par variante, alertes seuil
+#   ✓ Commandes        : pipeline complet panier → paiement → expédition → livré
+#   ✓ Paiements natifs : virement bancaire, chèque, cash (à la livraison)
+#   ✓ Paiements module : Wero (module Marketplace), Stripe (module officiel)
+#   ✓ Clients          : comptes, historique, groupes (pro/particulier)
+#   ✓ Livraison        : zones, transporteurs, calcul frais de port
+#   ✓ Retours          : RMA natif, remboursements
+#   ✓ Promotions       : codes promo, réductions automatiques
+#   ✓ SEO              : URLs rewriting, meta, sitemap
+#
+# URL publique  : https://barista.app.xixtu.eu
+# Admin panel   : https://barista.app.xixtu.eu/admin-barista
+#
+# Prérequis :
+#   - K3s + MetalLB + Traefik + cert-manager installés
+#   - DNS : barista.app.xixtu.eu → <IP publique Traefik>
+#   - Ports 80 et 443 accessibles depuis Internet (challenge HTTP-01)
+#
+# ⚠ IMPORTANT HTTPS / SSL Offloading :
+#   Traefik termine TLS et forward en HTTP vers PrestaShop.
+#   prestashopEnableHttps=true configure l'URL de la boutique en https://
+#   mais PrestaShop reçoit les requêtes en HTTP (port 80) depuis Traefik.
+#   Le header X-Forwarded-Proto: https est envoyé par Traefik.
+#
+# ⚠ HPA et scaling horizontal :
+#   Le scaling multi-pods nécessite :
+#     1. Sessions Redis (PS_CACHE_ENABLED + Redis) - voir modules cache
+#     2. PVC media en ReadWriteMany (Longhorn RWX via NFS gateway)
+#   Par défaut : 1 replica, HPA actif mais limité par RWO storage.
+#   Migration vers RWX : changer accessModes + activer Redis sessions.
+# =============================================================
+
+- name: "PrestaShop - Boutique e-commerce café capsules Barista"
+  hosts: k3s-node-1
+  become: true
+  gather_facts: false
+  vars_files:
+    - "../group_vars/k3s_cluster.yml"
+
+  tasks:
+
+    # ==========================================================
+    # PRÉPARATION
+    # ==========================================================
+
+    - name: Ajouter le repo Helm Bitnami
+      ansible.builtin.command: >
+        helm repo add bitnami https://charts.bitnami.com/bitnami
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [prestashop, prestashop-install, prestashop-tls]
+
+    - name: Mettre à jour les repos Helm
+      ansible.builtin.command: helm repo update
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [prestashop, prestashop-install, prestashop-tls]
+
+    - name: Créer le namespace prestashop (si absent)
+      ansible.builtin.command: k3s kubectl create namespace prestashop
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: ns_create
+      failed_when: ns_create.rc != 0 and 'already exists' not in ns_create.stderr
+      changed_when: ns_create.rc == 0
+      tags: [prestashop, prestashop-install, prestashop-tls]
+
+    # ==========================================================
+    # FICHIER DE VALEURS HELM
+    # ==========================================================
+
+    - name: Écrire le fichier de valeurs PrestaShop
+      ansible.builtin.copy:
+        dest: /tmp/prestashop-values.yml
+        mode: '0600'
+        content: |
+          # ==========================================================
+          # PrestaShop Helm values - Boutique café capsules Barista
+          # Chart : bitnami/prestashop
+          # Docs  : https://github.com/bitnami/charts/tree/main/bitnami/prestashop
+          # ==========================================================
+
+          ## --- Storage class globale ---
+          global:
+            storageClass: "longhorn-fast"
+
+          # ==========================================================
+          # APPLICATION PRESTASHOP
+          # ==========================================================
+
+          ## Domaine public de la boutique (doit correspondre au DNS)
+          prestashopHost: "{{ external_domains.barista }}"
+
+          ## HTTPS activé (SSL offloading via Traefik)
+          ## PrestaShop configure son URL de base en https://
+          prestashopEnableHttps: true
+
+          ## Compte administrateur backoffice
+          prestashopUsername: "{{ prestashop_config.admin_user }}"
+          prestashopPassword: "{{ prestashop_config.admin_password }}"
+          prestashopEmail: "{{ letsencrypt_email }}"
+          prestashopFirstName: "Admin"
+          prestashopLastName: "Barista"
+
+          ## Localisation boutique (France)
+          prestashopCountry: "fr"
+          prestashopLanguage: "fr"
+
+          ## Sécurité session : désactiver vérification IP (breaks behind proxy)
+          prestashopCookieCheckIP: "false"
+
+          ## Ne pas ré-installer si déjà configuré (idempotent)
+          prestashopSkipInstall: false
+
+          ## Variables d'environnement supplémentaires
+          extraEnvVars:
+            ## Dossier admin custom (masquer /admin pour sécurité)
+            - name: PS_FOLDER_ADMIN
+              value: "admin-barista"
+            ## Dossier install custom
+            - name: PS_FOLDER_INSTALL
+              value: "install-barista"
+            ## Activer SSL côté PrestaShop
+            - name: PS_ENABLE_SSL
+              value: "1"
+            ## Activer la réécriture d'URL (URLs SEO)
+            - name: PS_REWRITE_ENGINES
+              value: "1"
+            ## Faire confiance au proxy Traefik (plage CIDR pods K3s)
+            ## Permet de lire correctement X-Forwarded-Proto: https
+            - name: _PS_TRUST_IP_
+              value: "10.42.0.0/16"
+
+          # ==========================================================
+          # SERVICE (ClusterIP - Traefik expose via Ingress)
+          # ==========================================================
+
+          service:
+            type: ClusterIP
+            port: 80
+
+          # ==========================================================
+          # INGRESS TRAEFIK
+          # ==========================================================
+          # L'Ingress standard est requis pour que cert-manager génère
+          # le certificat TLS via le challenge HTTP-01.
+          # La route HTTPS websecure est gérée par l'IngressRoute CRD
+          # créé séparément dans ce playbook.
+          #
+          # Stratégie redirection HTTP → HTTPS :
+          #   - Middleware redirect-to-https appliqué sur entrypoint: web
+          #   - cert-manager utilise son propre Ingress temporaire (pas redirigé)
+          #   - Cf. playbooks/letsencrypt.yml commentaire ⚠
+          # ==========================================================
+
+          ingress:
+            enabled: true
+            ingressClassName: traefik
+            annotations:
+              ## Entrypoint HTTP (web) + redirect vers HTTPS
+              traefik.ingress.kubernetes.io/router.entrypoints: web
+              traefik.ingress.kubernetes.io/router.middlewares: traefik-redirect-to-https@kubernetescrd
+              ## cert-manager : génération certificat ECDSA P-384
+              cert-manager.io/cluster-issuer: letsencrypt-production
+              cert-manager.io/private-key-algorithm: "ECDSA"
+              cert-manager.io/private-key-size: "384"
+              cert-manager.io/private-key-rotation-policy: "Always"
+            hostname: "{{ external_domains.barista }}"
+            tls: true
+            ## Secret TLS généré par cert-manager
+            tlsSecret: prestashop-tls
+
+          # ==========================================================
+          # PERSISTANCE DONNÉES PRESTASHOP
+          # ==========================================================
+          # Contient : thèmes, modules, images produits, uploads,
+          #            override, translations, mails
+
+          persistence:
+            enabled: true
+            storageClass: "longhorn-fast"
+            size: "{{ prestashop_config.data_storage_size }}"
+            ## ReadWriteOnce (1 pod) - migrer vers RWX pour HPA multi-pod
+            ## Longhorn RWX disponible via NFS gateway (longhorn v1.6+)
+            accessModes:
+              - ReadWriteOnce
+
+          # ==========================================================
+          # MARIADB (base de données intégrée)
+          # ==========================================================
+
+          mariadb:
+            enabled: true
+            auth:
+              rootPassword: "{{ prestashop_config.db_root_password }}"
+              database: "{{ prestashop_config.db_name }}"
+              username: "{{ prestashop_config.db_user }}"
+              password: "{{ prestashop_config.db_password }}"
+            primary:
+              ## Ressources MariaDB
+              resources:
+                requests:
+                  cpu: "100m"
+                  memory: "256Mi"
+                limits:
+                  cpu: "500m"
+                  memory: "1Gi"
+              persistence:
+                enabled: true
+                storageClass: "longhorn-fast"
+                size: "{{ prestashop_config.db_storage_size }}"
+
+          # ==========================================================
+          # RESSOURCES PRESTASHOP
+          # ==========================================================
+
+          resources:
+            requests:
+              cpu: "{{ prestashop_config.resources.requests.cpu }}"
+              memory: "{{ prestashop_config.resources.requests.memory }}"
+            limits:
+              cpu: "{{ prestashop_config.resources.limits.cpu }}"
+              memory: "{{ prestashop_config.resources.limits.memory }}"
+
+          # ==========================================================
+          # AUTOSCALING (HPA)
+          # ==========================================================
+          # ⚠ Pour un scaling réel multi-pod, voir commentaire en tête
+          #   de playbook : sessions Redis + PVC ReadWriteMany requis.
+
+          autoscaling:
+            enabled: true
+            minReplicas: 1
+            maxReplicas: 3
+            targetCPU: 70
+            targetMemory: 80
+
+          # ==========================================================
+          # PROBE DE LIVENESS / READINESS
+          # ==========================================================
+          # PrestaShop met du temps au premier démarrage (install DB)
+          # Augmenter les délais pour éviter les redémarrages prématurés
+
+          livenessProbe:
+            enabled: true
+            initialDelaySeconds: 600
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 6
+            successThreshold: 1
+
+          readinessProbe:
+            enabled: true
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            timeoutSeconds: 10
+            failureThreshold: 10
+            successThreshold: 1
+      tags: [prestashop, prestashop-install, prestashop-tls]
+
+    # ==========================================================
+    # INSTALLATION PRESTASHOP VIA HELM
+    # ==========================================================
+
+    - name: Installer / Mettre à jour PrestaShop via Helm (Bitnami)
+      ansible.builtin.command: >
+        helm upgrade --install prestashop bitnami/prestashop
+        --namespace prestashop
+        --create-namespace
+        --version {{ prestashop_version }}
+        --values /tmp/prestashop-values.yml
+        --wait
+        --timeout 20m
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      tags: [prestashop, prestashop-install]
+
+    - name: Supprimer le fichier de valeurs temporaire
+      ansible.builtin.file:
+        path: /tmp/prestashop-values.yml
+        state: absent
+      tags: [prestashop, prestashop-install, prestashop-tls]
+
+    # ==========================================================
+    # RENOUVELLEMENT CERTIFICAT ECDSA (si ancien certificat RSA)
+    # ==========================================================
+
+    - name: Vérifier le type de clé du certificat actuel
+      ansible.builtin.shell: >
+        k3s kubectl get secret prestashop-tls -n prestashop -o jsonpath='{.data.tls\.key}'
+        | base64 -d | openssl ec -noout 2>/dev/null && echo "ECDSA" || echo "RSA"
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: cert_key_type
+      changed_when: false
+      failed_when: false
+      tags: [prestashop, prestashop-install, prestashop-tls]
+
+    - name: Supprimer l'ancien certificat RSA pour forcer le renouvellement ECDSA
+      ansible.builtin.command: >
+        k3s kubectl delete certificate prestashop-tls -n prestashop --ignore-not-found
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      when: cert_key_type.stdout is defined and 'ECDSA' not in cert_key_type.stdout
+      changed_when: true
+      tags: [prestashop, prestashop-install, prestashop-tls]
+
+    - name: Supprimer l'ancien secret TLS RSA
+      ansible.builtin.command: >
+        k3s kubectl delete secret prestashop-tls -n prestashop --ignore-not-found
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      when: cert_key_type.stdout is defined and 'ECDSA' not in cert_key_type.stdout
+      changed_when: true
+      tags: [prestashop, prestashop-install, prestashop-tls]
+
+    # ==========================================================
+    # INGRESSROUTE HTTPS (Traefik CRD - router websecure explicite)
+    # ==========================================================
+    # L'IngressRoute CRD Traefik gère le routage HTTPS (entrypoint websecure)
+    # avec TLS terminé par Traefik + security headers (HSTS, XSS, etc.)
+    # Complément du standard Ingress ci-dessus (qui gère HTTP-01 + redirect)
+    # ==========================================================
+
+    - name: Écrire l'IngressRoute HTTPS PrestaShop
+      ansible.builtin.copy:
+        dest: /tmp/prestashop-ingressroute.yml
+        mode: '0644'
+        content: |
+          apiVersion: traefik.io/v1alpha1
+          kind: IngressRoute
+          metadata:
+            name: prestashop-https
+            namespace: prestashop
+            labels:
+              app: prestashop
+          spec:
+            entryPoints:
+              - websecure
+            routes:
+              - match: Host(`{{ external_domains.barista }}`)
+                kind: Rule
+                middlewares:
+                  ## Security headers : HSTS 2 ans, X-Frame-Options, XSS, etc.
+                  - name: security-headers
+                    namespace: traefik
+                services:
+                  - name: prestashop
+                    port: 80
+            tls:
+              secretName: prestashop-tls
+      tags: [prestashop, prestashop-install]
+
+    - name: Appliquer l'IngressRoute HTTPS PrestaShop
+      ansible.builtin.command: k3s kubectl apply -f /tmp/prestashop-ingressroute.yml
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [prestashop, prestashop-install]
+
+    - name: Supprimer le fichier IngressRoute temporaire
+      ansible.builtin.file:
+        path: /tmp/prestashop-ingressroute.yml
+        state: absent
+      tags: [prestashop, prestashop-install]
+
+    # ==========================================================
+    # VÉRIFICATION
+    # ==========================================================
+
+    - name: Attendre que les pods PrestaShop soient Ready
+      ansible.builtin.command: >
+        k3s kubectl wait --for=condition=Ready pods
+        --all -n prestashop
+        --timeout=1200s
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: prestashop_pods_ready
+      changed_when: false
+      tags: [prestashop, prestashop-verify]
+
+    - name: Vérifier les pods PrestaShop
+      ansible.builtin.command: k3s kubectl get pods -n prestashop -o wide
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: prestashop_pods
+      changed_when: false
+      tags: [prestashop, prestashop-verify]
+
+    - name: Vérifier les services PrestaShop
+      ansible.builtin.command: k3s kubectl get svc -n prestashop
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: prestashop_svc
+      changed_when: false
+      tags: [prestashop, prestashop-verify]
+
+    - name: Vérifier l'Ingress PrestaShop
+      ansible.builtin.command: k3s kubectl get ingress -n prestashop
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: prestashop_ingress
+      changed_when: false
+      tags: [prestashop, prestashop-verify]
+
+    - name: Vérifier le certificat TLS
+      ansible.builtin.command: k3s kubectl get certificate -n prestashop
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: prestashop_cert
+      changed_when: false
+      tags: [prestashop, prestashop-verify]
+
+    - name: Vérifier les PersistentVolumeClaims
+      ansible.builtin.command: k3s kubectl get pvc -n prestashop
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: prestashop_pvc
+      changed_when: false
+      tags: [prestashop, prestashop-verify]
+
+    - name: Vérifier le HorizontalPodAutoscaler
+      ansible.builtin.command: k3s kubectl get hpa -n prestashop
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: prestashop_hpa
+      changed_when: false
+      tags: [prestashop, prestashop-verify]
+
+    - name: Vérifier l'IngressRoute HTTPS
+      ansible.builtin.command: k3s kubectl get ingressroute -n prestashop
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: prestashop_ir
+      changed_when: false
+      tags: [prestashop, prestashop-verify]
+
+    # ==========================================================
+    # RÉSUMÉ
+    # ==========================================================
+
+    - name: Résumé PrestaShop
+      ansible.builtin.debug:
+        msg:
+          - "============================================================"
+          - "  PrestaShop {{ prestashop_version }} - Boutique Barista"
+          - "  Déploiement réussi ✓"
+          - "============================================================"
+          - "URL boutique  : https://{{ external_domains.barista }}"
+          - "Admin panel   : https://{{ external_domains.barista }}/admin-barista"
+          - "Admin user    : {{ prestashop_config.admin_user }}"
+          - "Langue        : Français (fr) | Pays : France"
+          - "------------------------------------------------------------"
+          - "Ingress       : traefik (web → redirect HTTPS, websecure TLS)"
+          - "TLS           : cert-manager / letsencrypt-production"
+          - "Certificat    : ECDSA P-384 (rotation automatique)"
+          - "Headers       : security-headers (HSTS 2 ans, X-Frame, XSS)"
+          - "------------------------------------------------------------"
+          - "Storage       : longhorn-fast (répliques: 2)"
+          - "Données app   : {{ prestashop_config.data_storage_size }} (médias, modules, thèmes)"
+          - "Base de données: MariaDB {{ prestashop_config.db_storage_size }}"
+          - "HPA           : min=1 max=3 | CPU=70% | Memory=80%"
+          - "------------------------------------------------------------"
+          - "Pods    : {{ prestashop_pods.stdout_lines }}"
+          - "Services: {{ prestashop_svc.stdout_lines }}"
+          - "Ingress : {{ prestashop_ingress.stdout_lines }}"
+          - "Certs   : {{ prestashop_cert.stdout_lines }}"
+          - "PVCs    : {{ prestashop_pvc.stdout_lines }}"
+          - "HPA     : {{ prestashop_hpa.stdout_lines }}"
+          - "IR HTTPS: {{ prestashop_ir.stdout_lines }}"
+          - "============================================================"
+          - "ÉTAPES POST-DÉPLOIEMENT :"
+          - "  1. Vérifier DNS : barista.app.xixtu.eu → IP publique"
+          - "  2. Attendre certificat Let's Encrypt (~2 min)"
+          - "  3. Accéder au backoffice et finaliser la configuration"
+          - "------------------------------------------------------------"
+          - "MODULES PAIEMENT À INSTALLER (Marketplace PrestaShop) :"
+          - "  ✓ Virement bancaire  → natif (Modules > Paiements)"
+          - "  ✓ Chèque             → natif (Modules > Paiements)"
+          - "  ✓ Cash à la livraison→ natif (ps_cashondelivery)"
+          - "  ★ Wero               → module 'Wero by Hello bank!'"
+          - "    ou 'Lyra Collect' (intègre Wero + CB)"
+          - "  ★ Stripe             → module officiel Stripe"
+          - "------------------------------------------------------------"
+          - "MODULES LIVRAISON RECOMMANDÉS :"
+          - "  ★ Colissimo          → module officiel La Poste"
+          - "  ★ Mondial Relay      → module officiel"
+          - "  ★ Chronopost         → module officiel"
+          - "------------------------------------------------------------"
+          - "SCALING HORIZONTAL (si trafic élevé) :"
+          - "  1. Migrer PVC vers ReadWriteMany (Longhorn NFS gateway)"
+          - "  2. Activer module Redis : 'Redis cache' dans le backoffice"
+          - "  3. Augmenter HPA maxReplicas dans group_vars"
+          - "============================================================"
+      tags: [prestashop, prestashop-verify]

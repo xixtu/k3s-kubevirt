@@ -4,18 +4,19 @@
 # =============================================================
 # Usage : ansible-playbook -i inventory/hosts.yml playbooks/site.yml
 # Tags disponibles :
-#   network   → Configuration réseau LACP + IPs statiques
-#   prereq    → Prérequis système + Git
-#   lvm       → Configuration stockage LVM
-#   k3s       → Installation K3s
-#   storage   → Migration data-dir K3s + préparation Longhorn
-#   longhorn  → Installation Longhorn
-#   metallb   → Installation MetalLB
-#   traefik   → Installation Traefik
-#   headlamp  → Installation Headlamp Dashboard
-#   monitoring→ Prometheus + Grafana + Alertmanager
-#   kubevirt  → Installation KubeVirt
-#   rancher   → Installation Rancher UI
+#   network     → Configuration réseau LACP + IPs statiques
+#   prereq      → Prérequis système + Git
+#   lvm         → Configuration stockage LVM
+#   k3s         → Installation K3s
+#   storage     → Migration data-dir K3s + préparation Longhorn
+#   longhorn    → Installation Longhorn
+#   metallb     → Installation MetalLB
+#   traefik     → Installation Traefik
+#   headlamp    → Installation Headlamp Dashboard
+#   monitoring  → Prometheus + Grafana + Alertmanager
+#   prestashop  → Boutique e-commerce café capsules (barista.app.xixtu.eu)
+#   kubevirt    → Installation KubeVirt
+#   rancher     → Installation Rancher UI
 # =============================================================
 
 # # PHASE 0 : Configuration réseau (LACP + IPs statiques)
@@ -77,3 +78,10 @@
 # - name: "PHASE 10 - Rancher UI"
 #   import_playbook: rancher.yml
 #   tags: [rancher]
+
+# PHASE 11 : PrestaShop - Boutique e-commerce café capsules
+# URL : https://barista.app.xixtu.eu
+# Prérequis : DNS barista.app.xixtu.eu → IP publique Traefik
+- name: "PHASE 11 - PrestaShop Boutique Barista"
+  import_playbook: prestashop.yml
+  tags: [prestashop]

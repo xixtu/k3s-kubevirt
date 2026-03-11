@@ -22,12 +22,14 @@
 #   - longhorn.app.xixtu.eu       (namespace: longhorn-system)
 #   - paheko.app.xixtu.eu         (namespace: paheko)
 #   - kwaba-kinesiologie.xixtu.eu (namespace: kwaba-kinesiologie-redirect)
+#   - barista.app.xixtu.eu        (namespace: prestashop)
 #
 # ⚠ PRÉREQUIS DNS (dans Netim) :
 #   headlamp.app.xixtu.eu       → A → <IP publique>
 #   longhorn.app.xixtu.eu       → A → <IP publique>
 #   paheko.app.xixtu.eu         → A → <IP publique>
 #   kwaba-kinesiologie.xixtu.eu → A → <IP publique>
+#   barista.app.xixtu.eu        → A → <IP publique>
 #   Port 80 et 443 doivent être joignables depuis Internet.
 # =============================================================
 
