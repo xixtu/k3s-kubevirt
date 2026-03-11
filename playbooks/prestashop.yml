@@ -282,23 +282,52 @@
                 labels:
                   app: prestashop
               spec:
-                ## Init container : attendre que MariaDB accepte les connexions
+                ## Init container : attendre que MariaDB soit prête au niveau MySQL
+                ## (mysqladmin ping = connexion réelle, pas juste TCP)
+                ## On utilise la même image mariadb que le pod DB pour avoir le client
                 initContainers:
                   - name: wait-for-mariadb
-                    image: busybox:1.36
+                    image: mariadb:{{ prestashop_config.mariadb_image_tag }}
                     command:
-                      - sh
+                      - bash
                       - -c
                       - |
-                        echo "Attente MariaDB sur prestashop-mariadb:3306..."
-                        until nc -z prestashop-mariadb 3306; do
+                        echo "Attente MariaDB (connexion MySQL réelle)..."
+                        until mysqladmin ping -h prestashop-mariadb -u root -p${MYSQL_ROOT_PASSWORD} --silent 2>/dev/null; do
                           echo "MariaDB pas encore prête, nouvelle tentative dans 3s..."
                           sleep 3
                         done
-                        echo "MariaDB prête."
+                        echo "MariaDB prête - connexion MySQL OK."
+                    env:
+                      - name: MYSQL_ROOT_PASSWORD
+                        valueFrom:
+                          secretKeyRef:
+                            name: prestashop-secret
+                            key: db-root-password
                 containers:
                   - name: prestashop
                     image: prestashop/prestashop:{{ prestashop_version }}
+                    ## Wrapper pour absorber le exit 42 (signal de redémarrage interne
+                    ## du script /tmp/docker_run.sh de l'image officielle PrestaShop).
+                    ## Sans wrapper, Kubernetes traite exit 42 comme un crash →
+                    ## CrashLoopBackOff avec backoff exponentiel qui bloque l'install.
+                    ## Le wrapper relance le script en interne jusqu'à ce qu'il quitte
+                    ## avec un code autre que 42 (0 = Apache en cours, 1+ = erreur).
+                    command:
+                      - /bin/bash
+                      - -c
+                      - |
+                        while true; do
+                          bash /tmp/docker_run.sh
+                          ec=$?
+                          if [ "$ec" -eq 42 ]; then
+                            echo "[k8s-wrapper] Exit 42 détecté (signal restart PrestaShop) - relance dans 5s..."
+                            sleep 5
+                          else
+                            echo "[k8s-wrapper] Exit $ec - arrêt du wrapper."
+                            exit $ec
+                          fi
+                        done
                     ports:
                       - containerPort: 80
                     env:
