@@ -282,10 +282,29 @@
                 labels:
                   app: prestashop
               spec:
-                ## Init container : attendre que MariaDB soit prête au niveau MySQL
-                ## (mysqladmin ping = connexion réelle, pas juste TCP)
-                ## On utilise la même image mariadb que le pod DB pour avoir le client
+                ## Init containers (exécutés dans l'ordre) :
+                ##   1. cleanup-lock      : supprime les locks stales dans le PVC
+                ##   2. wait-for-mariadb  : connexion MySQL réelle avant démarrage PS
                 initContainers:
+                  - name: cleanup-lock
+                    image: alpine:3.19
+                    command:
+                      - sh
+                      - -c
+                      - |
+                        echo "Nettoyage des fichiers de lock PrestaShop dans /var/www/html..."
+                        ## Le script /tmp/docker_run.sh crée un lock dans PS_FOLDER
+                        ## pour éviter les installations concurrentes.
+                        ## S'il persiste après un crash (PVC), le prochain démarrage
+                        ## affiche "Another setup is currently running" et exit 42 en boucle.
+                        rm -f /var/www/html/.setup_lock \
+                              /var/www/html/.ps_lock \
+                              /var/www/html/install/install.lock 2>/dev/null || true
+                        find /var/www/html -maxdepth 2 -name "*.lock" -delete 2>/dev/null || true
+                        echo "Nettoyage terminé."
+                    volumeMounts:
+                      - name: prestashop-data
+                        mountPath: /var/www/html
                   - name: wait-for-mariadb
                     image: mariadb:{{ prestashop_config.mariadb_image_tag }}
                     command:
