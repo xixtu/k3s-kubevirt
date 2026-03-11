@@ -5,9 +5,9 @@
 # =============================================================
 # Usage : ansible-playbook -i inventory/hosts.yml playbooks/barista.yml
 # Tags :
-#   barista-install   → Namespace, Secrets, PVC, PostgreSQL, Redis, Build Image, ConfigMap, Medusa
+#   barista-install   → Déploiement complet (tout ci-dessous)
 #   barista-build     → Build image Docker Medusa uniquement (rebuild forcé)
-#   barista-ingress   → Ingress TLS + IngressRoute HTTPS
+#   barista-ingress   → Ingress TLS + IngressRoute HTTPS + ECDSA
 #   letsencrypt-tls   → Renouvellement certificat ECDSA
 #   barista-verify    → Vérification pods, services, ingress, cert
 # Prérequis :
@@ -794,19 +794,19 @@
                           name: {{ app_name }}-service
                           port:
                             number: 80
-      tags: [barista, barista-ingress, letsencrypt-tls]
+      tags: [barista, barista-install, barista-ingress, letsencrypt-tls]
 
     - name: Appliquer l'Ingress TLS Barista
       ansible.builtin.command: k3s kubectl apply -f /tmp/barista-ingress.yml
       register: ingress_apply
       changed_when: "'configured' in ingress_apply.stdout or 'created' in ingress_apply.stdout"
-      tags: [barista, barista-ingress, letsencrypt-tls]
+      tags: [barista, barista-install, barista-ingress, letsencrypt-tls]
 
     - name: Supprimer le fichier Ingress temporaire
       ansible.builtin.file:
         path: /tmp/barista-ingress.yml
         state: absent
-      tags: [barista, barista-ingress, letsencrypt-tls]
+      tags: [barista, barista-install, barista-ingress, letsencrypt-tls]
 
     # ==========================================================
     # MIGRATION ECDSA (si ancien certificat RSA)
@@ -820,7 +820,7 @@
       register: barista_cert_key_type
       changed_when: false
       failed_when: false
-      tags: [barista, barista-ingress, letsencrypt-tls]
+      tags: [barista, barista-install, barista-ingress, letsencrypt-tls]
 
     - name: Supprimer l'ancien certificat RSA pour renouvellement ECDSA
       ansible.builtin.command: >
@@ -828,7 +828,7 @@
         -n {{ target_namespace }} --ignore-not-found
       when: barista_cert_key_type.stdout is defined and 'ECDSA' not in barista_cert_key_type.stdout
       changed_when: true
-      tags: [barista, barista-ingress, letsencrypt-tls]
+      tags: [barista, barista-install, barista-ingress, letsencrypt-tls]
 
     - name: Supprimer l'ancien secret TLS RSA
       ansible.builtin.command: >
@@ -836,7 +836,7 @@
         -n {{ target_namespace }} --ignore-not-found
       when: barista_cert_key_type.stdout is defined and 'ECDSA' not in barista_cert_key_type.stdout
       changed_when: true
-      tags: [barista, barista-ingress, letsencrypt-tls]
+      tags: [barista, barista-install, barista-ingress, letsencrypt-tls]
 
     # ==========================================================
     # INGRESSROUTE HTTPS (Traefik CRD - router websecure)
@@ -863,19 +863,19 @@
                     port: 80
             tls:
               secretName: {{ app_name }}-tls
-      tags: [barista, barista-ingress, letsencrypt-tls]
+      tags: [barista, barista-install, barista-ingress, letsencrypt-tls]
 
     - name: Appliquer l'IngressRoute HTTPS Barista
       ansible.builtin.command: k3s kubectl apply -f /tmp/barista-ingressroute-https.yml
       register: ingressroute_apply
       changed_when: "'configured' in ingressroute_apply.stdout or 'created' in ingressroute_apply.stdout"
-      tags: [barista, barista-ingress, letsencrypt-tls]
+      tags: [barista, barista-install, barista-ingress, letsencrypt-tls]
 
     - name: Supprimer le fichier IngressRoute temporaire
       ansible.builtin.file:
         path: /tmp/barista-ingressroute-https.yml
         state: absent
-      tags: [barista, barista-ingress, letsencrypt-tls]
+      tags: [barista, barista-install, barista-ingress, letsencrypt-tls]
 
     # ==========================================================
     # VÉRIFICATION
