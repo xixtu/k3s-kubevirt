@@ -5,7 +5,8 @@
 # =============================================================
 # Usage : ansible-playbook -i inventory/hosts.yml playbooks/barista.yml
 # Tags :
-#   barista-install   → Namespace, Secrets, PVC, PostgreSQL, Redis, ConfigMap, Medusa
+#   barista-install   → Namespace, Secrets, PVC, PostgreSQL, Redis, Build Image, ConfigMap, Medusa
+#   barista-build     → Build image Docker Medusa uniquement (rebuild forcé)
 #   barista-ingress   → Ingress TLS + IngressRoute HTTPS
 #   letsencrypt-tls   → Renouvellement certificat ECDSA
 #   barista-verify    → Vérification pods, services, ingress, cert
@@ -14,17 +15,18 @@
 #   - Longhorn StorageClasses (longhorn-fast, longhorn-slow)
 #   - cert-manager + ClusterIssuer letsencrypt-production
 #   - DNS : barista.app.xixtu.eu → A → <IP publique>
+#   - nerdctl ou docker disponible sur le nœud (nerdctl installé auto si absent)
 #
 # Architecture :
 #   barista.app.xixtu.eu        → Medusa API REST (port 9000)
 #   barista.app.xixtu.eu/app    → Medusa Admin Dashboard (intégré)
 #
 # Stack :
-#   Medusa v2 (node:20-slim) + PostgreSQL 16 + Redis 7
-#   Stockage : Longhorn (longhorn-fast pour DB + app, longhorn-slow pour uploads)
+#   Image barista-medusa:latest (node:20-slim + Medusa pré-compilé)
+#   PostgreSQL 16 + Redis 7
+#   Stockage : Longhorn (longhorn-fast pour DB, longhorn-slow pour uploads)
 #
-# ⚠ Premier démarrage : 5-10 min (npm install + medusa build)
-#   Démarrages suivants : ~30 sec
+# Démarrage : ~30 sec (image pré-compilée, juste migrations au boot)
 # =============================================================
 
 - name: "Barista - Boutique e-commerce capsules café (Medusa.js v2)"
@@ -39,7 +41,6 @@
     storage_class_fast: "longhorn-fast"
     storage_class_slow: "longhorn-slow"
     db_storage_size: "5Gi"
-    app_storage_size: "8Gi"
     uploads_storage_size: "20Gi"
     # PostgreSQL
     db_name: "medusa"
@@ -48,7 +49,7 @@
     # Medusa
     medusa_domain: "{{ external_domains.barista }}"
     medusa_port: "9000"
-    node_image: "node:20-slim"
+    medusa_image: "barista-medusa:latest"
 
   tasks:
 
@@ -125,20 +126,6 @@
             resources:
               requests:
                 storage: {{ db_storage_size }}
-          ---
-          # Installation Medusa (node_modules + build)
-          apiVersion: v1
-          kind: PersistentVolumeClaim
-          metadata:
-            name: {{ app_name }}-app-data
-            namespace: {{ target_namespace }}
-          spec:
-            accessModes:
-              - ReadWriteOnce
-            storageClassName: {{ storage_class_fast }}
-            resources:
-              requests:
-                storage: {{ app_storage_size }}
           ---
           # Uploads produits (photos capsules)
           apiVersion: v1
@@ -334,7 +321,220 @@
       tags: [barista, barista-install]
 
     # ==========================================================
-    # CONFIGMAP : Scripts + Configuration Medusa v2
+    # BUILD IMAGE MEDUSA (nerdctl / docker → containerd k3s)
+    # ==========================================================
+    # L'image est construite une fois et réutilisée tant que le
+    # build context ne change pas (MD5 du Dockerfile + sources).
+    # Tag : barista-medusa:<hash> + barista-medusa:latest
+    # imagePullPolicy: Never → image locale uniquement
+    # ==========================================================
+
+    - name: Créer le répertoire de build
+      ansible.builtin.file:
+        path: /tmp/barista-build
+        state: directory
+        mode: '0755'
+      tags: [barista, barista-install, barista-build]
+
+    - name: Écrire le Dockerfile Medusa
+      ansible.builtin.copy:
+        dest: /tmp/barista-build/Dockerfile
+        mode: '0644'
+        content: |
+          # ── Stage 1 : build ───────────────────────────────────────────────────────
+          FROM node:20-slim AS builder
+          WORKDIR /app
+
+          COPY package.json tsconfig.json medusa-config.ts ./
+          RUN mkdir -p src
+
+          ENV NODE_OPTIONS="--max-old-space-size=2048"
+          RUN npm install --no-audit --no-fund
+
+          # Build Medusa (TypeScript → .medusa/server/)
+          # medusa-config.ts utilise // @ts-nocheck → aucune erreur TS possible
+          RUN node_modules/.bin/medusa build
+
+          # ── Stage 2 : production ──────────────────────────────────────────────────
+          FROM node:20-slim
+          WORKDIR /app
+
+          COPY --from=builder /app/.medusa      /app/.medusa
+          COPY --from=builder /app/node_modules /app/node_modules
+          COPY --from=builder /app/package.json /app/package.json
+
+          # Rendre medusa CLI disponible (migrations)
+          ENV PATH="/app/node_modules/.bin:$PATH"
+          ENV NODE_ENV=production
+
+          EXPOSE 9000
+          CMD ["node", "/app/.medusa/server/index.js"]
+      tags: [barista, barista-install, barista-build]
+
+    - name: Écrire package.json (build context)
+      ansible.builtin.copy:
+        dest: /tmp/barista-build/package.json
+        mode: '0644'
+        content: |
+          {
+            "name": "barista-medusa",
+            "version": "1.0.0",
+            "scripts": {
+              "build": "medusa build",
+              "start": "medusa start"
+            },
+            "dependencies": {
+              "@medusajs/medusa": "2.13.3",
+              "@medusajs/dashboard": "2.13.3"
+            },
+            "devDependencies": {
+              "typescript": "^5.0.0"
+            }
+          }
+      tags: [barista, barista-install, barista-build]
+
+    - name: Écrire tsconfig.json (build context)
+      ansible.builtin.copy:
+        dest: /tmp/barista-build/tsconfig.json
+        mode: '0644'
+        content: |
+          {
+            "compilerOptions": {
+              "target": "ES2021",
+              "module": "CommonJS",
+              "lib": ["ES2021"],
+              "declaration": true,
+              "strict": false,
+              "moduleResolution": "node",
+              "skipLibCheck": true,
+              "esModuleInterop": true,
+              "experimentalDecorators": true,
+              "emitDecoratorMetadata": true
+            },
+            "include": ["src", "medusa-config.ts"],
+            "exclude": ["dist", "node_modules", ".medusa"]
+          }
+      tags: [barista, barista-install, barista-build]
+
+    - name: Écrire medusa-config.ts (build context)
+      ansible.builtin.copy:
+        dest: /tmp/barista-build/medusa-config.ts
+        mode: '0644'
+        content: |
+          // @ts-nocheck
+          import { defineConfig } from "@medusajs/framework/config"
+
+          export default defineConfig({
+            projectConfig: {
+              databaseUrl: process.env.DATABASE_URL,
+              redisUrl: process.env.REDIS_URL,
+              http: {
+                adminCors:   process.env.ADMIN_CORS   || "https://{{ medusa_domain }}",
+                authCors:    process.env.AUTH_CORS    || "https://{{ medusa_domain }}",
+                storeCors:   process.env.STORE_CORS   || "https://{{ medusa_domain }}",
+                jwtSecret:   process.env.JWT_SECRET   || "supersecret",
+                cookieSecret: process.env.COOKIE_SECRET || "supersecret",
+              },
+            },
+            admin: {
+              disable: false,
+            },
+          })
+      tags: [barista, barista-install, barista-build]
+
+    - name: Calculer le hash du build context
+      ansible.builtin.shell: |
+        cat /tmp/barista-build/Dockerfile \
+            /tmp/barista-build/package.json \
+            /tmp/barista-build/tsconfig.json \
+            /tmp/barista-build/medusa-config.ts \
+          | md5sum | cut -d' ' -f1
+      register: barista_build_hash
+      changed_when: false
+      tags: [barista, barista-install, barista-build]
+
+    - name: Vérifier si l'image Medusa est déjà à jour
+      ansible.builtin.shell: |
+        k3s ctr -n k8s.io images ls 2>/dev/null \
+          | grep "barista-medusa:{{ barista_build_hash.stdout }}" \
+          && echo "EXISTS" || echo "MISSING"
+      register: barista_image_exists
+      changed_when: false
+      failed_when: false
+      tags: [barista, barista-install, barista-build]
+
+    - name: Vérifier si nerdctl est disponible
+      ansible.builtin.command: which nerdctl
+      register: nerdctl_available
+      changed_when: false
+      failed_when: false
+      tags: [barista, barista-install, barista-build]
+
+    - name: Vérifier si docker est disponible
+      ansible.builtin.command: which docker
+      register: docker_available
+      changed_when: false
+      failed_when: false
+      tags: [barista, barista-install, barista-build]
+
+    - name: Installer nerdctl (si ni docker ni nerdctl disponibles)
+      ansible.builtin.shell: |
+        ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
+        NERDCTL_VERSION=1.7.6
+        curl -fsSL -o /tmp/nerdctl.tar.gz \
+          "https://github.com/containerd/nerdctl/releases/download/v${NERDCTL_VERSION}/nerdctl-${NERDCTL_VERSION}-linux-${ARCH}.tar.gz"
+        tar xzf /tmp/nerdctl.tar.gz -C /usr/local/bin/ nerdctl
+        rm -f /tmp/nerdctl.tar.gz
+      when:
+        - nerdctl_available.rc != 0
+        - docker_available.rc != 0
+        - barista_image_exists.stdout is defined
+        - "'MISSING' in barista_image_exists.stdout"
+      changed_when: true
+      tags: [barista, barista-install, barista-build]
+
+    # Build avec nerdctl (namespace k8s.io → directement dans containerd k3s)
+    - name: Build image Medusa (nerdctl → k3s containerd)
+      ansible.builtin.shell: |
+        nerdctl build \
+          --namespace k8s.io \
+          -t "docker.io/library/barista-medusa:{{ barista_build_hash.stdout }}" \
+          -t "docker.io/library/barista-medusa:latest" \
+          /tmp/barista-build/
+      when:
+        - barista_image_exists.stdout is defined
+        - "'MISSING' in barista_image_exists.stdout"
+        - nerdctl_available.rc == 0 or docker_available.rc != 0
+      register: nerdctl_build_result
+      changed_when: true
+      tags: [barista, barista-install, barista-build]
+
+    # Build avec docker + import dans k3s containerd
+    - name: Build image Medusa (docker → export → k3s ctr import)
+      ansible.builtin.shell: |
+        docker build \
+          -t "barista-medusa:{{ barista_build_hash.stdout }}" \
+          -t "barista-medusa:latest" \
+          /tmp/barista-build/ && \
+        docker save "barista-medusa:{{ barista_build_hash.stdout }}" \
+          | k3s ctr -n k8s.io images import --base-name docker.io/library/barista-medusa -
+      when:
+        - barista_image_exists.stdout is defined
+        - "'MISSING' in barista_image_exists.stdout"
+        - docker_available.rc == 0
+        - nerdctl_available.rc != 0
+      register: docker_build_result
+      changed_when: true
+      tags: [barista, barista-install, barista-build]
+
+    - name: Nettoyer le répertoire de build
+      ansible.builtin.file:
+        path: /tmp/barista-build
+        state: absent
+      tags: [barista, barista-install, barista-build]
+
+    # ==========================================================
+    # CONFIGMAP : Scripts de démarrage
     # ==========================================================
 
     - name: Écrire le ConfigMap Medusa
@@ -348,199 +548,29 @@
             name: {{ app_name }}-medusa-config
             namespace: {{ target_namespace }}
           data:
-            # ── package.json ──────────────────────────────────────────
-            package.json: |
-              {
-                "name": "barista-medusa",
-                "version": "1.0.0",
-                "scripts": {
-                  "build": "medusa build",
-                  "start": "medusa start",
-                  "dev": "medusa develop"
-                },
-                "dependencies": {
-                  "@medusajs/medusa": "^2.13.0",
-                  "@medusajs/dashboard": "^2.13.0"
-                },
-                "devDependencies": {
-                  "typescript": "^5.0.0"
-                }
-              }
-
-            # ── tsconfig.json ─────────────────────────────────────────
-            tsconfig.json: |
-              {
-                "compilerOptions": {
-                  "target": "ES2021",
-                  "module": "ESNext",
-                  "lib": ["ES2021"],
-                  "declaration": true,
-                  "strict": false,
-                  "moduleResolution": "Bundler",
-                  "skipLibCheck": true,
-                  "esModuleInterop": true,
-                  "experimentalDecorators": true,
-                  "emitDecoratorMetadata": true
-                },
-                "include": ["src", "medusa-config.ts"],
-                "exclude": ["dist", "node_modules", ".medusa"]
-              }
-
-            # ── medusa-config.ts ──────────────────────────────────────
-            medusa-config.ts: |
-              import { defineConfig } from "@medusajs/framework/config"
-
-              export default defineConfig({
-                projectConfig: {
-                  databaseUrl: process.env.DATABASE_URL,
-                  redisUrl: process.env.REDIS_URL,
-                  http: {
-                    adminCors: process.env.ADMIN_CORS || "https://{{ medusa_domain }}",
-                    authCors: process.env.AUTH_CORS || "https://{{ medusa_domain }}",
-                    storeCors: process.env.STORE_CORS || "https://{{ medusa_domain }}",
-                    jwtSecret: process.env.JWT_SECRET || "supersecret",
-                    cookieSecret: process.env.COOKIE_SECRET || "supersecret",
-                  },
-                },
-                admin: {
-                  disable: false,
-                },
-              })
-
-            # ── medusa-config.js ──────────────────────────────────────
-            # Version CJS pré-compilée de medusa-config.ts
-            # defineConfig() dans Medusa v2 est un no-op (return config)
-            # On exporte la config directement sans compiler le TypeScript
-            # dynamicImport() charge ce fichier via ESM import() → result.default
-            medusa-config.js: |
-              "use strict";
-              Object.defineProperty(exports, "__esModule", { value: true });
-              exports.default = {
-                projectConfig: {
-                  databaseUrl: process.env.DATABASE_URL,
-                  redisUrl: process.env.REDIS_URL,
-                  http: {
-                    adminCors: process.env.ADMIN_CORS || "https://{{ medusa_domain }}",
-                    authCors: process.env.AUTH_CORS || "https://{{ medusa_domain }}",
-                    storeCors: process.env.STORE_CORS || "https://{{ medusa_domain }}",
-                    jwtSecret: process.env.JWT_SECRET || "supersecret",
-                    cookieSecret: process.env.COOKIE_SECRET || "supersecret",
-                  },
-                },
-                admin: {
-                  disable: false,
-                },
-              };
-
-            # ── setup.sh ──────────────────────────────────────────────
-            # Exécuté dans l'initContainer (pas de probe timeout)
-            # Gère npm install + medusa build une seule fois (persisté sur PVC)
-            setup.sh: |
+            # ── migrate.sh ────────────────────────────────────────────
+            # initContainer : applique les migrations PostgreSQL
+            migrate.sh: |
               #!/bin/sh
               set -e
-
-              APP_DIR="/medusa-app"
-              CONFIG_DIR="/config"
-
               echo "==================================================="
-              echo "  Barista - Setup (initContainer)"
+              echo "  Barista - Migrations PostgreSQL"
               echo "==================================================="
-
-              # ── Copie des fichiers de config (toujours, pour prendre en compte les mises à jour) ──
-              mkdir -p "${APP_DIR}/src"
-              # Si package.json change (nouvelles deps), invalider le sentinel npm
-              if [ -f "${APP_DIR}/package.json" ]; then
-                if ! diff -q "${CONFIG_DIR}/package.json" "${APP_DIR}/package.json" > /dev/null 2>&1; then
-                  echo "[setup] package.json modifié → invalidation sentinel npm et build..."
-                  rm -f "${APP_DIR}/.npm-install-complete" "${APP_DIR}/.medusa-build-complete"
-                fi
-              fi
-              cp "${CONFIG_DIR}/package.json"     "${APP_DIR}/package.json"
-              cp "${CONFIG_DIR}/tsconfig.json"    "${APP_DIR}/tsconfig.json"
-              cp "${CONFIG_DIR}/medusa-config.ts" "${APP_DIR}/medusa-config.ts"
-              echo "[setup] Fichiers de configuration copiés."
-
-              cd "${APP_DIR}"
-
-              # ── Installation des dépendances ──
-              # Sentinel file : créé UNIQUEMENT après un npm install complet
-              # Évite de réutiliser un node_modules partiel (install interrompue)
-              if [ ! -f "${APP_DIR}/.npm-install-complete" ]; then
-                echo "[setup] Installation des dépendances npm (~5-10 minutes)..."
-                rm -rf "${APP_DIR}/node_modules"
-                export NODE_OPTIONS="--max-old-space-size=1536"
-                npm install --no-audit --no-fund --loglevel=http 2>&1 || {
-                  echo "[setup] ERREUR: npm install a échoué - nettoyage..."
-                  rm -rf "${APP_DIR}/node_modules"
-                  exit 1
-                }
-                unset NODE_OPTIONS
-                touch "${APP_DIR}/.npm-install-complete"
-                echo "[setup] Dépendances installées."
-              else
-                echo "[setup] Dépendances déjà installées (.npm-install-complete), skip."
-              fi
-
-              # ── Copie de medusa-config.js (CJS pré-écrit dans le ConfigMap) ──
-              # Medusa CLI (build + db:migrate) charge ce fichier via dynamicImport()
-              # (ESM import()) → result.default. defineConfig() est un no-op dans
-              # Medusa v2, donc on exporte la config directement en CJS sans compilation.
-              echo "[setup] Copie de medusa-config.js depuis le ConfigMap..."
-              cp "${CONFIG_DIR}/medusa-config.js" "${APP_DIR}/medusa-config.js"
-              echo "[setup] medusa-config.js copié."
-
-              # ── Build Medusa (compilation TypeScript → .medusa/server) ──
-              # Double vérification : sentinel ET présence réelle de l'output
-              # (évite le cas d'un sentinel créé après un build qui a exit 0 mais échoué)
-              if [ ! -f "${APP_DIR}/.medusa-build-complete" ] || [ ! -f "${APP_DIR}/.medusa/server/index.js" ]; then
-                echo "[setup] Build Medusa (compilation TypeScript)..."
-                rm -f "${APP_DIR}/.medusa-build-complete"
-                rm -rf "${APP_DIR}/.medusa"
-                export NODE_OPTIONS="--max-old-space-size=1536"
-                ./node_modules/.bin/medusa build 2>&1 || {
-                  echo "[setup] ERREUR: medusa build a échoué - nettoyage..."
-                  rm -rf "${APP_DIR}/.medusa"
-                  exit 1
-                }
-                if [ ! -f "${APP_DIR}/.medusa/server/index.js" ]; then
-                  echo "[setup] ERREUR: medusa build a exit 0 mais .medusa/server/index.js manquant"
-                  rm -rf "${APP_DIR}/.medusa"
-                  exit 1
-                fi
-                unset NODE_OPTIONS
-                touch "${APP_DIR}/.medusa-build-complete"
-                echo "[setup] Build terminé."
-              else
-                echo "[setup] Build déjà présent (.medusa-build-complete + index.js), skip."
-              fi
-
-              # ── Migrations PostgreSQL (idempotent, toujours exécuté) ──
-              echo "[setup] Application des migrations PostgreSQL..."
-              ./node_modules/.bin/medusa db:migrate 2>&1 || {
-                echo "[setup] ERREUR: migrations échouées"
-                exit 1
-              }
-              echo "[setup] Migrations OK."
-
-              echo "[setup] Setup terminé. Démarrage du container principal."
+              cd /app
+              echo "[migrate] Application des migrations..."
+              medusa db:migrate
+              echo "[migrate] Migrations OK."
 
             # ── start.sh ──────────────────────────────────────────────
-            # Exécuté dans le container principal (après l'initContainer)
-            # Setup complet (npm + build + migrations) déjà fait → démarrage immédiat
+            # Container principal : démarre le serveur Medusa
             start.sh: |
               #!/bin/sh
               set -e
-
-              APP_DIR="/medusa-app"
-
               echo "==================================================="
-              echo "  Barista - Start (container principal)"
+              echo "  Barista - Démarrage Medusa v2"
               echo "==================================================="
-
-              cd "${APP_DIR}"
-
-              echo "[start] Démarrage du serveur Medusa sur port {{ medusa_port }}..."
-              exec node .medusa/server/index.js
+              echo "[start] Démarrage sur port {{ medusa_port }}..."
+              exec node /app/.medusa/server/index.js
       tags: [barista, barista-install]
 
     - name: Appliquer le ConfigMap Medusa
@@ -583,11 +613,12 @@
                 labels:
                   app: {{ app_name }}-medusa
               spec:
-                # ── initContainer : npm install + medusa build (sans probe timeout) ──
+                # ── initContainer : migrations (~5-10 sec) ──────────────
                 initContainers:
-                  - name: medusa-setup
-                    image: {{ node_image }}
-                    command: ["/bin/sh", "/config/setup.sh"]
+                  - name: medusa-migrate
+                    image: docker.io/library/barista-medusa:{{ barista_build_hash.stdout }}
+                    imagePullPolicy: Never
+                    command: ["/bin/sh", "/config/migrate.sh"]
                     env:
                       - name: NODE_ENV
                         value: "production"
@@ -609,20 +640,21 @@
                             name: {{ app_name }}-secret
                             key: COOKIE_SECRET
                     volumeMounts:
-                      - name: app-data
-                        mountPath: /medusa-app
+                      - name: uploads
+                        mountPath: /app/uploads
                       - name: medusa-config
                         mountPath: /config
                     resources:
                       requests:
-                        cpu: 500m
-                        memory: 512Mi
+                        cpu: 100m
+                        memory: 256Mi
                       limits:
-                        memory: 2Gi
-                # ── Container principal : migrations + démarrage serveur (~15 sec) ──
+                        memory: 512Mi
+                # ── Container principal : serveur Medusa (~30 sec) ──────
                 containers:
                   - name: medusa
-                    image: {{ node_image }}
+                    image: docker.io/library/barista-medusa:{{ barista_build_hash.stdout }}
+                    imagePullPolicy: Never
                     command: ["/bin/sh", "/config/start.sh"]
                     ports:
                       - containerPort: {{ medusa_port }}
@@ -656,10 +688,8 @@
                             name: {{ app_name }}-secret
                             key: COOKIE_SECRET
                     volumeMounts:
-                      - name: app-data
-                        mountPath: /medusa-app
                       - name: uploads
-                        mountPath: /medusa-app/uploads
+                        mountPath: /app/uploads
                       - name: medusa-config
                         mountPath: /config
                     resources:
@@ -668,12 +698,11 @@
                         memory: 256Mi
                       limits:
                         memory: 1Gi
-                    # Setup fait par initContainer → startup rapide (~30 sec)
                     startupProbe:
                       httpGet:
                         path: /health
                         port: {{ medusa_port }}
-                      failureThreshold: 12
+                      failureThreshold: 24
                       periodSeconds: 5
                     readinessProbe:
                       httpGet:
@@ -690,9 +719,6 @@
                       periodSeconds: 30
                       failureThreshold: 5
                 volumes:
-                  - name: app-data
-                    persistentVolumeClaim:
-                      claimName: {{ app_name }}-app-data
                   - name: uploads
                     persistentVolumeClaim:
                       claimName: {{ app_name }}-uploads
@@ -909,22 +935,19 @@
           - ""
           - "  Stack"
           - "──────────────────────────────────────────────"
-          - "Medusa v2     : node:20-slim (port {{ medusa_port }})"
+          - "Medusa v2     : barista-medusa:{{ barista_build_hash.stdout }} (image locale)"
           - "PostgreSQL    : postgres:16-alpine ({{ db_storage_size }})"
           - "Redis         : redis:7-alpine (cache sessions)"
           - ""
           - "  Stockage"
           - "──────────────────────────────────────────────"
           - "DB            : {{ db_storage_size }} ({{ storage_class_fast }})"
-          - "App (npm)     : {{ app_storage_size }} ({{ storage_class_fast }})"
           - "Uploads       : {{ uploads_storage_size }} ({{ storage_class_slow }})"
           - ""
-          - "  ⚠  Premier démarrage"
+          - "  Image locale"
           - "──────────────────────────────────────────────"
-          - "Le pod Medusa effectue npm install + medusa build"
-          - "lors du premier démarrage (~5-10 minutes)."
-          - "Surveiller les logs :"
-          - "  k3s kubectl logs -f -l app={{ app_name }}-medusa -n {{ target_namespace }}"
+          - "Rebuild       : ansible-playbook ... --tags barista-build"
+          - "Hash actuel   : {{ barista_build_hash.stdout }}"
           - ""
           - "  Pods"
           - "──────────────────────────────────────────────"
@@ -947,7 +970,7 @@
           - "{{ barista_cert.stdout_lines | default(['En cours de génération...']) }}"
           - ""
           - "================================================"
-          - "  ⚠  ACTIONS POST-DÉPLOIEMENT"
+          - "  ACTIONS POST-DÉPLOIEMENT"
           - "================================================"
           - "1. Changer db_password en production (ansible-vault)"
           - "2. Créer le compte admin via l'interface /app"
