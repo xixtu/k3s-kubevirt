@@ -292,16 +292,22 @@
                       - sh
                       - -c
                       - |
-                        echo "Nettoyage des fichiers de lock PrestaShop dans /var/www/html..."
-                        ## Le script /tmp/docker_run.sh crée un lock dans PS_FOLDER
-                        ## pour éviter les installations concurrentes.
-                        ## S'il persiste après un crash (PVC), le prochain démarrage
-                        ## affiche "Another setup is currently running" et exit 42 en boucle.
+                        echo "=== cleanup-lock : état de /var/www/html avant nettoyage ==="
+                        ls -la /var/www/html/ 2>/dev/null || echo "(vide)"
+                        echo "=== Fichiers *lock* détectés ==="
+                        find /var/www/html -maxdepth 4 -name "*lock*" 2>/dev/null || echo "aucun"
+                        echo "=== Nettoyage ==="
+                        ## Pattern large : *lock* (et non *.lock) pour couvrir
+                        ## ps-install.lock, setup_lock, lockfile, .lock, etc.
+                        find /var/www/html -maxdepth 4 \
+                          \( -name "*lock*" -o -name ".*lock*" \) \
+                          -type f -delete 2>/dev/null || true
+                        ## Suppressions explicites connues
                         rm -f /var/www/html/.setup_lock \
                               /var/www/html/.ps_lock \
+                              /var/www/html/ps-install.lock \
                               /var/www/html/install/install.lock 2>/dev/null || true
-                        find /var/www/html -maxdepth 2 -name "*.lock" -delete 2>/dev/null || true
-                        echo "Nettoyage terminé."
+                        echo "=== Nettoyage terminé ==="
                     volumeMounts:
                       - name: prestashop-data
                         mountPath: /var/www/html
@@ -336,14 +342,30 @@
                       - /bin/bash
                       - -c
                       - |
+                        ## --- Diagnostic au démarrage (une seule fois) ---
+                        echo "[wrapper] === Mécanisme de lock dans docker_run.sh ==="
+                        grep -n "lock\|LOCK\|Another setup\|running\|SETUP" /tmp/docker_run.sh 2>/dev/null | head -30 || echo "grep: rien trouvé"
+                        echo "[wrapper] === Fichiers /var/www/html au démarrage ==="
+                        ls -la /var/www/html/ 2>/dev/null | head -20 || echo "(vide)"
+                        echo "[wrapper] ==========================================="
+                        ## --- Boucle principale ---
                         while true; do
+                          ## Nettoyer AVANT chaque appel (couvre /tmp ET /var/www/html)
+                          ## Le lock peut être dans /tmp (même session container) ou dans le PVC
+                          find /var/www/html -maxdepth 4 \( -name "*lock*" -o -name ".*lock*" \) \
+                            -type f -delete 2>/dev/null || true
+                          find /tmp -maxdepth 2 \( -name "*lock*" -o -name ".*lock*" \) \
+                            -type f -delete 2>/dev/null || true
                           bash /tmp/docker_run.sh
                           ec=$?
                           if [ "$ec" -eq 42 ]; then
-                            echo "[k8s-wrapper] Exit 42 détecté (signal restart PrestaShop) - relance dans 5s..."
+                            echo "[wrapper] Exit 42 détecté. Locks résiduels :"
+                            find /var/www/html -maxdepth 4 -name "*lock*" 2>/dev/null || echo "  /var/www/html : aucun"
+                            find /tmp -maxdepth 2 -name "*lock*" 2>/dev/null || echo "  /tmp : aucun"
+                            echo "[wrapper] Relance dans 5s..."
                             sleep 5
                           else
-                            echo "[k8s-wrapper] Exit $ec - arrêt du wrapper."
+                            echo "[wrapper] Exit $ec - arrêt du wrapper."
                             exit $ec
                           fi
                         done
