@@ -1,103 +1,99 @@
-2026-03-12 21:35:28,478 p=3891795 u=administrator n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+2026-03-12 22:18:51,510 p=3948324 u=administrator n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
 
-2026-03-12 21:35:28,479 p=3891795 u=administrator n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be removed from collection 'community.general' version 12.0.0.
+2026-03-12 22:18:51,511 p=3948324 u=administrator n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be removed from collection 'community.general' version 12.0.0.
 
-2026-03-12 21:35:28,559 p=3891795 u=administrator n=ansible INFO| PLAY [PrestaShop - Boutique e-commerce café capsules Barista] *************************************************************************
-2026-03-12 21:35:28,587 p=3891795 u=administrator n=ansible INFO| TASK [Créer le namespace prestashop (si absent)] **************************************************************************************
-2026-03-12 21:35:28,588 p=3891795 u=administrator n=ansible INFO| jeudi 12 mars 2026  21:35:28 +0100 (0:00:00.070)       0:00:00.070 ************ 
-2026-03-12 21:35:51,025 p=3891795 u=administrator n=ansible INFO| changed: [k3s-node-1]
-2026-03-12 21:35:51,044 p=3891795 u=administrator n=ansible INFO| TASK [Labelliser le namespace prestashop (PSA baseline - Apache www-data)] ************************************************************
-2026-03-12 21:35:51,044 p=3891795 u=administrator n=ansible INFO| jeudi 12 mars 2026  21:35:51 +0100 (0:00:22.455)       0:00:22.526 ************ 
-2026-03-12 21:35:51,842 p=3891795 u=administrator n=ansible INFO| ok: [k3s-node-1]
-2026-03-12 21:35:51,868 p=3891795 u=administrator n=ansible INFO| TASK [Écrire les manifests PrestaShop (Secret + PVCs + MariaDB + App)] ****************************************************************
-2026-03-12 21:35:51,868 p=3891795 u=administrator n=ansible INFO| jeudi 12 mars 2026  21:35:51 +0100 (0:00:00.824)       0:00:23.350 ************ 
-2026-03-12 21:35:53,647 p=3891795 u=administrator n=ansible INFO| changed: [k3s-node-1]
-2026-03-12 21:35:53,665 p=3891795 u=administrator n=ansible INFO| TASK [Appliquer les manifests PrestaShop (Secret, PVCs, Deployments, Services, Ingress, HPA)] *****************************************
-2026-03-12 21:35:53,665 p=3891795 u=administrator n=ansible INFO| jeudi 12 mars 2026  21:35:53 +0100 (0:00:01.796)       0:00:25.147 ************ 
-2026-03-12 21:35:55,306 p=3891795 u=administrator n=ansible INFO| ok: [k3s-node-1]
-2026-03-12 21:35:55,324 p=3891795 u=administrator n=ansible INFO| TASK [Supprimer le fichier manifests temporaire] **************************************************************************************
-2026-03-12 21:35:55,324 p=3891795 u=administrator n=ansible INFO| jeudi 12 mars 2026  21:35:55 +0100 (0:00:01.659)       0:00:26.807 ************ 
-2026-03-12 21:35:56,241 p=3891795 u=administrator n=ansible INFO| changed: [k3s-node-1]
-2026-03-12 21:35:56,259 p=3891795 u=administrator n=ansible INFO| TASK [Vérifier le type de clé du certificat actuel] ***********************************************************************************
-2026-03-12 21:35:56,259 p=3891795 u=administrator n=ansible INFO| jeudi 12 mars 2026  21:35:56 +0100 (0:00:00.934)       0:00:27.741 ************ 
-2026-03-12 21:35:57,031 p=3891795 u=administrator n=ansible INFO| ok: [k3s-node-1]
-2026-03-12 21:35:57,051 p=3891795 u=administrator n=ansible INFO| TASK [Supprimer l'ancien certificat RSA pour forcer le renouvellement ECDSA] **********************************************************
-2026-03-12 21:35:57,051 p=3891795 u=administrator n=ansible INFO| jeudi 12 mars 2026  21:35:57 +0100 (0:00:00.792)       0:00:28.534 ************ 
-2026-03-12 21:35:57,844 p=3891795 u=administrator n=ansible INFO| changed: [k3s-node-1]
-2026-03-12 21:35:57,875 p=3891795 u=administrator n=ansible INFO| TASK [Supprimer l'ancien secret TLS RSA] **********************************************************************************************
-2026-03-12 21:35:57,875 p=3891795 u=administrator n=ansible INFO| jeudi 12 mars 2026  21:35:57 +0100 (0:00:00.824)       0:00:29.358 ************ 
-2026-03-12 21:35:58,632 p=3891795 u=administrator n=ansible INFO| changed: [k3s-node-1]
-2026-03-12 21:35:58,651 p=3891795 u=administrator n=ansible INFO| TASK [Écrire l'IngressRoute HTTPS PrestaShop] *****************************************************************************************
-2026-03-12 21:35:58,651 p=3891795 u=administrator n=ansible INFO| jeudi 12 mars 2026  21:35:58 +0100 (0:00:00.775)       0:00:30.133 ************ 
-2026-03-12 21:35:59,940 p=3891795 u=administrator n=ansible INFO| changed: [k3s-node-1]
-2026-03-12 21:35:59,960 p=3891795 u=administrator n=ansible INFO| TASK [Appliquer l'IngressRoute HTTPS PrestaShop] **************************************************************************************
-2026-03-12 21:35:59,960 p=3891795 u=administrator n=ansible INFO| jeudi 12 mars 2026  21:35:59 +0100 (0:00:01.309)       0:00:31.443 ************ 
-2026-03-12 21:36:00,784 p=3891795 u=administrator n=ansible INFO| ok: [k3s-node-1]
-2026-03-12 21:36:00,808 p=3891795 u=administrator n=ansible INFO| TASK [Supprimer le fichier IngressRoute temporaire] ***********************************************************************************
-2026-03-12 21:36:00,808 p=3891795 u=administrator n=ansible INFO| jeudi 12 mars 2026  21:36:00 +0100 (0:00:00.847)       0:00:32.290 ************ 
-2026-03-12 21:36:01,437 p=3891795 u=administrator n=ansible INFO| changed: [k3s-node-1]
-2026-03-12 21:36:01,513 p=3891795 u=administrator n=ansible INFO| TASK [Attendre que MariaDB soit Ready] ************************************************************************************************
-2026-03-12 21:36:01,514 p=3891795 u=administrator n=ansible INFO| jeudi 12 mars 2026  21:36:01 +0100 (0:00:00.705)       0:00:32.996 ************ 
-2026-03-12 21:36:52,776 p=3891795 u=administrator n=ansible INFO| ok: [k3s-node-1]
-2026-03-12 21:36:52,796 p=3891795 u=administrator n=ansible INFO| TASK [Attendre que PrestaShop soit Ready (installation DB au 1er boot = ~10min)] ******************************************************
-2026-03-12 21:36:52,797 p=3891795 u=administrator n=ansible INFO| jeudi 12 mars 2026  21:36:52 +0100 (0:00:51.282)       0:01:24.279 ************ 
-2026-03-12 21:54:53,365 p=3891795 u=administrator n=ansible ERROR| [ERROR]: Task failed: process object is closed
-Origin: /home/administrator/git/k3s-kubevirt/playbooks/prestashop.yml:652:7
+2026-03-12 22:18:51,590 p=3948324 u=administrator n=ansible INFO| PLAY [PrestaShop - Boutique e-commerce café capsules Barista] *************************************************************************
+2026-03-12 22:18:51,618 p=3948324 u=administrator n=ansible INFO| TASK [Créer le namespace prestashop (si absent)] **************************************************************************************
+2026-03-12 22:18:51,618 p=3948324 u=administrator n=ansible INFO| jeudi 12 mars 2026  22:18:51 +0100 (0:00:00.068)       0:00:00.068 ************ 
+2026-03-12 22:18:52,619 p=3948324 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-03-12 22:18:52,640 p=3948324 u=administrator n=ansible INFO| TASK [Labelliser le namespace prestashop (PSA baseline - Apache www-data)] ************************************************************
+2026-03-12 22:18:52,641 p=3948324 u=administrator n=ansible INFO| jeudi 12 mars 2026  22:18:52 +0100 (0:00:01.022)       0:00:01.091 ************ 
+2026-03-12 22:18:53,413 p=3948324 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-12 22:18:53,430 p=3948324 u=administrator n=ansible INFO| TASK [Écrire les manifests PrestaShop (Secret + PVCs + MariaDB + App)] ****************************************************************
+2026-03-12 22:18:53,430 p=3948324 u=administrator n=ansible INFO| jeudi 12 mars 2026  22:18:53 +0100 (0:00:00.789)       0:00:01.880 ************ 
+2026-03-12 22:18:54,942 p=3948324 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-03-12 22:18:54,957 p=3948324 u=administrator n=ansible INFO| TASK [Appliquer les manifests PrestaShop (Secret, PVCs, Deployments, Services, Ingress, HPA)] *****************************************
+2026-03-12 22:18:54,957 p=3948324 u=administrator n=ansible INFO| jeudi 12 mars 2026  22:18:54 +0100 (0:00:01.527)       0:00:03.407 ************ 
+2026-03-12 22:18:56,540 p=3948324 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-12 22:18:56,569 p=3948324 u=administrator n=ansible INFO| TASK [Supprimer le fichier manifests temporaire] **************************************************************************************
+2026-03-12 22:18:56,570 p=3948324 u=administrator n=ansible INFO| jeudi 12 mars 2026  22:18:56 +0100 (0:00:01.612)       0:00:05.020 ************ 
+2026-03-12 22:18:57,539 p=3948324 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-03-12 22:18:57,558 p=3948324 u=administrator n=ansible INFO| TASK [Vérifier le type de clé du certificat actuel] ***********************************************************************************
+2026-03-12 22:18:57,558 p=3948324 u=administrator n=ansible INFO| jeudi 12 mars 2026  22:18:57 +0100 (0:00:00.988)       0:00:06.008 ************ 
+2026-03-12 22:18:58,339 p=3948324 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-12 22:18:58,362 p=3948324 u=administrator n=ansible INFO| TASK [Supprimer l'ancien certificat RSA pour forcer le renouvellement ECDSA] **********************************************************
+2026-03-12 22:18:58,363 p=3948324 u=administrator n=ansible INFO| jeudi 12 mars 2026  22:18:58 +0100 (0:00:00.804)       0:00:06.813 ************ 
+2026-03-12 22:18:59,171 p=3948324 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-03-12 22:18:59,189 p=3948324 u=administrator n=ansible INFO| TASK [Supprimer l'ancien secret TLS RSA] **********************************************************************************************
+2026-03-12 22:18:59,190 p=3948324 u=administrator n=ansible INFO| jeudi 12 mars 2026  22:18:59 +0100 (0:00:00.827)       0:00:07.640 ************ 
+2026-03-12 22:18:59,988 p=3948324 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-03-12 22:19:00,007 p=3948324 u=administrator n=ansible INFO| TASK [Écrire l'IngressRoute HTTPS PrestaShop] *****************************************************************************************
+2026-03-12 22:19:00,007 p=3948324 u=administrator n=ansible INFO| jeudi 12 mars 2026  22:19:00 +0100 (0:00:00.817)       0:00:08.457 ************ 
+2026-03-12 22:19:01,120 p=3948324 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-03-12 22:19:01,142 p=3948324 u=administrator n=ansible INFO| TASK [Appliquer l'IngressRoute HTTPS PrestaShop] **************************************************************************************
+2026-03-12 22:19:01,143 p=3948324 u=administrator n=ansible INFO| jeudi 12 mars 2026  22:19:01 +0100 (0:00:01.135)       0:00:09.593 ************ 
+2026-03-12 22:19:01,995 p=3948324 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-12 22:19:02,020 p=3948324 u=administrator n=ansible INFO| TASK [Supprimer le fichier IngressRoute temporaire] ***********************************************************************************
+2026-03-12 22:19:02,021 p=3948324 u=administrator n=ansible INFO| jeudi 12 mars 2026  22:19:02 +0100 (0:00:00.877)       0:00:10.471 ************ 
+2026-03-12 22:19:02,656 p=3948324 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-03-12 22:19:02,727 p=3948324 u=administrator n=ansible INFO| TASK [Attendre que MariaDB soit Ready] ************************************************************************************************
+2026-03-12 22:19:02,727 p=3948324 u=administrator n=ansible INFO| jeudi 12 mars 2026  22:19:02 +0100 (0:00:00.706)       0:00:11.177 ************ 
+2026-03-12 22:19:43,633 p=3948324 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-12 22:19:43,658 p=3948324 u=administrator n=ansible INFO| TASK [Attendre que PrestaShop soit Ready (installation DB au 1er boot = ~15min)] ******************************************************
+2026-03-12 22:19:43,658 p=3948324 u=administrator n=ansible INFO| jeudi 12 mars 2026  22:19:43 +0100 (0:00:40.931)       0:00:52.108 ************ 
+2026-03-12 22:26:55,022 p=3948324 u=administrator n=ansible ERROR| [ERROR]: Task failed: process object is closed
+Origin: /home/administrator/git/k3s-kubevirt/playbooks/prestashop.yml:674:7
 
-650       tags: [prestashop, prestashop-verify]
-651
-652     - name: Attendre que PrestaShop soit Ready (installation DB au 1er boot = ~10min)
+672       tags: [prestashop, prestashop-verify]
+673
+674     - name: Attendre que PrestaShop soit Ready (installation DB au 1er boot = ~15min)
           ^ column 7
 
 
-2026-03-12 21:54:53,367 p=3891795 u=administrator n=ansible INFO| fatal: [k3s-node-1]: FAILED! => changed=false 
+2026-03-12 22:26:55,024 p=3948324 u=administrator n=ansible INFO| fatal: [k3s-node-1]: FAILED! => changed=false 
   msg: 'Task failed: process object is closed'
-2026-03-12 21:54:53,369 p=3891795 u=administrator n=ansible INFO| PLAY RECAP ****************************************************************************************************************************
-2026-03-12 21:54:53,370 p=3891795 u=administrator n=ansible INFO| k3s-node-1                 : ok=12   changed=7    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0   
-2026-03-12 21:54:53,370 p=3891795 u=administrator n=ansible INFO| PLAYBOOK RECAP ************************************************************************************************************************
-2026-03-12 21:54:53,371 p=3891795 u=administrator n=ansible INFO| Playbook run took 0 days, 0 hours, 19 minutes, 24 seconds
+2026-03-12 22:26:55,024 p=3948324 u=administrator n=ansible INFO| ...ignoring
+2026-03-12 22:26:55,044 p=3948324 u=administrator n=ansible INFO| TASK [Avertissement si PrestaShop pas encore Ready] ***********************************************************************************
+2026-03-12 22:26:55,044 p=3948324 u=administrator n=ansible INFO| jeudi 12 mars 2026  22:26:55 +0100 (0:07:11.386)       0:08:03.495 ************ 
+2026-03-12 22:26:55,086 p=3948324 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-03-12 22:26:55,110 p=3948324 u=administrator n=ansible INFO| TASK [Vérifier les pods PrestaShop] ***************************************************************************************************
+2026-03-12 22:26:55,111 p=3948324 u=administrator n=ansible INFO| jeudi 12 mars 2026  22:26:55 +0100 (0:00:00.066)       0:08:03.561 ************ 
+2026-03-12 22:26:55,912 p=3948324 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-12 22:26:55,930 p=3948324 u=administrator n=ansible INFO| TASK [Vérifier les services PrestaShop] ***********************************************************************************************
+2026-03-12 22:26:55,930 p=3948324 u=administrator n=ansible INFO| jeudi 12 mars 2026  22:26:55 +0100 (0:00:00.819)       0:08:04.381 ************ 
+2026-03-12 22:26:56,703 p=3948324 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-12 22:26:56,723 p=3948324 u=administrator n=ansible INFO| TASK [Vérifier l'Ingress PrestaShop] **************************************************************************************************
+2026-03-12 22:26:56,723 p=3948324 u=administrator n=ansible INFO| jeudi 12 mars 2026  22:26:56 +0100 (0:00:00.792)       0:08:05.173 ************ 
+2026-03-12 22:26:57,506 p=3948324 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-12 22:26:57,525 p=3948324 u=administrator n=ansible INFO| TASK [Vérifier l'IngressRoute HTTPS] **************************************************************************************************
+2026-03-12 22:26:57,525 p=3948324 u=administrator n=ansible INFO| jeudi 12 mars 2026  22:26:57 +0100 (0:00:00.802)       0:08:05.975 ************ 
+2026-03-12 22:26:58,300 p=3948324 u=administrator n=ansible ERROR| [ERROR]: Task result omitted due to queue send failure: process object is closed
 
-2026-03-12 21:54:53,371 p=3891795 u=administrator n=ansible INFO| TASKS RECAP ***************************************************************************************************************************
-2026-03-12 21:54:53,371 p=3891795 u=administrator n=ansible INFO| jeudi 12 mars 2026  21:54:53 +0100 (0:18:00.574)       0:19:24.853 ************ 
-2026-03-12 21:54:53,371 p=3891795 u=administrator n=ansible INFO| =============================================================================== 
-2026-03-12 21:54:53,372 p=3891795 u=administrator n=ansible INFO| Attendre que PrestaShop soit Ready (installation DB au 1er boot = ~10min) --------------------------------------------------- 1080.57s
-2026-03-12 21:54:53,372 p=3891795 u=administrator n=ansible INFO| Attendre que MariaDB soit Ready ----------------------------------------------------------------------------------------------- 51.28s
-2026-03-12 21:54:53,372 p=3891795 u=administrator n=ansible INFO| Créer le namespace prestashop (si absent) ------------------------------------------------------------------------------------- 22.46s
-2026-03-12 21:54:53,373 p=3891795 u=administrator n=ansible INFO| Écrire les manifests PrestaShop (Secret + PVCs + MariaDB + App) ---------------------------------------------------------------- 1.80s
-2026-03-12 21:54:53,373 p=3891795 u=administrator n=ansible INFO| Appliquer les manifests PrestaShop (Secret, PVCs, Deployments, Services, Ingress, HPA) ----------------------------------------- 1.66s
-2026-03-12 21:54:53,373 p=3891795 u=administrator n=ansible INFO| Écrire l'IngressRoute HTTPS PrestaShop ----------------------------------------------------------------------------------------- 1.31s
-2026-03-12 21:54:53,373 p=3891795 u=administrator n=ansible INFO| Supprimer le fichier manifests temporaire -------------------------------------------------------------------------------------- 0.93s
-2026-03-12 21:54:53,373 p=3891795 u=administrator n=ansible INFO| Appliquer l'IngressRoute HTTPS PrestaShop -------------------------------------------------------------------------------------- 0.85s
-2026-03-12 21:54:53,374 p=3891795 u=administrator n=ansible INFO| Labelliser le namespace prestashop (PSA baseline - Apache www-data) ------------------------------------------------------------ 0.82s
-2026-03-12 21:54:53,374 p=3891795 u=administrator n=ansible INFO| Supprimer l'ancien certificat RSA pour forcer le renouvellement ECDSA ---------------------------------------------------------- 0.82s
-2026-03-12 21:54:53,374 p=3891795 u=administrator n=ansible INFO| Vérifier le type de clé du certificat actuel ----------------------------------------------------------------------------------- 0.79s
-2026-03-12 21:54:53,374 p=3891795 u=administrator n=ansible INFO| Supprimer l'ancien secret TLS RSA ---------------------------------------------------------------------------------------------- 0.78s
-2026-03-12 21:54:53,374 p=3891795 u=administrator n=ansible INFO| Supprimer le fichier IngressRoute temporaire ----------------------------------------------------------------------------------- 0.71s
-2026-03-12 21:59:11,892 p=3922277 u=administrator n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+2026-03-12 22:26:58,301 p=3948324 u=administrator n=ansible INFO| fatal: [k3s-node-1]: FAILED! => 
+  msg: 'Task result omitted due to queue send failure: process object is closed'
+2026-03-12 22:26:58,302 p=3948324 u=administrator n=ansible INFO| PLAY RECAP ****************************************************************************************************************************
+2026-03-12 22:26:58,303 p=3948324 u=administrator n=ansible INFO| k3s-node-1                 : ok=16   changed=7    unreachable=0    failed=1    skipped=1    rescued=0    ignored=1   
+2026-03-12 22:26:58,303 p=3948324 u=administrator n=ansible INFO| PLAYBOOK RECAP ************************************************************************************************************************
+2026-03-12 22:26:58,303 p=3948324 u=administrator n=ansible INFO| Playbook run took 0 days, 0 hours, 8 minutes, 6 seconds
 
-2026-03-12 21:59:11,892 p=3922277 u=administrator n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be removed from collection 'community.general' version 12.0.0.
-
-2026-03-12 21:59:11,988 p=3922277 u=administrator n=ansible INFO| PLAY [PrestaShop - Boutique e-commerce café capsules Barista] ******************
-2026-03-12 21:59:12,021 p=3922277 u=administrator n=ansible INFO| TASK [Créer le namespace prestashop (si absent)] *******************************
-2026-03-12 21:59:12,021 p=3922277 u=administrator n=ansible INFO| jeudi 12 mars 2026  21:59:12 +0100 (0:00:00.082)       0:00:00.082 ************ 
-2026-03-12 21:59:12,496 p=3922277 u=administrator n=ansible ERROR| [ERROR]: Task failed: Data could not be sent to remote host "192.168.0.11". Make sure this host can be reached over ssh: administrator@192.168.0.11: Permission denied (publickey,password).
-Origin: /home/administrator/git/k3s-kubevirt/playbooks/prestashop.yml:76:7
-
-74     # ==========================================================
-75
-76     - name: Créer le namespace prestashop (si absent)
-         ^ column 7
-
-
-2026-03-12 21:59:12,497 p=3922277 u=administrator n=ansible INFO| fatal: [k3s-node-1]: UNREACHABLE! => changed=false 
-  msg: 'Task failed: Data could not be sent to remote host "192.168.0.11". Make sure this host can be reached over ssh: administrator@192.168.0.11: Permission denied (publickey,password).'
-  unreachable: true
-2026-03-12 21:59:12,499 p=3922277 u=administrator n=ansible INFO| PLAY RECAP *********************************************************************
-2026-03-12 21:59:12,499 p=3922277 u=administrator n=ansible INFO| k3s-node-1                 : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0   
-2026-03-12 21:59:12,499 p=3922277 u=administrator n=ansible INFO| PLAYBOOK RECAP *****************************************************************
-2026-03-12 21:59:12,499 p=3922277 u=administrator n=ansible INFO| Playbook run took 0 days, 0 hours, 0 minutes, 0 seconds
-
-2026-03-12 21:59:12,500 p=3922277 u=administrator n=ansible INFO| TASKS RECAP ********************************************************************
-2026-03-12 21:59:12,500 p=3922277 u=administrator n=ansible INFO| jeudi 12 mars 2026  21:59:12 +0100 (0:00:00.478)       0:00:00.561 ************ 
-2026-03-12 21:59:12,500 p=3922277 u=administrator n=ansible INFO| =============================================================================== 
-2026-03-12 21:59:12,500 p=3922277 u=administrator n=ansible INFO| Créer le namespace prestashop (si absent) ------------------------------- 0.48s
+2026-03-12 22:26:58,303 p=3948324 u=administrator n=ansible INFO| TASKS RECAP ***************************************************************************************************************************
+2026-03-12 22:26:58,304 p=3948324 u=administrator n=ansible INFO| jeudi 12 mars 2026  22:26:58 +0100 (0:00:00.778)       0:08:06.754 ************ 
+2026-03-12 22:26:58,304 p=3948324 u=administrator n=ansible INFO| =============================================================================== 
+2026-03-12 22:26:58,304 p=3948324 u=administrator n=ansible INFO| Attendre que PrestaShop soit Ready (installation DB au 1er boot = ~15min) ---------------------------------------------------- 431.39s
+2026-03-12 22:26:58,304 p=3948324 u=administrator n=ansible INFO| Attendre que MariaDB soit Ready ----------------------------------------------------------------------------------------------- 40.93s
+2026-03-12 22:26:58,304 p=3948324 u=administrator n=ansible INFO| Appliquer les manifests PrestaShop (Secret, PVCs, Deployments, Services, Ingress, HPA) ----------------------------------------- 1.61s
+2026-03-12 22:26:58,305 p=3948324 u=administrator n=ansible INFO| Écrire les manifests PrestaShop (Secret + PVCs + MariaDB + App) ---------------------------------------------------------------- 1.53s
+2026-03-12 22:26:58,305 p=3948324 u=administrator n=ansible INFO| Écrire l'IngressRoute HTTPS PrestaShop ----------------------------------------------------------------------------------------- 1.14s
+2026-03-12 22:26:58,305 p=3948324 u=administrator n=ansible INFO| Créer le namespace prestashop (si absent) -------------------------------------------------------------------------------------- 1.02s
+2026-03-12 22:26:58,305 p=3948324 u=administrator n=ansible INFO| Supprimer le fichier manifests temporaire -------------------------------------------------------------------------------------- 0.99s
+2026-03-12 22:26:58,305 p=3948324 u=administrator n=ansible INFO| Appliquer l'IngressRoute HTTPS PrestaShop -------------------------------------------------------------------------------------- 0.88s
+2026-03-12 22:26:58,306 p=3948324 u=administrator n=ansible INFO| Supprimer l'ancien certificat RSA pour forcer le renouvellement ECDSA ---------------------------------------------------------- 0.83s
+2026-03-12 22:26:58,306 p=3948324 u=administrator n=ansible INFO| Vérifier les pods PrestaShop --------------------------------------------------------------------------------------------------- 0.82s
+2026-03-12 22:26:58,306 p=3948324 u=administrator n=ansible INFO| Supprimer l'ancien secret TLS RSA ---------------------------------------------------------------------------------------------- 0.82s
+2026-03-12 22:26:58,306 p=3948324 u=administrator n=ansible INFO| Vérifier le type de clé du certificat actuel ----------------------------------------------------------------------------------- 0.80s
+2026-03-12 22:26:58,306 p=3948324 u=administrator n=ansible INFO| Vérifier l'Ingress PrestaShop -------------------------------------------------------------------------------------------------- 0.80s
+2026-03-12 22:26:58,306 p=3948324 u=administrator n=ansible INFO| Vérifier les services PrestaShop ----------------------------------------------------------------------------------------------- 0.79s
+2026-03-12 22:26:58,307 p=3948324 u=administrator n=ansible INFO| Labelliser le namespace prestashop (PSA baseline - Apache www-data) ------------------------------------------------------------ 0.79s
+2026-03-12 22:26:58,307 p=3948324 u=administrator n=ansible INFO| Vérifier l'IngressRoute HTTPS -------------------------------------------------------------------------------------------------- 0.78s
+2026-03-12 22:26:58,307 p=3948324 u=administrator n=ansible INFO| Supprimer le fichier IngressRoute temporaire ----------------------------------------------------------------------------------- 0.70s
+2026-03-12 22:26:58,307 p=3948324 u=administrator n=ansible INFO| Avertissement si PrestaShop pas encore Ready ----------------------------------------------------------------------------------- 0.07s
