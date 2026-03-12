@@ -671,7 +671,10 @@
       changed_when: false
       tags: [prestashop, prestashop-verify]
 
-    - name: Attendre que PrestaShop soit Ready (installation DB au 1er boot = ~10min)
+    - name: Attendre que PrestaShop soit Ready (installation DB au 1er boot = ~15min)
+      ## ignore_errors: true car kubectl wait peut dépasser le timeout SSH (ControlPersist=30m)
+      ## si l'installation PrestaShop est particulièrement lente.
+      ## Le résumé final affichera l'état réel des pods.
       ansible.builtin.command: >
         k3s kubectl wait --for=condition=Ready pods
         -l app=prestashop
@@ -681,6 +684,17 @@
         KUBECONFIG: /etc/rancher/k3s/k3s.yaml
       register: prestashop_ready
       changed_when: false
+      ignore_errors: true
+      tags: [prestashop, prestashop-verify]
+
+    - name: Avertissement si PrestaShop pas encore Ready
+      ansible.builtin.debug:
+        msg:
+          - "⚠ PrestaShop pas encore Ready après 20min."
+          - "L'installation peut prendre jusqu'à 30min selon les ressources."
+          - "Vérifier avec : kubectl logs -n prestashop -l app=prestashop -f"
+          - "Et           : kubectl get pods -n prestashop"
+      when: prestashop_ready.rc is defined and prestashop_ready.rc != 0
       tags: [prestashop, prestashop-verify]
 
     - name: Vérifier les pods PrestaShop
