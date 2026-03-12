@@ -73,3 +73,31 @@ Origin: /home/administrator/git/k3s-kubevirt/playbooks/prestashop.yml:652:7
 2026-03-12 21:54:53,374 p=3891795 u=administrator n=ansible INFO| Vérifier le type de clé du certificat actuel ----------------------------------------------------------------------------------- 0.79s
 2026-03-12 21:54:53,374 p=3891795 u=administrator n=ansible INFO| Supprimer l'ancien secret TLS RSA ---------------------------------------------------------------------------------------------- 0.78s
 2026-03-12 21:54:53,374 p=3891795 u=administrator n=ansible INFO| Supprimer le fichier IngressRoute temporaire ----------------------------------------------------------------------------------- 0.71s
+2026-03-12 21:59:11,892 p=3922277 u=administrator n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+
+2026-03-12 21:59:11,892 p=3922277 u=administrator n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be removed from collection 'community.general' version 12.0.0.
+
+2026-03-12 21:59:11,988 p=3922277 u=administrator n=ansible INFO| PLAY [PrestaShop - Boutique e-commerce café capsules Barista] ******************
+2026-03-12 21:59:12,021 p=3922277 u=administrator n=ansible INFO| TASK [Créer le namespace prestashop (si absent)] *******************************
+2026-03-12 21:59:12,021 p=3922277 u=administrator n=ansible INFO| jeudi 12 mars 2026  21:59:12 +0100 (0:00:00.082)       0:00:00.082 ************ 
+2026-03-12 21:59:12,496 p=3922277 u=administrator n=ansible ERROR| [ERROR]: Task failed: Data could not be sent to remote host "192.168.0.11". Make sure this host can be reached over ssh: administrator@192.168.0.11: Permission denied (publickey,password).
+Origin: /home/administrator/git/k3s-kubevirt/playbooks/prestashop.yml:76:7
+
+74     # ==========================================================
+75
+76     - name: Créer le namespace prestashop (si absent)
+         ^ column 7
+
+
+2026-03-12 21:59:12,497 p=3922277 u=administrator n=ansible INFO| fatal: [k3s-node-1]: UNREACHABLE! => changed=false 
+  msg: 'Task failed: Data could not be sent to remote host "192.168.0.11". Make sure this host can be reached over ssh: administrator@192.168.0.11: Permission denied (publickey,password).'
+  unreachable: true
+2026-03-12 21:59:12,499 p=3922277 u=administrator n=ansible INFO| PLAY RECAP *********************************************************************
+2026-03-12 21:59:12,499 p=3922277 u=administrator n=ansible INFO| k3s-node-1                 : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0   
+2026-03-12 21:59:12,499 p=3922277 u=administrator n=ansible INFO| PLAYBOOK RECAP *****************************************************************
+2026-03-12 21:59:12,499 p=3922277 u=administrator n=ansible INFO| Playbook run took 0 days, 0 hours, 0 minutes, 0 seconds
+
+2026-03-12 21:59:12,500 p=3922277 u=administrator n=ansible INFO| TASKS RECAP ********************************************************************
+2026-03-12 21:59:12,500 p=3922277 u=administrator n=ansible INFO| jeudi 12 mars 2026  21:59:12 +0100 (0:00:00.478)       0:00:00.561 ************ 
+2026-03-12 21:59:12,500 p=3922277 u=administrator n=ansible INFO| =============================================================================== 
+2026-03-12 21:59:12,500 p=3922277 u=administrator n=ansible INFO| Créer le namespace prestashop (si absent) ------------------------------- 0.48s
