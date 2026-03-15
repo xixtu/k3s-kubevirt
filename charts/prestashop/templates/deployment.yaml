@@ -92,12 +92,17 @@ spec:
                   -type f -delete 2>/dev/null || true
                 find /tmp -maxdepth 2 \( -name "*lock*" -o -name ".*lock*" \) \
                   -type f -delete 2>/dev/null || true
-                # Supprimer les dossiers renommés avant chaque appel à docker_run.sh.
+                # Supprimer les dossiers renommés seulement si PS n'est pas encore installé.
                 # docker_run.sh fait mv install→install-barista et mv admin→admin-barista.
-                # Si ces dossiers existent déjà (run précédent incomplet), mv échoue
-                # avec "Directory not empty" → exit 1.
-                rm -rf /var/www/html/{{ .Values.prestashop.folderInstall }} \
-                        /var/www/html/{{ .Values.prestashop.folderAdmin }} 2>/dev/null || true
+                # Ces mv échouent si les dossiers existent déjà (run incomplet).
+                # La condition est identique au if de docker_run.sh ligne 25 :
+                #   pas de config/settings.inc.php ET pas de app/config/parameters.php
+                # → si PS est installé, on ne touche pas admin-barista (panel admin intact).
+                if [ ! -f /var/www/html/config/settings.inc.php ] && \
+                   [ ! -f /var/www/html/app/config/parameters.php ]; then
+                  rm -rf /var/www/html/{{ .Values.prestashop.folderInstall }} \
+                          /var/www/html/{{ .Values.prestashop.folderAdmin }} 2>/dev/null || true
+                fi
                 bash /tmp/docker_run.sh
                 ec=$?
                 if [ "$ec" -eq 42 ]; then
