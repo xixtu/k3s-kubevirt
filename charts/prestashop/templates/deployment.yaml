@@ -1,0 +1,191 @@
+---
+# Deployment PrestaShop
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "prestashop.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "prestashop.labels" . | nindent 4 }}
+    app.kubernetes.io/component: app
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate  # Recreate car PVC RWO (1 seul pod à la fois)
+  selector:
+    matchLabels:
+      {{- include "prestashop.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "prestashop.selectorLabels" . | nindent 8 }}
+    spec:
+      initContainers:
+        # 1. Supprime les locks stales dans le PVC avant démarrage
+        - name: cleanup-lock
+          image: "{{ .Values.image.alpine.repository }}:{{ .Values.image.alpine.tag }}"
+          imagePullPolicy: {{ .Values.image.alpine.pullPolicy }}
+          command:
+            - sh
+            - -c
+            - |
+              echo "=== cleanup-lock : état de /var/www/html ==="
+              ls -la /var/www/html/ 2>/dev/null || echo "(vide)"
+              echo "=== Nettoyage des locks ==="
+              find /var/www/html -maxdepth 4 \
+                \( -name "*lock*" -o -name ".*lock*" \) \
+                -type f -delete 2>/dev/null || true
+              rm -f /var/www/html/.setup_lock \
+                    /var/www/html/.ps_lock \
+                    /var/www/html/ps-install.lock \
+                    /var/www/html/install/install.lock 2>/dev/null || true
+              echo "=== Nettoyage terminé ==="
+          volumeMounts:
+            - name: prestashop-data
+              mountPath: /var/www/html
+        # 2. Attend que MariaDB accepte les connexions MySQL
+        - name: wait-for-mariadb
+          image: "{{ .Values.image.mariadb.repository }}:{{ .Values.image.mariadb.tag }}"
+          imagePullPolicy: {{ .Values.image.mariadb.pullPolicy }}
+          command:
+            - bash
+            - -c
+            - |
+              echo "Attente MariaDB (connexion MySQL réelle)..."
+              until mysqladmin ping -h {{ include "prestashop.mariadb.serviceName" . }} \
+                -u root -p${MYSQL_ROOT_PASSWORD} --silent 2>/dev/null; do
+                echo "MariaDB pas encore prête, nouvelle tentative dans 3s..."
+                sleep 3
+              done
+              echo "MariaDB prête - connexion MySQL OK."
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "prestashop.secretName" . }}
+                  key: db-root-password
+      containers:
+        - name: prestashop
+          image: "{{ .Values.image.prestashop.repository }}:{{ .Values.image.prestashop.tag }}"
+          imagePullPolicy: {{ .Values.image.prestashop.pullPolicy }}
+          # Wrapper pour absorber le exit 42 (signal de redémarrage interne
+          # du script /tmp/docker_run.sh de l'image officielle PrestaShop).
+          # Sans wrapper, Kubernetes traite exit 42 comme un crash →
+          # CrashLoopBackOff avec backoff exponentiel qui bloque l'install.
+          command:
+            - /bin/bash
+            - -c
+            - |
+              echo "[wrapper] === Diagnostic démarrage ==="
+              grep -n "lock\|LOCK\|Another setup\|running\|SETUP" /tmp/docker_run.sh 2>/dev/null | head -30 || true
+              ls -la /var/www/html/ 2>/dev/null | head -20 || echo "(vide)"
+              echo "[wrapper] ==========================================="
+              while true; do
+                find /var/www/html -maxdepth 4 \( -name "*lock*" -o -name ".*lock*" \) \
+                  -type f -delete 2>/dev/null || true
+                find /tmp -maxdepth 2 \( -name "*lock*" -o -name ".*lock*" \) \
+                  -type f -delete 2>/dev/null || true
+                bash /tmp/docker_run.sh
+                ec=$?
+                if [ "$ec" -eq 42 ]; then
+                  echo "[wrapper] Exit 42 détecté - relance dans 5s..."
+                  sleep 5
+                else
+                  echo "[wrapper] Exit $ec - arrêt du wrapper."
+                  exit $ec
+                fi
+              done
+          ports:
+            - name: http
+              containerPort: 80
+          env:
+            # --- Connexion base de données ---
+            - name: DB_SERVER
+              value: {{ include "prestashop.mariadb.serviceName" . | quote }}
+            - name: DB_PORT
+              value: "3306"
+            - name: DB_NAME
+              value: {{ .Values.mariadb.dbName | quote }}
+            - name: DB_USER
+              value: {{ .Values.mariadb.dbUser | quote }}
+            - name: DB_PASSWD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "prestashop.secretName" . }}
+                  key: db-password
+            - name: DB_PREFIX
+              value: "ps_"
+            # --- Installation automatique ---
+            - name: PS_INSTALL_AUTO
+              value: "1"
+            - name: PS_INSTALL_DB
+              value: "1"
+            - name: PS_ERASE_DB
+              # ⚠ NE PAS PASSER À 1 EN PRODUCTION
+              value: "0"
+            # --- Configuration boutique ---
+            - name: PS_DOMAIN
+              value: {{ .Values.prestashop.domain | quote }}
+            - name: PS_LANGUAGE
+              value: {{ .Values.prestashop.language | quote }}
+            - name: PS_COUNTRY
+              value: {{ .Values.prestashop.country | quote }}
+            - name: PS_ENABLE_SSL
+              value: {{ .Values.prestashop.enableSsl | quote }}
+            - name: PS_REWRITE_ENGINES
+              value: {{ .Values.prestashop.rewriteEngines | quote }}
+            - name: PS_FOLDER_ADMIN
+              value: {{ .Values.prestashop.folderAdmin | quote }}
+            - name: PS_FOLDER_INSTALL
+              value: {{ .Values.prestashop.folderInstall | quote }}
+            # --- Compte administrateur ---
+            - name: ADMIN_MAIL
+              value: {{ .Values.prestashop.adminMail | quote }}
+            - name: ADMIN_PASSWD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "prestashop.secretName" . }}
+                  key: admin-password
+          volumeMounts:
+            - name: prestashop-data
+              mountPath: /var/www/html
+          resources:
+            {{- toYaml .Values.resources.prestashop | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: {{ .Values.probes.prestashop.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.prestashop.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.prestashop.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.prestashop.liveness.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: {{ .Values.probes.prestashop.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.prestashop.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.prestashop.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.prestashop.readiness.failureThreshold }}
+      volumes:
+        - name: prestashop-data
+          persistentVolumeClaim:
+            claimName: {{ include "prestashop.fullname" . }}-data-pvc
+---
+# Service PrestaShop (ClusterIP - Traefik expose via Ingress)
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "prestashop.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "prestashop.labels" . | nindent 4 }}
+    app.kubernetes.io/component: app
+spec:
+  selector:
+    {{- include "prestashop.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+  type: ClusterIP

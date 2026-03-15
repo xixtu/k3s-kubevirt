@@ -1,0 +1,114 @@
+# =============================================================
+# VALUES : PrestaShop Helm Chart
+# Surcharger via : helm upgrade --install ... -f my-values.yaml
+# ou              : --set key=value
+# =============================================================
+
+# --- Images ---
+image:
+  prestashop:
+    repository: prestashop/prestashop
+    tag: "8"
+    pullPolicy: IfNotPresent
+  mariadb:
+    repository: mariadb
+    tag: "10.11"
+    pullPolicy: IfNotPresent
+  alpine:
+    repository: alpine
+    tag: "3.19"
+    pullPolicy: IfNotPresent
+
+# --- Configuration boutique ---
+prestashop:
+  domain: "barista.app.xixtu.eu"
+  language: "fr"
+  country: "fr"
+  enableSsl: "1"
+  rewriteEngines: "1"
+  folderAdmin: "admin-barista"
+  folderInstall: "install-barista"
+  # Compte administrateur
+  adminMail: "admin@example.com"
+  adminPassword: "ch4nge-me-barista"
+
+# --- Base de données MariaDB ---
+mariadb:
+  dbName: "prestashop"
+  dbUser: "prestashop"
+  dbPassword: "ps-db-s3cret"
+  dbRootPassword: "ps-root-s3cret"
+  characterSet: "utf8mb4"
+  collation: "utf8mb4_unicode_ci"
+
+# --- Stockage (PVCs) ---
+persistence:
+  storageClass: "longhorn-fast"
+  app:
+    size: "10Gi"
+  db:
+    size: "5Gi"
+
+# --- Ressources PrestaShop ---
+resources:
+  prestashop:
+    requests:
+      cpu: "200m"
+      memory: "512Mi"
+    limits:
+      cpu: "1000m"
+      memory: "2Gi"
+  mariadb:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "1Gi"
+
+# --- HPA ---
+hpa:
+  minReplicas: 1
+  maxReplicas: 3
+  cpuUtilization: 70
+  memoryUtilization: 80
+
+# --- Probes (délais longs : installation DB au 1er boot) ---
+probes:
+  prestashop:
+    liveness:
+      initialDelaySeconds: 600
+      periodSeconds: 30
+      timeoutSeconds: 10
+      failureThreshold: 6
+    readiness:
+      initialDelaySeconds: 120
+      periodSeconds: 15
+      timeoutSeconds: 10
+      failureThreshold: 10
+  mariadb:
+    liveness:
+      initialDelaySeconds: 60
+      periodSeconds: 30
+      timeoutSeconds: 5
+      failureThreshold: 3
+    readiness:
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 6
+
+# --- Ingress / TLS ---
+ingress:
+  className: "traefik"
+  certManager:
+    clusterIssuer: "letsencrypt-production"
+    privateKeyAlgorithm: "ECDSA"
+    privateKeySize: "384"
+  ingressRoute:
+    enabled: true
+    securityHeadersMiddleware: "traefik-security-headers@kubernetescrd"
+
+# --- PSA (Pod Security Admission) ---
+podSecurityAdmission:
+  level: "baseline"

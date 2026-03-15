@@ -1,0 +1,58 @@
+---
+# Ingress standard Kubernetes (HTTP-01 cert-manager + redirect HTTP→HTTPS)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "prestashop.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "prestashop.labels" . | nindent 4 }}
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+    traefik.ingress.kubernetes.io/router.middlewares: traefik-redirect-to-https@kubernetescrd
+    cert-manager.io/cluster-issuer: {{ .Values.ingress.certManager.clusterIssuer | quote }}
+    cert-manager.io/private-key-algorithm: {{ .Values.ingress.certManager.privateKeyAlgorithm | quote }}
+    cert-manager.io/private-key-size: {{ .Values.ingress.certManager.privateKeySize | quote }}
+    cert-manager.io/private-key-rotation-policy: "Always"
+spec:
+  ingressClassName: {{ .Values.ingress.className | quote }}
+  rules:
+    - host: {{ .Values.prestashop.domain | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "prestashop.fullname" . }}
+                port:
+                  number: 80
+  tls:
+    - hosts:
+        - {{ .Values.prestashop.domain | quote }}
+      secretName: {{ include "prestashop.fullname" . }}-tls
+---
+# IngressRoute Traefik CRD (HTTPS websecure + security-headers)
+{{- if .Values.ingress.ingressRoute.enabled }}
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: {{ include "prestashop.fullname" . }}-https
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "prestashop.labels" . | nindent 4 }}
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`{{ .Values.prestashop.domain }}`)
+      kind: Rule
+      middlewares:
+        - name: security-headers
+          namespace: traefik
+      services:
+        - name: {{ include "prestashop.fullname" . }}
+          port: 80
+  tls:
+    secretName: {{ include "prestashop.fullname" . }}-tls
+{{- end }}

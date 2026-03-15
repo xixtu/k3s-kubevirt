@@ -1,0 +1,95 @@
+---
+# Deployment MariaDB
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "prestashop.fullname" . }}-mariadb
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "prestashop.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mariadb
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate  # Recreate car RWO - un seul pod à la fois
+  selector:
+    matchLabels:
+      {{- include "prestashop.mariadb.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "prestashop.mariadb.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: mariadb
+          image: "{{ .Values.image.mariadb.repository }}:{{ .Values.image.mariadb.tag }}"
+          imagePullPolicy: {{ .Values.image.mariadb.pullPolicy }}
+          ports:
+            - name: mysql
+              containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "prestashop.secretName" . }}
+                  key: db-root-password
+            - name: MYSQL_DATABASE
+              value: {{ .Values.mariadb.dbName | quote }}
+            - name: MYSQL_USER
+              value: {{ .Values.mariadb.dbUser | quote }}
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "prestashop.secretName" . }}
+                  key: db-password
+            - name: MARIADB_CHARACTER_SET_SERVER
+              value: {{ .Values.mariadb.characterSet | quote }}
+            - name: MARIADB_COLLATION_SERVER
+              value: {{ .Values.mariadb.collation | quote }}
+          volumeMounts:
+            - name: db-data
+              mountPath: /var/lib/mysql
+          resources:
+            {{- toYaml .Values.resources.mariadb | nindent 12 }}
+          readinessProbe:
+            exec:
+              command:
+                - bash
+                - -c
+                - "mysqladmin ping -h localhost -u root -p${MYSQL_ROOT_PASSWORD} --silent"
+            initialDelaySeconds: {{ .Values.probes.mariadb.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.mariadb.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.mariadb.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.mariadb.readiness.failureThreshold }}
+          livenessProbe:
+            exec:
+              command:
+                - bash
+                - -c
+                - "mysqladmin ping -h localhost -u root -p${MYSQL_ROOT_PASSWORD} --silent"
+            initialDelaySeconds: {{ .Values.probes.mariadb.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.mariadb.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.mariadb.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.mariadb.liveness.failureThreshold }}
+      volumes:
+        - name: db-data
+          persistentVolumeClaim:
+            claimName: {{ include "prestashop.fullname" . }}-db-pvc
+---
+# Service MariaDB (ClusterIP interne uniquement)
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "prestashop.mariadb.serviceName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "prestashop.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mariadb
+spec:
+  selector:
+    {{- include "prestashop.mariadb.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: mysql
+      port: 3306
+      targetPort: 3306
+  type: ClusterIP

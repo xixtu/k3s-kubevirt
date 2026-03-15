@@ -1,0 +1,36 @@
+---
+# PVC : Base de données MariaDB
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "prestashop.fullname" . }}-db-pvc
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "prestashop.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mariadb
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: {{ .Values.persistence.storageClass | quote }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.db.size | quote }}
+---
+# PVC : Données applicatives PrestaShop (thèmes, modules, médias)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "prestashop.fullname" . }}-data-pvc
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "prestashop.labels" . | nindent 4 }}
+    app.kubernetes.io/component: app
+spec:
+  accessModes:
+    # ReadWriteOnce (1 pod) - migrer en ReadWriteMany pour HPA multi-pod
+    # Longhorn RWX disponible depuis v1.6 (NFS gateway)
+    - ReadWriteOnce
+  storageClassName: {{ .Values.persistence.storageClass | quote }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.app.size | quote }}
