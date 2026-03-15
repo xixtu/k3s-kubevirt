@@ -39,14 +39,13 @@ spec:
                     /var/www/html/.ps_lock \
                     /var/www/html/ps-install.lock \
                     /var/www/html/install/install.lock 2>/dev/null || true
-              # Si l'installation est incomplète (pas de config/settings.inc.php),
-              # supprimer install-barista pour que docker_run.sh puisse faire
-              # "mv install install-barista" sans "Directory not empty".
-              if [ ! -f /var/www/html/config/settings.inc.php ] && \
-                 [ ! -f /var/www/html/app/config/parameters.php ]; then
-                echo "=== Install incomplète : suppression de install-barista ==="
-                rm -rf /var/www/html/{{ .Values.prestashop.folderInstall }} 2>/dev/null || true
-              fi
+              # Supprimer inconditionnellement le dossier install renommé.
+              # docker_run.sh fait "mv install install-barista" au premier boot.
+              # Si install-barista existe déjà (run précédent incomplet),
+              # mv échoue avec "Directory not empty" → exit 1.
+              # Safe : si PS est déjà installé, docker_run.sh ne fait pas ce mv.
+              echo "=== Suppression inconditionnelle de {{ .Values.prestashop.folderInstall }} ==="
+              rm -rf /var/www/html/{{ .Values.prestashop.folderInstall }} 2>/dev/null || true
               echo "=== Nettoyage terminé ==="
           volumeMounts:
             - name: prestashop-data
