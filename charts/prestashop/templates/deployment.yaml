@@ -92,6 +92,11 @@ spec:
                   -type f -delete 2>/dev/null || true
                 find /tmp -maxdepth 2 \( -name "*lock*" -o -name ".*lock*" \) \
                   -type f -delete 2>/dev/null || true
+                # Supprimer install-barista avant chaque appel à docker_run.sh.
+                # docker_run.sh fait "mv install install-barista" et échoue si
+                # install-barista existe déjà ("Directory not empty" → exit 1).
+                # Cela couvre le cas où le cp depuis /tmp recrée le répertoire.
+                rm -rf /var/www/html/{{ .Values.prestashop.folderInstall }} 2>/dev/null || true
                 bash /tmp/docker_run.sh
                 ec=$?
                 if [ "$ec" -eq 42 ]; then
