@@ -1,2 +1,77 @@
 2026-03-15 19:48:46,506 p=3956876 u=administrator n=ansible ERROR| [ERROR]: User interrupted execution
 
+2026-03-15 19:52:01,226 p=3960886 u=administrator n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+
+2026-03-15 19:52:01,227 p=3960886 u=administrator n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be removed from collection 'community.general' version 12.0.0.
+
+2026-03-15 19:52:01,322 p=3960886 u=administrator n=ansible INFO| PLAY [PrestaShop - Boutique e-commerce café capsules Barista (Helm)] *******************************************************************************************
+2026-03-15 19:52:01,356 p=3960886 u=administrator n=ansible INFO| TASK [Vérifier que Helm est installé] **************************************************************************************************************************
+2026-03-15 19:52:01,356 p=3960886 u=administrator n=ansible INFO| dimanche 15 mars 2026  19:52:01 +0100 (0:00:00.083)       0:00:00.083 ********* 
+2026-03-15 19:52:02,324 p=3960886 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-15 19:52:02,353 p=3960886 u=administrator n=ansible INFO| TASK [Afficher la version Helm] ********************************************************************************************************************************
+2026-03-15 19:52:02,354 p=3960886 u=administrator n=ansible INFO| dimanche 15 mars 2026  19:52:02 +0100 (0:00:00.997)       0:00:01.081 ********* 
+2026-03-15 19:52:02,390 p=3960886 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg: 'Helm détecté : v3.20.0+gb2e4314'
+2026-03-15 19:52:02,416 p=3960886 u=administrator n=ansible INFO| TASK [Créer le namespace prestashop (si absent)] ***************************************************************************************************************
+2026-03-15 19:52:02,417 p=3960886 u=administrator n=ansible INFO| dimanche 15 mars 2026  19:52:02 +0100 (0:00:00.063)       0:00:01.144 ********* 
+2026-03-15 19:52:03,189 p=3960886 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-03-15 19:52:03,207 p=3960886 u=administrator n=ansible INFO| TASK [Labelliser le namespace prestashop (PSA baseline - Apache www-data)] *************************************************************************************
+2026-03-15 19:52:03,208 p=3960886 u=administrator n=ansible INFO| dimanche 15 mars 2026  19:52:03 +0100 (0:00:00.790)       0:00:01.934 ********* 
+2026-03-15 19:52:03,976 p=3960886 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-15 19:52:03,999 p=3960886 u=administrator n=ansible INFO| TASK [Créer le répertoire de travail pour le chart Helm] *******************************************************************************************************
+2026-03-15 19:52:04,000 p=3960886 u=administrator n=ansible INFO| dimanche 15 mars 2026  19:52:03 +0100 (0:00:00.792)       0:00:02.727 ********* 
+2026-03-15 19:52:04,890 p=3960886 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-03-15 19:52:04,908 p=3960886 u=administrator n=ansible INFO| TASK [Copier le chart Helm PrestaShop sur le nœud] *************************************************************************************************************
+2026-03-15 19:52:04,909 p=3960886 u=administrator n=ansible INFO| dimanche 15 mars 2026  19:52:04 +0100 (0:00:00.908)       0:00:03.636 ********* 
+2026-03-15 19:52:15,269 p=3960886 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-03-15 19:52:15,297 p=3960886 u=administrator n=ansible INFO| TASK [Écrire le fichier values Helm (overrides depuis group_vars)] *********************************************************************************************
+2026-03-15 19:52:15,297 p=3960886 u=administrator n=ansible INFO| dimanche 15 mars 2026  19:52:15 +0100 (0:00:10.388)       0:00:14.024 ********* 
+2026-03-15 19:52:16,420 p=3960886 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-03-15 19:52:16,449 p=3960886 u=administrator n=ansible INFO| TASK [Déployer PrestaShop via Helm (upgrade --install)] ********************************************************************************************************
+2026-03-15 19:52:16,450 p=3960886 u=administrator n=ansible INFO| dimanche 15 mars 2026  19:52:16 +0100 (0:00:01.152)       0:00:15.177 ********* 
+2026-03-15 19:52:17,988 p=3960886 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-15 19:52:18,012 p=3960886 u=administrator n=ansible INFO| TASK [Afficher le résultat Helm] *******************************************************************************************************************************
+2026-03-15 19:52:18,012 p=3960886 u=administrator n=ansible INFO| dimanche 15 mars 2026  19:52:18 +0100 (0:00:01.562)       0:00:16.739 ********* 
+2026-03-15 19:52:18,050 p=3960886 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg:
+  - Release "prestashop" does not exist. Installing it now.
+  - 'NAME: prestashop'
+  - 'LAST DEPLOYED: Sun Mar 15 19:52:17 2026'
+  - 'NAMESPACE: prestashop'
+  - 'STATUS: deployed'
+  - 'REVISION: 1'
+  - 'TEST SUITE: None'
+2026-03-15 19:52:18,077 p=3960886 u=administrator n=ansible INFO| TASK [Supprimer le chart et les values temporaires] ************************************************************************************************************
+2026-03-15 19:52:18,077 p=3960886 u=administrator n=ansible INFO| dimanche 15 mars 2026  19:52:18 +0100 (0:00:00.064)       0:00:16.804 ********* 
+2026-03-15 19:52:18,710 p=3960886 u=administrator n=ansible INFO| changed: [k3s-node-1] => (item=/tmp/helm-prestashop)
+2026-03-15 19:52:19,288 p=3960886 u=administrator n=ansible INFO| changed: [k3s-node-1] => (item=/tmp/helm-prestashop-values.yaml)
+2026-03-15 19:52:19,340 p=3960886 u=administrator n=ansible INFO| TASK [Vérifier le type de clé du certificat actuel] ************************************************************************************************************
+2026-03-15 19:52:19,340 p=3960886 u=administrator n=ansible INFO| dimanche 15 mars 2026  19:52:19 +0100 (0:00:01.262)       0:00:18.067 ********* 
+2026-03-15 19:52:20,153 p=3960886 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-03-15 19:52:20,233 p=3960886 u=administrator n=ansible INFO| TASK [Supprimer l'ancien certificat RSA pour forcer le renouvellement ECDSA] ***********************************************************************************
+2026-03-15 19:52:20,233 p=3960886 u=administrator n=ansible INFO| dimanche 15 mars 2026  19:52:20 +0100 (0:00:00.893)       0:00:18.960 ********* 
+2026-03-15 19:52:21,049 p=3960886 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-03-15 19:52:21,083 p=3960886 u=administrator n=ansible INFO| TASK [Supprimer l'ancien secret TLS RSA] ***********************************************************************************************************************
+2026-03-15 19:52:21,083 p=3960886 u=administrator n=ansible INFO| dimanche 15 mars 2026  19:52:21 +0100 (0:00:00.849)       0:00:19.810 ********* 
+2026-03-15 19:52:21,907 p=3960886 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-03-15 19:52:21,910 p=3960886 u=administrator n=ansible INFO| PLAY RECAP *****************************************************************************************************************************************************
+2026-03-15 19:52:21,910 p=3960886 u=administrator n=ansible INFO| k3s-node-1                 : ok=13   changed=7    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+2026-03-15 19:52:21,910 p=3960886 u=administrator n=ansible INFO| PLAYBOOK RECAP *************************************************************************************************************************************************
+2026-03-15 19:52:21,911 p=3960886 u=administrator n=ansible INFO| Playbook run took 0 days, 0 hours, 0 minutes, 20 seconds
+
+2026-03-15 19:52:21,911 p=3960886 u=administrator n=ansible INFO| TASKS RECAP ****************************************************************************************************************************************************
+2026-03-15 19:52:21,911 p=3960886 u=administrator n=ansible INFO| dimanche 15 mars 2026  19:52:21 +0100 (0:00:00.827)       0:00:20.638 ********* 
+2026-03-15 19:52:21,912 p=3960886 u=administrator n=ansible INFO| =============================================================================== 
+2026-03-15 19:52:21,912 p=3960886 u=administrator n=ansible INFO| Copier le chart Helm PrestaShop sur le nœud ------------------------------------------------------------------------------------------------------------ 10.39s
+2026-03-15 19:52:21,912 p=3960886 u=administrator n=ansible INFO| Déployer PrestaShop via Helm (upgrade --install) -------------------------------------------------------------------------------------------------------- 1.56s
+2026-03-15 19:52:21,913 p=3960886 u=administrator n=ansible INFO| Supprimer le chart et les values temporaires ------------------------------------------------------------------------------------------------------------ 1.26s
+2026-03-15 19:52:21,913 p=3960886 u=administrator n=ansible INFO| Écrire le fichier values Helm (overrides depuis group_vars) --------------------------------------------------------------------------------------------- 1.15s
+2026-03-15 19:52:21,913 p=3960886 u=administrator n=ansible INFO| Vérifier que Helm est installé -------------------------------------------------------------------------------------------------------------------------- 1.00s
+2026-03-15 19:52:21,913 p=3960886 u=administrator n=ansible INFO| Créer le répertoire de travail pour le chart Helm ------------------------------------------------------------------------------------------------------- 0.91s
+2026-03-15 19:52:21,913 p=3960886 u=administrator n=ansible INFO| Vérifier le type de clé du certificat actuel ------------------------------------------------------------------------------------------------------------ 0.89s
+2026-03-15 19:52:21,914 p=3960886 u=administrator n=ansible INFO| Supprimer l'ancien certificat RSA pour forcer le renouvellement ECDSA ----------------------------------------------------------------------------------- 0.85s
+2026-03-15 19:52:21,914 p=3960886 u=administrator n=ansible INFO| Supprimer l'ancien secret TLS RSA ----------------------------------------------------------------------------------------------------------------------- 0.83s
+2026-03-15 19:52:21,914 p=3960886 u=administrator n=ansible INFO| Labelliser le namespace prestashop (PSA baseline - Apache www-data) ------------------------------------------------------------------------------------- 0.79s
+2026-03-15 19:52:21,914 p=3960886 u=administrator n=ansible INFO| Créer le namespace prestashop (si absent) --------------------------------------------------------------------------------------------------------------- 0.79s
+2026-03-15 19:52:21,915 p=3960886 u=administrator n=ansible INFO| Afficher le résultat Helm ------------------------------------------------------------------------------------------------------------------------------- 0.07s
+2026-03-15 19:52:21,915 p=3960886 u=administrator n=ansible INFO| Afficher la version Helm -------------------------------------------------------------------------------------------------------------------------------- 0.06s
