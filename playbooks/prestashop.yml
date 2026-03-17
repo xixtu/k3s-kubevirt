@@ -144,26 +144,98 @@
       tags: [prestashop, prestashop-install]
 
     # ==========================================================
-    # HELM UPGRADE --INSTALL (idempotent)
+    # HELM UPGRADE --INSTALL + DIAGNOSTIC K8S (toujours affiché)
     # ==========================================================
 
     - name: Déployer PrestaShop via Helm (upgrade --install)
-      ansible.builtin.command: >
-        helm upgrade --install prestashop /tmp/helm-prestashop
-        --namespace prestashop
-        --values /tmp/helm-prestashop-values.yaml
-        --wait-for-jobs
-        --timeout 30m
-      environment:
-        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
-      register: helm_deploy
-      changed_when: "'has been upgraded' in helm_deploy.stdout or 'has been deployed' in helm_deploy.stdout"
       tags: [prestashop, prestashop-install]
+      block:
 
-    - name: Afficher le résultat Helm
-      ansible.builtin.debug:
-        msg: "{{ helm_deploy.stdout_lines }}"
-      tags: [prestashop, prestashop-install]
+        - name: "Helm | upgrade --install prestashop"
+          ansible.builtin.command: >
+            helm upgrade --install prestashop /tmp/helm-prestashop
+            --namespace prestashop
+            --values /tmp/helm-prestashop-values.yaml
+            --wait-for-jobs
+            --timeout 30m
+          environment:
+            KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+          register: helm_deploy
+          changed_when: "'has been upgraded' in helm_deploy.stdout or 'has been deployed' in helm_deploy.stdout"
+
+        - name: "Helm | résultat"
+          ansible.builtin.debug:
+            msg: "{{ helm_deploy.stdout_lines }}"
+
+      rescue:
+
+        - name: "Helm | ÉCHEC - stderr"
+          ansible.builtin.debug:
+            msg: "{{ helm_deploy.stderr_lines | default(['(pas de stderr)']) }}"
+
+        - name: "Helm | re-raise l'erreur"
+          ansible.builtin.fail:
+            msg: "helm upgrade --install a échoué (voir stderr ci-dessus)"
+
+      always:
+
+        - name: "Diag K8s | pods -n prestashop"
+          ansible.builtin.command: k3s kubectl get pods -n prestashop -o wide
+          environment:
+            KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+          register: diag_pods
+          changed_when: false
+          failed_when: false
+
+        - name: "Diag K8s | afficher pods"
+          ansible.builtin.debug:
+            msg: "{{ diag_pods.stdout_lines | default(['(aucun pod)']) }}"
+
+        - name: "Diag K8s | events (triés par date)"
+          ansible.builtin.command: >
+            k3s kubectl get events -n prestashop
+            --sort-by='.lastTimestamp'
+          environment:
+            KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+          register: diag_events
+          changed_when: false
+          failed_when: false
+
+        - name: "Diag K8s | afficher events"
+          ansible.builtin.debug:
+            msg: "{{ diag_events.stdout_lines | default(['(aucun event)']) }}"
+
+        - name: "Diag K8s | logs PrestaShop (50 dernières lignes)"
+          ansible.builtin.shell: >
+            k3s kubectl logs -n prestashop
+            -l app.kubernetes.io/component=app
+            --tail=50 --all-containers --prefix
+            2>&1 || echo "(pas encore de pod prestashop)"
+          environment:
+            KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+          register: diag_ps_logs
+          changed_when: false
+          failed_when: false
+
+        - name: "Diag K8s | afficher logs PrestaShop"
+          ansible.builtin.debug:
+            msg: "{{ diag_ps_logs.stdout_lines | default(['(vide)']) }}"
+
+        - name: "Diag K8s | logs MariaDB (30 dernières lignes)"
+          ansible.builtin.shell: >
+            k3s kubectl logs -n prestashop
+            -l app.kubernetes.io/component=mariadb
+            --tail=30 --all-containers --prefix
+            2>&1 || echo "(pas encore de pod mariadb)"
+          environment:
+            KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+          register: diag_db_logs
+          changed_when: false
+          failed_when: false
+
+        - name: "Diag K8s | afficher logs MariaDB"
+          ansible.builtin.debug:
+            msg: "{{ diag_db_logs.stdout_lines | default(['(vide)']) }}"
 
     # ==========================================================
     # NETTOYAGE TEMPORAIRES

@@ -103,6 +103,11 @@ spec:
                   rm -rf /var/www/html/{{ .Values.prestashop.folderInstall }} \
                           /var/www/html/{{ .Values.prestashop.folderAdmin }} 2>/dev/null || true
                 fi
+                # Patch idempotent : "mysqladmin create" échoue si la DB existe déjà.
+                # On ajoute "|| true" sur la ligne incriminée de docker_run.sh pour
+                # que l'install continue même si la DB a été créée par un run précédent.
+                grep -q 'mysqladmin.*create.*|| true' /tmp/docker_run.sh 2>/dev/null || \
+                  sed -i '/mysqladmin.*create/s/$/ || true/' /tmp/docker_run.sh 2>/dev/null || true
                 bash /tmp/docker_run.sh
                 ec=$?
                 if [ "$ec" -eq 42 ]; then
