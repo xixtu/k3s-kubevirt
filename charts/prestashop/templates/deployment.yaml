@@ -103,11 +103,22 @@ spec:
                   rm -rf /var/www/html/{{ .Values.prestashop.folderInstall }} \
                           /var/www/html/{{ .Values.prestashop.folderAdmin }} 2>/dev/null || true
                 fi
-                # Patch idempotent : "mysqladmin create" échoue si la DB existe déjà.
-                # On ajoute "|| true" sur la ligne incriminée de docker_run.sh pour
-                # que l'install continue même si la DB a été créée par un run précédent.
-                grep -q 'mysqladmin.*create.*|| true' /tmp/docker_run.sh 2>/dev/null || \
-                  sed -i '/mysqladmin.*create/s/$/ || true/' /tmp/docker_run.sh 2>/dev/null || true
+                # Override mysqladmin pour rendre "CREATE DATABASE" idempotent.
+                # docker_run.sh appelle "mysqladmin ... create $DB_NAME" qui
+                # échoue si la DB existe déjà (exit 1 → crash wrapper).
+                # La fonction bash intercepte le sous-commande "create" et le
+                # remplace par "CREATE DATABASE IF NOT EXISTS" sans modifier
+                # le fichier docker_run.sh (évite les erreurs de syntaxe sed).
+                mysqladmin() {
+                  if printf '%s\n' "$@" | grep -qw 'create'; then
+                    mysql -h "${DB_SERVER}" -u "${DB_USER:-root}" -p"${DB_PASSWD}" \
+                      --port="${DB_PORT:-3306}" \
+                      -e "CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`;" 2>/dev/null
+                  else
+                    command mysqladmin "$@"
+                  fi
+                }
+                export -f mysqladmin
                 bash /tmp/docker_run.sh
                 ec=$?
                 if [ "$ec" -eq 42 ]; then
