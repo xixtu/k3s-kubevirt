@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: typebot-builder
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: typebot-builder
+  template:
+    metadata:
+      labels:
+        app: typebot-builder
+    spec:
+      containers:
+        - name: builder
+          image: {{ .Values.images.builder }}
+          envFrom:
+            - secretRef:
+                name: typebot-secrets
+          env:
+            - name: PORT
+              value: "3000"
+            - name: NEXTAUTH_URL
+              value: "https://builder.{{ .Values.domain }}"
+            - name: NEXT_PUBLIC_VIEWER_URL
+              value: "https://viewer.{{ .Values.domain }}"
+            - name: NEXTAUTH_PROVIDERS
+              value: "credentials"
+          ports:
+            - containerPort: 3000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: typebot-builder
+  namespace: {{ .Release.Namespace }}
+spec:
+  ports:
+    - port: 3000
+      targetPort: 3000
+  selector:
+    app: typebot-builder

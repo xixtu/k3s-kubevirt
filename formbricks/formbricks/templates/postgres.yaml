@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: formbricks-postgres
+spec:
+  selector:
+    matchLabels:
+      app: formbricks-postgres
+  template:
+    metadata:
+      labels:
+        app: formbricks-postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        env:
+        - name: POSTGRES_USER
+          value: {{ .Values.postgresql.user }}
+        - name: POSTGRES_PASSWORD
+          value: {{ .Values.postgresql.password }}
+        - name: POSTGRES_DB
+          value: {{ .Values.postgresql.db }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: formbricks-postgres
+spec:
+  ports:
+  - port: 5432
+  selector:
+    app: formbricks-postgres

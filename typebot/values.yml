@@ -1,0 +1,21 @@
+domain: "app.xixtu.eu"
+
+images:
+  builder: baptistearno/typebot-builder:latest
+  viewer: baptistearno/typebot-viewer:latest
+  postgres: postgres:16-alpine
+
+postgresql:
+  user: typebot
+  password: "ChangeThisSecurePassword123!"
+  db: typebot
+
+storageClass: "longhorn-fast"
+encryptionSecret: "1234567890abcdef1234567890abcdef"
+adminEmail: "admin@xixtu.eu"
+
+auth:
+  # Active l'authentification par e-mail (Credentials)
+  enabled: true
+  # Secret utilisé par NextAuth (peut être le même ou un autre string sécurisé de 32 caractères)
+  nextAuthSecret: "1234567890abcdef1234567890abcdef"

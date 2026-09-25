@@ -1,0 +1,6 @@
+apiVersion: v2
+name: typebot
+description: Helm chart pour auto-héberger Typebot sur k3s avec Longhorn
+type: application
+version: 0.1.0
+appVersion: "latest"

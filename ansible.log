@@ -1,223 +1,199 @@
-2026-03-17 20:29:05,272 p=3145617 u=administrator n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+2026-09-25 21:21:26,995 p=2080808 u=administrator n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
 
-2026-03-17 20:29:05,273 p=3145617 u=administrator n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be removed from collection 'community.general' version 12.0.0.
+2026-09-25 21:21:26,995 p=2080808 u=administrator n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be removed from collection 'community.general' version 12.0.0.
 
-2026-03-17 20:29:05,382 p=3145617 u=administrator n=ansible INFO| PLAY [PrestaShop - Boutique e-commerce café capsules Barista (Helm)] *******************************************************************************************
-2026-03-17 20:29:05,419 p=3145617 u=administrator n=ansible INFO| TASK [Vérifier que Helm est installé] **************************************************************************************************************************
-2026-03-17 20:29:05,419 p=3145617 u=administrator n=ansible INFO| mardi 17 mars 2026  20:29:05 +0100 (0:00:00.088)       0:00:00.088 ************ 
-2026-03-17 20:29:06,387 p=3145617 u=administrator n=ansible INFO| ok: [k3s-node-1]
-2026-03-17 20:29:06,407 p=3145617 u=administrator n=ansible INFO| TASK [Afficher la version Helm] ********************************************************************************************************************************
-2026-03-17 20:29:06,407 p=3145617 u=administrator n=ansible INFO| mardi 17 mars 2026  20:29:06 +0100 (0:00:00.987)       0:00:01.076 ************ 
-2026-03-17 20:29:06,442 p=3145617 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
-  msg: 'Helm détecté : v3.20.0+gb2e4314'
-2026-03-17 20:29:06,461 p=3145617 u=administrator n=ansible INFO| TASK [Créer le namespace prestashop (si absent)] ***************************************************************************************************************
-2026-03-17 20:29:06,461 p=3145617 u=administrator n=ansible INFO| mardi 17 mars 2026  20:29:06 +0100 (0:00:00.053)       0:00:01.129 ************ 
-2026-03-17 20:29:07,242 p=3145617 u=administrator n=ansible INFO| changed: [k3s-node-1]
-2026-03-17 20:29:07,264 p=3145617 u=administrator n=ansible INFO| TASK [Labelliser le namespace prestashop (PSA baseline - Apache www-data)] *************************************************************************************
-2026-03-17 20:29:07,265 p=3145617 u=administrator n=ansible INFO| mardi 17 mars 2026  20:29:07 +0100 (0:00:00.803)       0:00:01.933 ************ 
-2026-03-17 20:29:08,051 p=3145617 u=administrator n=ansible INFO| ok: [k3s-node-1]
-2026-03-17 20:29:08,076 p=3145617 u=administrator n=ansible INFO| TASK [Créer le répertoire de travail pour le chart Helm] *******************************************************************************************************
-2026-03-17 20:29:08,076 p=3145617 u=administrator n=ansible INFO| mardi 17 mars 2026  20:29:08 +0100 (0:00:00.811)       0:00:02.745 ************ 
-2026-03-17 20:29:08,992 p=3145617 u=administrator n=ansible INFO| changed: [k3s-node-1]
-2026-03-17 20:29:09,018 p=3145617 u=administrator n=ansible INFO| TASK [Copier le chart Helm PrestaShop sur le nœud] *************************************************************************************************************
-2026-03-17 20:29:09,019 p=3145617 u=administrator n=ansible INFO| mardi 17 mars 2026  20:29:09 +0100 (0:00:00.942)       0:00:03.687 ************ 
-2026-03-17 20:29:18,941 p=3145617 u=administrator n=ansible INFO| changed: [k3s-node-1]
-2026-03-17 20:29:18,971 p=3145617 u=administrator n=ansible INFO| TASK [Écrire le fichier values Helm (overrides depuis group_vars)] *********************************************************************************************
-2026-03-17 20:29:18,972 p=3145617 u=administrator n=ansible INFO| mardi 17 mars 2026  20:29:18 +0100 (0:00:09.952)       0:00:13.640 ************ 
-2026-03-17 20:29:20,015 p=3145617 u=administrator n=ansible INFO| changed: [k3s-node-1]
-2026-03-17 20:29:20,043 p=3145617 u=administrator n=ansible INFO| TASK [Helm | upgrade --install prestashop] *********************************************************************************************************************
-2026-03-17 20:29:20,043 p=3145617 u=administrator n=ansible INFO| mardi 17 mars 2026  20:29:20 +0100 (0:00:01.071)       0:00:14.712 ************ 
-2026-03-17 20:29:21,591 p=3145617 u=administrator n=ansible INFO| ok: [k3s-node-1]
-2026-03-17 20:29:21,622 p=3145617 u=administrator n=ansible INFO| TASK [Helm | résultat] *****************************************************************************************************************************************
-2026-03-17 20:29:21,622 p=3145617 u=administrator n=ansible INFO| mardi 17 mars 2026  20:29:21 +0100 (0:00:01.578)       0:00:16.291 ************ 
-2026-03-17 20:29:21,659 p=3145617 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
-  msg:
-  - Release "prestashop" does not exist. Installing it now.
-  - 'NAME: prestashop'
-  - 'LAST DEPLOYED: Tue Mar 17 20:29:20 2026'
-  - 'NAMESPACE: prestashop'
-  - 'STATUS: deployed'
-  - 'REVISION: 1'
-  - 'TEST SUITE: None'
-2026-03-17 20:29:21,730 p=3145617 u=administrator n=ansible INFO| TASK [Diag K8s | pods -n prestashop] ***************************************************************************************************************************
-2026-03-17 20:29:21,730 p=3145617 u=administrator n=ansible INFO| mardi 17 mars 2026  20:29:21 +0100 (0:00:00.108)       0:00:16.399 ************ 
-2026-03-17 20:29:22,522 p=3145617 u=administrator n=ansible INFO| ok: [k3s-node-1]
-2026-03-17 20:29:22,543 p=3145617 u=administrator n=ansible INFO| TASK [Diag K8s | afficher pods] ********************************************************************************************************************************
-2026-03-17 20:29:22,543 p=3145617 u=administrator n=ansible INFO| mardi 17 mars 2026  20:29:22 +0100 (0:00:00.812)       0:00:17.211 ************ 
-2026-03-17 20:29:22,602 p=3145617 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
-  msg:
-  - NAME                                  READY   STATUS    RESTARTS   AGE   IP       NODE     NOMINATED NODE   READINESS GATES
-  - prestashop-6df847dfdd-r29w7           0/1     Pending   0          1s    <none>   <none>   <none>           <none>
-  - prestashop-mariadb-865bdbf48d-fhq7s   0/1     Pending   0          1s    <none>   <none>   <none>           <none>
-2026-03-17 20:29:22,633 p=3145617 u=administrator n=ansible INFO| TASK [Diag K8s | events (triés par date)] **********************************************************************************************************************
-2026-03-17 20:29:22,634 p=3145617 u=administrator n=ansible INFO| mardi 17 mars 2026  20:29:22 +0100 (0:00:00.090)       0:00:17.302 ************ 
-2026-03-17 20:29:23,439 p=3145617 u=administrator n=ansible INFO| ok: [k3s-node-1]
-2026-03-17 20:29:23,468 p=3145617 u=administrator n=ansible INFO| TASK [Diag K8s | afficher events] ******************************************************************************************************************************
-2026-03-17 20:29:23,468 p=3145617 u=administrator n=ansible INFO| mardi 17 mars 2026  20:29:23 +0100 (0:00:00.834)       0:00:18.137 ************ 
-2026-03-17 20:29:23,531 p=3145617 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
-  msg:
-  - LAST SEEN   TYPE      REASON                 OBJECT                                      MESSAGE
-  - '1s          Warning   FailedScheduling       pod/prestashop-mariadb-865bdbf48d-fhq7s     0/3 nodes are available: pod has unbound immediate PersistentVolumeClaims. preemption: 0/3 nodes are available: 3 Preemption is not helpful for scheduling.'
-  - '1s          Warning   FailedScheduling       pod/prestashop-6df847dfdd-r29w7             0/3 nodes are available: pod has unbound immediate PersistentVolumeClaims. preemption: 0/3 nodes are available: 3 Preemption is not helpful for scheduling.'
-  - 2s          Normal    WaitingForApproval     certificaterequest/prestashop-tls-1         Not signing CertificateRequest until it is Approved
-  - 2s          Normal    ExternalProvisioning   persistentvolumeclaim/prestashop-db-pvc     Waiting for a volume to be created either by the external provisioner 'driver.longhorn.io' or manually by the system administrator. If volume creation is delayed, please verify that the provisioner is running and correctly registered.
-  - 2s          Normal    WaitingForApproval     certificaterequest/prestashop-tls-1         Not signing CertificateRequest until it is Approved
-  - 2s          Normal    Provisioning           persistentvolumeclaim/prestashop-db-pvc     External provisioner is provisioning volume for claim "prestashop/prestashop-db-pvc"
-  - 2s          Normal    Provisioning           persistentvolumeclaim/prestashop-data-pvc   External provisioner is provisioning volume for claim "prestashop/prestashop-data-pvc"
-  - '2s          Normal    SuccessfulCreate       replicaset/prestashop-mariadb-865bdbf48d    Created pod: prestashop-mariadb-865bdbf48d-fhq7s'
-  - 2s          Normal    ScalingReplicaSet      deployment/prestashop-mariadb               Scaled up replica set prestashop-mariadb-865bdbf48d to 1
-  - 2s          Normal    WaitingForApproval     certificaterequest/prestashop-tls-1         Not signing CertificateRequest until it is Approved
-  - 2s          Normal    cert-manager.io        certificaterequest/prestashop-tls-1         Certificate request has been approved by cert-manager.io
-  - 2s          Normal    WaitingForApproval     certificaterequest/prestashop-tls-1         Not signing CertificateRequest until it is Approved
-  - 2s          Normal    CreateCertificate      ingress/prestashop                          Successfully created Certificate "prestashop-tls"
-  - 2s          Normal    ExternalProvisioning   persistentvolumeclaim/prestashop-data-pvc   Waiting for a volume to be created either by the external provisioner 'driver.longhorn.io' or manually by the system administrator. If volume creation is delayed, please verify that the provisioner is running and correctly registered.
-  - 2s          Normal    WaitingForApproval     certificaterequest/prestashop-tls-1         Not signing CertificateRequest until it is Approved
-  - 2s          Normal    OrderCreated           certificaterequest/prestashop-tls-1         Created Order resource prestashop/prestashop-tls-1-3080930927
-  - '2s          Normal    OrderPending           certificaterequest/prestashop-tls-1         Waiting on certificate issuance from order prestashop/prestashop-tls-1-3080930927: ""'
-  - '2s          Normal    SuccessfulCreate       replicaset/prestashop-6df847dfdd            Created pod: prestashop-6df847dfdd-r29w7'
-  - 2s          Normal    Issuing                certificate/prestashop-tls                  Issuing certificate as Secret does not exist
-  - 2s          Normal    Generated              certificate/prestashop-tls                  Stored new private key in temporary Secret resource "prestashop-tls-9qv94"
-  - 2s          Normal    Requested              certificate/prestashop-tls                  Created new CertificateRequest resource "prestashop-tls-1"
-  - 2s          Normal    ScalingReplicaSet      deployment/prestashop                       Scaled up replica set prestashop-6df847dfdd to 1
-  - '1s          Warning   Failed                 certificate/prestashop-tls                  The certificate request has failed to complete and will be retried: Failed to wait for order resource "prestashop-tls-1-3080930927" to become ready: order is in "errored" state: Failed to create Order: 429 urn:ietf:params:acme:error:rateLimited: too many certificates (5) already issued for this exact set of identifiers in the last 168h0m0s, retry after 2026-03-18 06:16:01 UTC: see https://letsencrypt.org/docs/rate-limits/#new-certificates-per-exact-set-of-identifiers'
-  - '1s          Warning   OrderFailed            certificaterequest/prestashop-tls-1         Failed to wait for order resource "prestashop-tls-1-3080930927" to become ready: order is in "errored" state: Failed to create Order: 429 urn:ietf:params:acme:error:rateLimited: too many certificates (5) already issued for this exact set of identifiers in the last 168h0m0s, retry after 2026-03-18 06:16:01 UTC: see https://letsencrypt.org/docs/rate-limits/#new-certificates-per-exact-set-of-identifiers'
-2026-03-17 20:29:23,561 p=3145617 u=administrator n=ansible INFO| TASK [Diag K8s | logs PrestaShop (50 dernières lignes)] ********************************************************************************************************
-2026-03-17 20:29:23,562 p=3145617 u=administrator n=ansible INFO| mardi 17 mars 2026  20:29:23 +0100 (0:00:00.093)       0:00:18.230 ************ 
-2026-03-17 20:29:24,386 p=3145617 u=administrator n=ansible INFO| ok: [k3s-node-1]
-2026-03-17 20:29:24,409 p=3145617 u=administrator n=ansible INFO| TASK [Diag K8s | afficher logs PrestaShop] *********************************************************************************************************************
-2026-03-17 20:29:24,410 p=3145617 u=administrator n=ansible INFO| mardi 17 mars 2026  20:29:24 +0100 (0:00:00.848)       0:00:19.078 ************ 
-2026-03-17 20:29:24,468 p=3145617 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
-  msg: []
-2026-03-17 20:29:24,497 p=3145617 u=administrator n=ansible INFO| TASK [Diag K8s | logs MariaDB (30 dernières lignes)] ***********************************************************************************************************
-2026-03-17 20:29:24,498 p=3145617 u=administrator n=ansible INFO| mardi 17 mars 2026  20:29:24 +0100 (0:00:00.087)       0:00:19.166 ************ 
-2026-03-17 20:29:25,308 p=3145617 u=administrator n=ansible INFO| ok: [k3s-node-1]
-2026-03-17 20:29:25,340 p=3145617 u=administrator n=ansible INFO| TASK [Diag K8s | afficher logs MariaDB] ************************************************************************************************************************
-2026-03-17 20:29:25,340 p=3145617 u=administrator n=ansible INFO| mardi 17 mars 2026  20:29:25 +0100 (0:00:00.842)       0:00:20.009 ************ 
-2026-03-17 20:29:25,404 p=3145617 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
-  msg: []
-2026-03-17 20:29:25,433 p=3145617 u=administrator n=ansible INFO| TASK [Supprimer le chart et les values temporaires] ************************************************************************************************************
-2026-03-17 20:29:25,433 p=3145617 u=administrator n=ansible INFO| mardi 17 mars 2026  20:29:25 +0100 (0:00:00.092)       0:00:20.102 ************ 
-2026-03-17 20:29:26,052 p=3145617 u=administrator n=ansible INFO| changed: [k3s-node-1] => (item=/tmp/helm-prestashop)
-2026-03-17 20:29:26,645 p=3145617 u=administrator n=ansible INFO| changed: [k3s-node-1] => (item=/tmp/helm-prestashop-values.yaml)
-2026-03-17 20:29:26,670 p=3145617 u=administrator n=ansible INFO| TASK [Vérifier le type de clé du certificat actuel] ************************************************************************************************************
-2026-03-17 20:29:26,670 p=3145617 u=administrator n=ansible INFO| mardi 17 mars 2026  20:29:26 +0100 (0:00:01.236)       0:00:21.339 ************ 
-2026-03-17 20:29:27,521 p=3145617 u=administrator n=ansible INFO| ok: [k3s-node-1]
-2026-03-17 20:29:27,540 p=3145617 u=administrator n=ansible INFO| TASK [Supprimer l'ancien certificat RSA pour forcer le renouvellement ECDSA] ***********************************************************************************
-2026-03-17 20:29:27,541 p=3145617 u=administrator n=ansible INFO| mardi 17 mars 2026  20:29:27 +0100 (0:00:00.870)       0:00:22.209 ************ 
-2026-03-17 20:29:28,367 p=3145617 u=administrator n=ansible INFO| changed: [k3s-node-1]
-2026-03-17 20:29:28,390 p=3145617 u=administrator n=ansible INFO| TASK [Supprimer l'ancien secret TLS RSA] ***********************************************************************************************************************
-2026-03-17 20:29:28,391 p=3145617 u=administrator n=ansible INFO| mardi 17 mars 2026  20:29:28 +0100 (0:00:00.849)       0:00:23.059 ************ 
-2026-03-17 20:29:29,202 p=3145617 u=administrator n=ansible INFO| changed: [k3s-node-1]
-2026-03-17 20:29:29,235 p=3145617 u=administrator n=ansible INFO| TASK [Attendre que MariaDB soit Ready] *************************************************************************************************************************
-2026-03-17 20:29:29,236 p=3145617 u=administrator n=ansible INFO| mardi 17 mars 2026  20:29:29 +0100 (0:00:00.844)       0:00:23.904 ************ 
-2026-03-17 20:30:09,526 p=3145617 u=administrator n=ansible INFO| ok: [k3s-node-1]
-2026-03-17 20:30:09,554 p=3145617 u=administrator n=ansible INFO| TASK [Attendre que PrestaShop soit Ready (installation DB au 1er boot = ~15min)] *******************************************************************************
-2026-03-17 20:30:09,555 p=3145617 u=administrator n=ansible INFO| mardi 17 mars 2026  20:30:09 +0100 (0:00:40.318)       0:01:04.223 ************ 
-2026-03-17 20:32:25,050 p=3145617 u=administrator n=ansible INFO| ok: [k3s-node-1]
-2026-03-17 20:32:25,074 p=3145617 u=administrator n=ansible INFO| TASK [Avertissement si PrestaShop pas encore Ready] ************************************************************************************************************
-2026-03-17 20:32:25,074 p=3145617 u=administrator n=ansible INFO| mardi 17 mars 2026  20:32:25 +0100 (0:02:15.519)       0:03:19.742 ************ 
-2026-03-17 20:32:25,116 p=3145617 u=administrator n=ansible INFO| skipping: [k3s-node-1]
-2026-03-17 20:32:25,145 p=3145617 u=administrator n=ansible INFO| TASK [Vérifier les pods PrestaShop] ****************************************************************************************************************************
-2026-03-17 20:32:25,145 p=3145617 u=administrator n=ansible INFO| mardi 17 mars 2026  20:32:25 +0100 (0:00:00.071)       0:03:19.814 ************ 
-2026-03-17 20:32:25,928 p=3145617 u=administrator n=ansible INFO| ok: [k3s-node-1]
-2026-03-17 20:32:25,958 p=3145617 u=administrator n=ansible INFO| TASK [Vérifier les services PrestaShop] ************************************************************************************************************************
-2026-03-17 20:32:25,958 p=3145617 u=administrator n=ansible INFO| mardi 17 mars 2026  20:32:25 +0100 (0:00:00.812)       0:03:20.627 ************ 
-2026-03-17 20:32:26,667 p=3145617 u=administrator n=ansible INFO| ok: [k3s-node-1]
-2026-03-17 20:32:26,696 p=3145617 u=administrator n=ansible INFO| TASK [Vérifier l'Ingress PrestaShop] ***************************************************************************************************************************
-2026-03-17 20:32:26,697 p=3145617 u=administrator n=ansible INFO| mardi 17 mars 2026  20:32:26 +0100 (0:00:00.738)       0:03:21.365 ************ 
-2026-03-17 20:32:27,476 p=3145617 u=administrator n=ansible INFO| ok: [k3s-node-1]
-2026-03-17 20:32:27,506 p=3145617 u=administrator n=ansible INFO| TASK [Vérifier l'IngressRoute HTTPS] ***************************************************************************************************************************
-2026-03-17 20:32:27,507 p=3145617 u=administrator n=ansible INFO| mardi 17 mars 2026  20:32:27 +0100 (0:00:00.809)       0:03:22.175 ************ 
-2026-03-17 20:32:28,208 p=3145617 u=administrator n=ansible INFO| ok: [k3s-node-1]
-2026-03-17 20:32:28,236 p=3145617 u=administrator n=ansible INFO| TASK [Vérifier le certificat TLS] ******************************************************************************************************************************
-2026-03-17 20:32:28,236 p=3145617 u=administrator n=ansible INFO| mardi 17 mars 2026  20:32:28 +0100 (0:00:00.729)       0:03:22.905 ************ 
-2026-03-17 20:32:28,985 p=3145617 u=administrator n=ansible INFO| ok: [k3s-node-1]
-2026-03-17 20:32:29,016 p=3145617 u=administrator n=ansible INFO| TASK [Vérifier les PersistentVolumeClaims] *********************************************************************************************************************
-2026-03-17 20:32:29,017 p=3145617 u=administrator n=ansible INFO| mardi 17 mars 2026  20:32:29 +0100 (0:00:00.780)       0:03:23.685 ************ 
-2026-03-17 20:32:29,807 p=3145617 u=administrator n=ansible INFO| ok: [k3s-node-1]
-2026-03-17 20:32:29,839 p=3145617 u=administrator n=ansible INFO| TASK [Vérifier le HorizontalPodAutoscaler] *********************************************************************************************************************
-2026-03-17 20:32:29,839 p=3145617 u=administrator n=ansible INFO| mardi 17 mars 2026  20:32:29 +0100 (0:00:00.822)       0:03:24.508 ************ 
-2026-03-17 20:32:30,638 p=3145617 u=administrator n=ansible INFO| ok: [k3s-node-1]
-2026-03-17 20:32:30,668 p=3145617 u=administrator n=ansible INFO| TASK [Vérifier la release Helm] ********************************************************************************************************************************
-2026-03-17 20:32:30,669 p=3145617 u=administrator n=ansible INFO| mardi 17 mars 2026  20:32:30 +0100 (0:00:00.829)       0:03:25.337 ************ 
-2026-03-17 20:32:31,352 p=3145617 u=administrator n=ansible INFO| ok: [k3s-node-1]
-2026-03-17 20:32:31,385 p=3145617 u=administrator n=ansible INFO| TASK [Résumé PrestaShop] ***************************************************************************************************************************************
-2026-03-17 20:32:31,386 p=3145617 u=administrator n=ansible INFO| mardi 17 mars 2026  20:32:31 +0100 (0:00:00.716)       0:03:26.054 ************ 
-2026-03-17 20:32:31,456 p=3145617 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
-  msg:
-  - ============================================================
-  - '  PrestaShop 8 - Boutique Barista'
-  - '  Déploiement Helm réussi ✓'
-  - ============================================================
-  - 'URL boutique  : https://barista.app.xixtu.eu'
-  - 'Admin panel   : https://barista.app.xixtu.eu/admin-barista'
-  - 'Admin user    : admin@xixtu.eu'
-  - 'Langue        : Français (fr) | Pays : France'
-  - '------------------------------------------------------------'
-  - 'Images Docker  : prestashop/prestashop:8'
-  - '               : mariadb:10.11'
-  - '               : alpine:3.19 (init cleanup-lock)'
-  - 'Helm release   : prestashop (namespace prestashop)'
-  - 'Chart          : charts/prestashop v1.0.0'
-  - '------------------------------------------------------------'
-  - 'Ingress        : traefik (web → redirect HTTPS, websecure TLS)'
-  - 'TLS            : cert-manager / letsencrypt-production'
-  - 'Certificat     : ECDSA P-384 (rotation automatique)'
-  - 'Headers        : security-headers (HSTS 2 ans, X-Frame, XSS)'
-  - 'PSA namespace  : baseline (Apache www-data)'
-  - '------------------------------------------------------------'
-  - 'Storage        : longhorn-fast (répliques: 2)'
-  - 'Données app    : 20Gi (/var/www/html)'
-  - 'Base de données: MariaDB 10Gi'
-  - 'HPA            : min=1 max=3 | CPU=70% | Memory=80%'
-  - '------------------------------------------------------------'
-  - 'Helm releases  : [''NAME      \tNAMESPACE \tREVISION\tUPDATED                                \tSTATUS  \tCHART           \tAPP VERSION'', ''prestashop\tprestashop\t1       \t2026-03-17 20:29:20.673727682 +0100 CET\tdeployed\tprestashop-1.0.0\t8          '']'
-  - 'Pods    : [''NAME                                  READY   STATUS    RESTARTS   AGE    IP            NODE         NOMINATED NODE   READINESS GATES'', ''prestashop-6df847dfdd-r29w7           1/1     Running   0          3m4s   10.42.0.243   k3s-node-1   <none>           <none>'', ''prestashop-mariadb-865bdbf48d-fhq7s   1/1     Running   0          3m4s   10.42.0.242   k3s-node-1   <none>           <none>'']'
-  - 'Services: [''NAME                 TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE'', ''prestashop           ClusterIP   10.43.253.179   <none>        80/TCP     3m5s'', ''prestashop-mariadb   ClusterIP   10.43.173.76    <none>        3306/TCP   3m5s'']'
-  - 'Ingress : [''NAME         CLASS     HOSTS                  ADDRESS        PORTS     AGE'', ''prestashop   traefik   barista.app.xixtu.eu   192.168.0.20   80, 443   3m6s'']'
-  - 'IR HTTPS: []'
-  - 'Certs   : [''NAME             READY   SECRET           AGE'', ''prestashop-tls   False   prestashop-tls   3m'']'
-  - 'PVCs    : [''NAME                  STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS    VOLUMEATTRIBUTESCLASS   AGE'', ''prestashop-data-pvc   Bound    pvc-989ffc50-2b99-4d58-b40d-1b5a345fd6e7   20Gi       RWO            longhorn-fast   <unset>                 3m8s'', ''prestashop-db-pvc     Bound    pvc-6ee668a0-d2e6-4ac4-baa6-69f4f6765ac5   10Gi       RWO            longhorn-fast   <unset>                 3m8s'']'
-  - 'HPA     : [''NAME         REFERENCE               TARGETS                               MINPODS   MAXPODS   REPLICAS   AGE'', ''prestashop   Deployment/prestashop   cpu: <unknown>/70%, memory: 17%/80%   1         3         1          3m9s'']'
-  - ============================================================
-  - 'COMMANDES UTILES :'
-  - '  helm list -n prestashop'
-  - '  helm history prestashop -n prestashop'
-  - '  helm rollback prestashop -n prestashop'
-  - '  kubectl logs -n prestashop -l app.kubernetes.io/component=app -f'
-  - '  kubectl logs -n prestashop -l app.kubernetes.io/component=mariadb -f'
-  - ============================================================
-  - 'MODULES PAIEMENT À INSTALLER (Marketplace PrestaShop) :'
-  - '  ✓ Virement bancaire   → natif'
-  - '  ✓ Chèque              → natif (ps_checkpayment)'
-  - '  ✓ Cash à la livraison → natif (ps_cashondelivery)'
-  - '  ★ Wero / Stripe       → modules Marketplace'
-  - ============================================================
-2026-03-17 20:32:31,458 p=3145617 u=administrator n=ansible INFO| PLAY RECAP *****************************************************************************************************************************************************
-2026-03-17 20:32:31,459 p=3145617 u=administrator n=ansible INFO| k3s-node-1                 : ok=32   changed=7    unreachable=0    failed=0    skipped=1    rescued=0    ignored=0   
-2026-03-17 20:32:31,460 p=3145617 u=administrator n=ansible INFO| PLAYBOOK RECAP *************************************************************************************************************************************************
-2026-03-17 20:32:31,460 p=3145617 u=administrator n=ansible INFO| Playbook run took 0 days, 0 hours, 3 minutes, 26 seconds
+2026-09-25 21:21:27,092 p=2080808 u=administrator n=ansible INFO| PLAY [NAS - Stockage partagé (Option C Hybride + Active Directory)] *************************************************************************************************************************
+2026-09-25 21:21:27,132 p=2080808 u=administrator n=ansible INFO| TASK [Créer le namespace NAS] ***************************************************************************************************************************************************************
+2026-09-25 21:21:27,132 p=2080808 u=administrator n=ansible INFO| vendredi 25 septembre 2026  21:21:27 +0200 (0:00:00.089)       0:00:00.089 **** 
+2026-09-25 21:21:28,295 p=2080808 u=administrator n=ansible ERROR| [ERROR]: non-zero return code
 
-2026-03-17 20:32:31,460 p=3145617 u=administrator n=ansible INFO| TASKS RECAP ****************************************************************************************************************************************************
-2026-03-17 20:32:31,461 p=3145617 u=administrator n=ansible INFO| mardi 17 mars 2026  20:32:31 +0100 (0:00:00.075)       0:03:26.129 ************ 
-2026-03-17 20:32:31,461 p=3145617 u=administrator n=ansible INFO| =============================================================================== 
-2026-03-17 20:32:31,462 p=3145617 u=administrator n=ansible INFO| Attendre que PrestaShop soit Ready (installation DB au 1er boot = ~15min) ----------------------------------------------------------------------------- 135.52s
-2026-03-17 20:32:31,462 p=3145617 u=administrator n=ansible INFO| Attendre que MariaDB soit Ready ------------------------------------------------------------------------------------------------------------------------ 40.32s
-2026-03-17 20:32:31,462 p=3145617 u=administrator n=ansible INFO| Copier le chart Helm PrestaShop sur le nœud ------------------------------------------------------------------------------------------------------------- 9.95s
-2026-03-17 20:32:31,463 p=3145617 u=administrator n=ansible INFO| Helm | upgrade --install prestashop --------------------------------------------------------------------------------------------------------------------- 1.58s
-2026-03-17 20:32:31,463 p=3145617 u=administrator n=ansible INFO| Supprimer le chart et les values temporaires ------------------------------------------------------------------------------------------------------------ 1.24s
-2026-03-17 20:32:31,463 p=3145617 u=administrator n=ansible INFO| Écrire le fichier values Helm (overrides depuis group_vars) --------------------------------------------------------------------------------------------- 1.07s
-2026-03-17 20:32:31,463 p=3145617 u=administrator n=ansible INFO| Vérifier que Helm est installé -------------------------------------------------------------------------------------------------------------------------- 0.99s
-2026-03-17 20:32:31,464 p=3145617 u=administrator n=ansible INFO| Créer le répertoire de travail pour le chart Helm ------------------------------------------------------------------------------------------------------- 0.94s
-2026-03-17 20:32:31,464 p=3145617 u=administrator n=ansible INFO| Vérifier le type de clé du certificat actuel ------------------------------------------------------------------------------------------------------------ 0.87s
-2026-03-17 20:32:31,464 p=3145617 u=administrator n=ansible INFO| Supprimer l'ancien certificat RSA pour forcer le renouvellement ECDSA ----------------------------------------------------------------------------------- 0.85s
-2026-03-17 20:32:31,465 p=3145617 u=administrator n=ansible INFO| Diag K8s | logs PrestaShop (50 dernières lignes) -------------------------------------------------------------------------------------------------------- 0.85s
-2026-03-17 20:32:31,465 p=3145617 u=administrator n=ansible INFO| Supprimer l'ancien secret TLS RSA ----------------------------------------------------------------------------------------------------------------------- 0.84s
-2026-03-17 20:32:31,465 p=3145617 u=administrator n=ansible INFO| Diag K8s | logs MariaDB (30 dernières lignes) ----------------------------------------------------------------------------------------------------------- 0.84s
-2026-03-17 20:32:31,466 p=3145617 u=administrator n=ansible INFO| Diag K8s | events (triés par date) ---------------------------------------------------------------------------------------------------------------------- 0.83s
-2026-03-17 20:32:31,466 p=3145617 u=administrator n=ansible INFO| Vérifier le HorizontalPodAutoscaler --------------------------------------------------------------------------------------------------------------------- 0.83s
-2026-03-17 20:32:31,466 p=3145617 u=administrator n=ansible INFO| Vérifier les PersistentVolumeClaims --------------------------------------------------------------------------------------------------------------------- 0.82s
-2026-03-17 20:32:31,466 p=3145617 u=administrator n=ansible INFO| Vérifier les pods PrestaShop ---------------------------------------------------------------------------------------------------------------------------- 0.81s
-2026-03-17 20:32:31,467 p=3145617 u=administrator n=ansible INFO| Diag K8s | pods -n prestashop --------------------------------------------------------------------------------------------------------------------------- 0.81s
-2026-03-17 20:32:31,467 p=3145617 u=administrator n=ansible INFO| Labelliser le namespace prestashop (PSA baseline - Apache www-data) ------------------------------------------------------------------------------------- 0.81s
-2026-03-17 20:32:31,467 p=3145617 u=administrator n=ansible INFO| Vérifier l'Ingress PrestaShop --------------------------------------------------------------------------------------------------------------------------- 0.81s
+2026-09-25 21:21:28,296 p=2080808 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-09-25 21:21:28,329 p=2080808 u=administrator n=ansible INFO| TASK [Créer le Secret AD join credentials] **************************************************************************************************************************************************
+2026-09-25 21:21:28,329 p=2080808 u=administrator n=ansible INFO| vendredi 25 septembre 2026  21:21:28 +0200 (0:00:01.196)       0:00:01.286 **** 
+2026-09-25 21:21:29,541 p=2080808 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-09-25 21:21:29,578 p=2080808 u=administrator n=ansible INFO| TASK [Écrire la ConfigMap Samba AD] *********************************************************************************************************************************************************
+2026-09-25 21:21:29,578 p=2080808 u=administrator n=ansible INFO| vendredi 25 septembre 2026  21:21:29 +0200 (0:00:01.249)       0:00:02.535 **** 
+2026-09-25 21:21:31,267 p=2080808 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-09-25 21:21:31,285 p=2080808 u=administrator n=ansible INFO| TASK [Appliquer la ConfigMap Samba AD] ******************************************************************************************************************************************************
+2026-09-25 21:21:31,285 p=2080808 u=administrator n=ansible INFO| vendredi 25 septembre 2026  21:21:31 +0200 (0:00:01.706)       0:00:04.242 **** 
+2026-09-25 21:21:32,408 p=2080808 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-09-25 21:21:32,436 p=2080808 u=administrator n=ansible INFO| TASK [Supprimer le fichier ConfigMap temporaire] ********************************************************************************************************************************************
+2026-09-25 21:21:32,436 p=2080808 u=administrator n=ansible INFO| vendredi 25 septembre 2026  21:21:32 +0200 (0:00:01.150)       0:00:05.393 **** 
+2026-09-25 21:21:33,376 p=2080808 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-09-25 21:21:33,399 p=2080808 u=administrator n=ansible INFO| TASK [Écrire les PVC NAS] *******************************************************************************************************************************************************************
+2026-09-25 21:21:33,399 p=2080808 u=administrator n=ansible INFO| vendredi 25 septembre 2026  21:21:33 +0200 (0:00:00.962)       0:00:06.356 **** 
+2026-09-25 21:21:34,495 p=2080808 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-09-25 21:21:34,527 p=2080808 u=administrator n=ansible INFO| TASK [Appliquer les PVC NAS] ****************************************************************************************************************************************************************
+2026-09-25 21:21:34,528 p=2080808 u=administrator n=ansible INFO| vendredi 25 septembre 2026  21:21:34 +0200 (0:00:01.128)       0:00:07.484 **** 
+2026-09-25 21:21:35,759 p=2080808 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-09-25 21:21:35,791 p=2080808 u=administrator n=ansible INFO| TASK [Supprimer le fichier PVC temporaire] **************************************************************************************************************************************************
+2026-09-25 21:21:35,791 p=2080808 u=administrator n=ansible INFO| vendredi 25 septembre 2026  21:21:35 +0200 (0:00:01.263)       0:00:08.748 **** 
+2026-09-25 21:21:36,436 p=2080808 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-09-25 21:21:36,459 p=2080808 u=administrator n=ansible INFO| TASK [Écrire le Deployment Samba AD] ********************************************************************************************************************************************************
+2026-09-25 21:21:36,459 p=2080808 u=administrator n=ansible INFO| vendredi 25 septembre 2026  21:21:36 +0200 (0:00:00.667)       0:00:09.416 **** 
+2026-09-25 21:21:37,595 p=2080808 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-09-25 21:21:37,632 p=2080808 u=administrator n=ansible INFO| TASK [Appliquer le Deployment Samba AD] *****************************************************************************************************************************************************
+2026-09-25 21:21:37,633 p=2080808 u=administrator n=ansible INFO| vendredi 25 septembre 2026  21:21:37 +0200 (0:00:01.173)       0:00:10.589 **** 
+2026-09-25 21:21:39,081 p=2080808 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-09-25 21:21:39,169 p=2080808 u=administrator n=ansible INFO| TASK [Supprimer le fichier Samba temporaire] ************************************************************************************************************************************************
+2026-09-25 21:21:39,169 p=2080808 u=administrator n=ansible INFO| vendredi 25 septembre 2026  21:21:39 +0200 (0:00:01.536)       0:00:12.126 **** 
+2026-09-25 21:21:39,776 p=2080808 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-09-25 21:21:39,805 p=2080808 u=administrator n=ansible INFO| TASK [Attendre que Samba soit Ready] ********************************************************************************************************************************************************
+2026-09-25 21:21:39,805 p=2080808 u=administrator n=ansible INFO| vendredi 25 septembre 2026  21:21:39 +0200 (0:00:00.636)       0:00:12.762 **** 
+2026-09-25 21:22:23,830 p=2080808 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-09-25 21:22:23,853 p=2080808 u=administrator n=ansible INFO| TASK [Écrire le Deployment Plex] ************************************************************************************************************************************************************
+2026-09-25 21:22:23,853 p=2080808 u=administrator n=ansible INFO| vendredi 25 septembre 2026  21:22:23 +0200 (0:00:44.047)       0:00:56.810 **** 
+2026-09-25 21:22:25,027 p=2080808 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-09-25 21:22:25,052 p=2080808 u=administrator n=ansible INFO| TASK [Appliquer le Deployment Plex] *********************************************************************************************************************************************************
+2026-09-25 21:22:25,053 p=2080808 u=administrator n=ansible INFO| vendredi 25 septembre 2026  21:22:25 +0200 (0:00:01.199)       0:00:58.009 **** 
+2026-09-25 21:22:26,333 p=2080808 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-09-25 21:22:26,356 p=2080808 u=administrator n=ansible INFO| TASK [Supprimer le fichier Plex temporaire] *************************************************************************************************************************************************
+2026-09-25 21:22:26,356 p=2080808 u=administrator n=ansible INFO| vendredi 25 septembre 2026  21:22:26 +0200 (0:00:01.303)       0:00:59.313 **** 
+2026-09-25 21:22:27,023 p=2080808 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-09-25 21:22:27,049 p=2080808 u=administrator n=ansible INFO| TASK [Attendre que Plex soit Ready] *********************************************************************************************************************************************************
+2026-09-25 21:22:27,049 p=2080808 u=administrator n=ansible INFO| vendredi 25 septembre 2026  21:22:27 +0200 (0:00:00.692)       0:01:00.006 **** 
+2026-09-25 21:22:50,787 p=2080808 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-09-25 21:22:50,806 p=2080808 u=administrator n=ansible INFO| TASK [Écrire l'Ingress Plex TLS (cert-manager)] *********************************************************************************************************************************************
+2026-09-25 21:22:50,806 p=2080808 u=administrator n=ansible INFO| vendredi 25 septembre 2026  21:22:50 +0200 (0:00:23.757)       0:01:23.763 **** 
+2026-09-25 21:22:51,981 p=2080808 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-09-25 21:22:51,999 p=2080808 u=administrator n=ansible INFO| TASK [Appliquer l'Ingress Plex TLS] *********************************************************************************************************************************************************
+2026-09-25 21:22:51,999 p=2080808 u=administrator n=ansible INFO| vendredi 25 septembre 2026  21:22:51 +0200 (0:00:01.192)       0:01:24.956 **** 
+2026-09-25 21:22:52,859 p=2080808 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-09-25 21:22:52,877 p=2080808 u=administrator n=ansible INFO| TASK [Supprimer le fichier Ingress Plex temporaire] *****************************************************************************************************************************************
+2026-09-25 21:22:52,878 p=2080808 u=administrator n=ansible INFO| vendredi 25 septembre 2026  21:22:52 +0200 (0:00:00.878)       0:01:25.834 **** 
+2026-09-25 21:22:53,497 p=2080808 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-09-25 21:22:53,518 p=2080808 u=administrator n=ansible INFO| TASK [Écrire l'IngressRoute Plex HTTPS (Traefik)] *******************************************************************************************************************************************
+2026-09-25 21:22:53,518 p=2080808 u=administrator n=ansible INFO| vendredi 25 septembre 2026  21:22:53 +0200 (0:00:00.640)       0:01:26.475 **** 
+2026-09-25 21:22:54,621 p=2080808 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-09-25 21:22:54,642 p=2080808 u=administrator n=ansible INFO| TASK [Appliquer l'IngressRoute Plex HTTPS] **************************************************************************************************************************************************
+2026-09-25 21:22:54,643 p=2080808 u=administrator n=ansible INFO| vendredi 25 septembre 2026  21:22:54 +0200 (0:00:01.124)       0:01:27.599 **** 
+2026-09-25 21:22:58,140 p=2080808 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-09-25 21:22:58,158 p=2080808 u=administrator n=ansible INFO| TASK [Supprimer le fichier IngressRoute Plex temporaire] ************************************************************************************************************************************
+2026-09-25 21:22:58,159 p=2080808 u=administrator n=ansible INFO| vendredi 25 septembre 2026  21:22:58 +0200 (0:00:03.516)       0:01:31.115 **** 
+2026-09-25 21:22:58,790 p=2080808 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-09-25 21:22:58,830 p=2080808 u=administrator n=ansible INFO| TASK [Vérifier les pods NAS] ****************************************************************************************************************************************************************
+2026-09-25 21:22:58,830 p=2080808 u=administrator n=ansible INFO| vendredi 25 septembre 2026  21:22:58 +0200 (0:00:00.671)       0:01:31.787 **** 
+2026-09-25 21:22:59,617 p=2080808 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-09-25 21:22:59,649 p=2080808 u=administrator n=ansible INFO| TASK [Vérifier les services NAS] ************************************************************************************************************************************************************
+2026-09-25 21:22:59,649 p=2080808 u=administrator n=ansible INFO| vendredi 25 septembre 2026  21:22:59 +0200 (0:00:00.819)       0:01:32.606 **** 
+2026-09-25 21:23:00,443 p=2080808 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-09-25 21:23:00,464 p=2080808 u=administrator n=ansible INFO| TASK [Vérifier les PVC NAS] *****************************************************************************************************************************************************************
+2026-09-25 21:23:00,465 p=2080808 u=administrator n=ansible INFO| vendredi 25 septembre 2026  21:23:00 +0200 (0:00:00.815)       0:01:33.421 **** 
+2026-09-25 21:23:01,264 p=2080808 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-09-25 21:23:01,288 p=2080808 u=administrator n=ansible INFO| TASK [Vérifier les endpoints Samba] *********************************************************************************************************************************************************
+2026-09-25 21:23:01,288 p=2080808 u=administrator n=ansible INFO| vendredi 25 septembre 2026  21:23:01 +0200 (0:00:00.823)       0:01:34.245 **** 
+2026-09-25 21:23:02,097 p=2080808 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-09-25 21:23:02,116 p=2080808 u=administrator n=ansible INFO| TASK [Vérifier les endpoints Plex] **********************************************************************************************************************************************************
+2026-09-25 21:23:02,116 p=2080808 u=administrator n=ansible INFO| vendredi 25 septembre 2026  21:23:02 +0200 (0:00:00.827)       0:01:35.073 **** 
+2026-09-25 21:23:02,897 p=2080808 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-09-25 21:23:02,919 p=2080808 u=administrator n=ansible INFO| TASK [Résumé NAS] ***************************************************************************************************************************************************************************
+2026-09-25 21:23:02,919 p=2080808 u=administrator n=ansible INFO| vendredi 25 septembre 2026  21:23:02 +0200 (0:00:00.803)       0:01:35.876 **** 
+2026-09-25 21:23:03,006 p=2080808 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg:
+  - ================================================================
+  - '  NAS deploye - Option C Hybride + Active Directory'
+  - ================================================================
+  - ''
+  - '  Architecture :'
+  - '  Longhorn PVC (RWX - longhorn-slow)'
+  - '  ├── Samba AD Member (RW) → SMB shares (auth AD)'
+  - '  └── Plex (RO) → Streaming media'
+  - ''
+  - '  Active Directory : CORP.LCL'
+  - '  Domain Controller: dc1.corp.lcl (192.168.0.100)'
+  - ''
+  - ================================================================
+  - '  Namespace    : nas'
+  - '  Volume NAS   : 2Ti (longhorn-slow, replica:2)'
+  - '  Volume Plex  : 20Gi (longhorn-fast)'
+  - '  Volume Samba : 1Gi (longhorn-fast, machine account AD)'
+  - ================================================================
+  - ''
+  - '  SAMBA AD Member (192.168.0.30:445)'
+  - '  ────────────────────────────────────'
+  - '  Domaine : CORP.LCL'
+  - '  Auth    : Kerberos / NTLM (comptes AD)'
+  - ''
+  - '  Shares :'
+  - '    \\192.168.0.30\media      → groupe AD: NAS-media-rw'
+  - '    \\192.168.0.30\documents  → groupe AD: NAS-documents-rw'
+  - '    \\192.168.0.30\shared     → groupe AD: NAS-shared-rw'
+  - ''
+  - '  Connexion Windows : net use Z: \\192.168.0.30\media'
+  - '  Connexion Linux   : smb://192.168.0.30/media'
+  - '  (les postes doivent etre membres du domaine corp.lcl)'
+  - ''
+  - '  Nextcloud (External Storage SMB/CIFS) :'
+  - '    Host interne : samba-service.nas.svc.cluster.local'
+  - '    Host externe : 192.168.0.30'
+  - '    Auth : compte de service AD (ex: svc-nextcloud@corp.lcl)'
+  - ''
+  - '  PLEX (192.168.0.31:32400)'
+  - '  ────────────────────────────────────'
+  - '  HTTPS   : https://plex.app.xixtu.eu (Let''s Encrypt)'
+  - '  LAN     : http://192.168.0.31:32400/web'
+  - '  Medias  : /data/media (read-only depuis le volume NAS)'
+  - '  Config  : /config (longhorn-fast)'
+  - ''
+  - ================================================================
+  - '  Pods'
+  - ================================================================
+  - - NAME                     READY   STATUS    RESTARTS   AGE   IP           NODE         NOMINATED NODE   READINESS GATES
+    - plex-57b796dc56-tsz4h    1/1     Running   0          17m   10.42.0.79   k3s-node-1   <none>           <none>
+    - samba-5996574498-hlpzn   1/1     Running   0          81s   10.42.0.78   k3s-node-1   <none>           <none>
+  - ================================================================
+  - '  Services'
+  - ================================================================
+  - - NAME                  TYPE           CLUSTER-IP      EXTERNAL-IP    PORT(S)             AGE
+    - jdownloader-service   ClusterIP      10.43.153.226   <none>         5800/TCP,3129/TCP   202d
+    - plex-service          LoadBalancer   10.43.55.129    192.168.0.31   32400:32546/TCP     210d
+    - samba-service         LoadBalancer   10.43.188.137   192.168.0.30   445:30325/TCP       210d
+  - ================================================================
+  - '  PVC'
+  - ================================================================
+  - - NAME          STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS    VOLUMEATTRIBUTESCLASS   AGE
+    - nas-data      Bound    pvc-e8777eb3-0105-4f06-9bdb-ead600accbbb   2Ti        RWX            longhorn-slow   <unset>                 86s
+    - plex-config   Bound    pvc-76127407-af61-46dc-8164-49ff13e05828   20Gi       RWO            longhorn-fast   <unset>                 86s
+    - samba-state   Bound    pvc-bdfdbe3e-8445-430e-b993-5ece570671ed   1Gi        RWO            longhorn-fast   <unset>                 86s
+  - ================================================================
+  - ''
+  - '  PREREQUIS AD :'
+  - '  1. Creer les groupes AD : NAS-media-rw, NAS-documents-rw, NAS-shared-rw'
+  - '  2. Ajouter les utilisateurs aux groupes correspondants'
+  - '  3. Le compte svc-adjoin doit pouvoir joindre des machines'
+  - '  4. DNS : dc1.corp.lcl doit resoudre vers 192.168.0.100'
+  - ''
+  - '  IMPORTANT : ansible-vault pour ad_join_password en production !'
+  - '  IMPORTANT : Obtenir PLEX_CLAIM sur https://plex.tv/claim'
+  - '  IMPORTANT : DNS public plex.app.xixtu.eu → 192.168.0.20 (Traefik)'
+  - '  OPTIONNEL : DNS AdGuard → nas.corp.lcl → 192.168.0.30'
+  - ''
+  - ================================================================
+2026-09-25 21:23:03,008 p=2080808 u=administrator n=ansible INFO| PLAY RECAP **********************************************************************************************************************************************************************************
+2026-09-25 21:23:03,009 p=2080808 u=administrator n=ansible INFO| k3s-node-1                 : ok=28   changed=15   unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+2026-09-25 21:23:03,009 p=2080808 u=administrator n=ansible INFO| PLAYBOOK RECAP ******************************************************************************************************************************************************************************
+2026-09-25 21:23:03,009 p=2080808 u=administrator n=ansible INFO| Playbook run took 0 days, 0 hours, 1 minutes, 35 seconds
+
+2026-09-25 21:23:03,010 p=2080808 u=administrator n=ansible INFO| TASKS RECAP *********************************************************************************************************************************************************************************
+2026-09-25 21:23:03,010 p=2080808 u=administrator n=ansible INFO| vendredi 25 septembre 2026  21:23:03 +0200 (0:00:00.090)       0:01:35.967 **** 
+2026-09-25 21:23:03,010 p=2080808 u=administrator n=ansible INFO| =============================================================================== 
+2026-09-25 21:23:03,011 p=2080808 u=administrator n=ansible INFO| Attendre que Samba soit Ready ------------------------------------------------------------------------------------------------------------------------------------------------------- 44.05s
+2026-09-25 21:23:03,011 p=2080808 u=administrator n=ansible INFO| Attendre que Plex soit Ready -------------------------------------------------------------------------------------------------------------------------------------------------------- 23.76s
+2026-09-25 21:23:03,011 p=2080808 u=administrator n=ansible INFO| Appliquer l'IngressRoute Plex HTTPS -------------------------------------------------------------------------------------------------------------------------------------------------- 3.52s
+2026-09-25 21:23:03,011 p=2080808 u=administrator n=ansible INFO| Écrire la ConfigMap Samba AD --------------------------------------------------------------------------------------------------------------------------------------------------------- 1.71s
+2026-09-25 21:23:03,011 p=2080808 u=administrator n=ansible INFO| Appliquer le Deployment Samba AD ----------------------------------------------------------------------------------------------------------------------------------------------------- 1.54s
+2026-09-25 21:23:03,012 p=2080808 u=administrator n=ansible INFO| Appliquer le Deployment Plex --------------------------------------------------------------------------------------------------------------------------------------------------------- 1.30s
+2026-09-25 21:23:03,012 p=2080808 u=administrator n=ansible INFO| Appliquer les PVC NAS ---------------------------------------------------------------------------------------------------------------------------------------------------------------- 1.26s
+2026-09-25 21:23:03,012 p=2080808 u=administrator n=ansible INFO| Créer le Secret AD join credentials -------------------------------------------------------------------------------------------------------------------------------------------------- 1.25s
+2026-09-25 21:23:03,012 p=2080808 u=administrator n=ansible INFO| Écrire le Deployment Plex ------------------------------------------------------------------------------------------------------------------------------------------------------------ 1.20s
+2026-09-25 21:23:03,012 p=2080808 u=administrator n=ansible INFO| Créer le namespace NAS --------------------------------------------------------------------------------------------------------------------------------------------------------------- 1.20s
+2026-09-25 21:23:03,013 p=2080808 u=administrator n=ansible INFO| Écrire l'Ingress Plex TLS (cert-manager) --------------------------------------------------------------------------------------------------------------------------------------------- 1.19s
+2026-09-25 21:23:03,013 p=2080808 u=administrator n=ansible INFO| Écrire le Deployment Samba AD -------------------------------------------------------------------------------------------------------------------------------------------------------- 1.17s
+2026-09-25 21:23:03,013 p=2080808 u=administrator n=ansible INFO| Appliquer la ConfigMap Samba AD ------------------------------------------------------------------------------------------------------------------------------------------------------ 1.15s
+2026-09-25 21:23:03,013 p=2080808 u=administrator n=ansible INFO| Écrire les PVC NAS ------------------------------------------------------------------------------------------------------------------------------------------------------------------- 1.13s
+2026-09-25 21:23:03,013 p=2080808 u=administrator n=ansible INFO| Écrire l'IngressRoute Plex HTTPS (Traefik) ------------------------------------------------------------------------------------------------------------------------------------------- 1.12s
+2026-09-25 21:23:03,013 p=2080808 u=administrator n=ansible INFO| Supprimer le fichier ConfigMap temporaire -------------------------------------------------------------------------------------------------------------------------------------------- 0.96s
+2026-09-25 21:23:03,014 p=2080808 u=administrator n=ansible INFO| Appliquer l'Ingress Plex TLS --------------------------------------------------------------------------------------------------------------------------------------------------------- 0.88s
+2026-09-25 21:23:03,014 p=2080808 u=administrator n=ansible INFO| Vérifier les endpoints Samba --------------------------------------------------------------------------------------------------------------------------------------------------------- 0.83s
+2026-09-25 21:23:03,014 p=2080808 u=administrator n=ansible INFO| Vérifier les PVC NAS ----------------------------------------------------------------------------------------------------------------------------------------------------------------- 0.82s
+2026-09-25 21:23:03,014 p=2080808 u=administrator n=ansible INFO| Vérifier les pods NAS ---------------------------------------------------------------------------------------------------------------------------------------------------------------- 0.82s

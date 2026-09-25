@@ -1,0 +1,13 @@
+domain: "formbricks.app.xixtu.eu"
+
+image:
+  repository: ghcr.io/formbricks/formbricks
+  tag: v2.5.0
+
+postgresql:
+  user: formbricks
+  password: "ChangeThisSecurePassword123!"
+  db: formbricks
+
+env:
+  nextAuthSecret: "1234567890abcdef1234567890abcdef"

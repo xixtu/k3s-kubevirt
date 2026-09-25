@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: formbricks-webapp
+spec:
+  selector:
+    matchLabels:
+      app: formbricks-webapp
+  template:
+    metadata:
+      labels:
+        app: formbricks-webapp
+    spec:
+      containers:
+      - name: webapp
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        ports:
+        - containerPort: 3000
+        env:
+        - name: WEBAPP_URL
+          value: "https://{{ .Values.domain }}"
+        - name: NEXTAUTH_URL
+          value: "https://{{ .Values.domain }}"
+        - name: NEXTAUTH_SECRET
+          value: {{ .Values.env.nextAuthSecret }}
+        - name: DATABASE_URL
+          value: "postgresql://{{ .Values.postgresql.user }}:{{ .Values.postgresql.password }}@formbricks-postgres:5432/{{ .Values.postgresql.db }}?schema=public"
+        - name: REDIS_URL
+          value: "redis://formbricks-redis:6379"
+        - name: ENCRYPTION_KEY
+          value: "1234567890abcdef1234567890abcdef"
+        - name: CUBEJS_API_URL
+          value: "http://localhost:4000"
+        - name: CUBEJS_API_SECRET
+          value: "dummy-secret"
+        - name: HUB_API_URL
+          value: "http://localhost:4000"
+        - name: HUB_API_KEY
+          value: "dummy-key"
+        - name: CRON_SECRET
+          value: "9876543210fedcba9876543210fedcba"
+        # -- Nouvelle configuration SMTP Mailpit --
+        - name: SMTP_HOST
+          value: "formbricks-mailpit"
+        - name: SMTP_PORT
+          value: "1025"
+        - name: MAIL_FROM
+          value: "noreply@formbricks.app.xixtu.eu"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: formbricks-webapp
+spec:
+  ports:
+  - port: 3000
+  selector:
+    app: formbricks-webapp
