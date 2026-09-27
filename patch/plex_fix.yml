@@ -1,0 +1,84 @@
+# =============================================================================
+# Plex — unification sur un seul canal (reverse proxy Traefik)
+# Objectif : supprimer le canal direct 32400 / la 2e VIP MetalLB, ne garder
+# que plex.app.xixtu.eu via Traefik, et fiabiliser le streaming (timeouts).
+#
+# À reconcilier avec tes manifests existants (garde tes labels/selectors).
+# Rappel box : ne laisser que 443 (+80 ACME) redirigés ; retirer le 32400.
+# Rappel Plex : Réseau → customConnections = https://plex.app.xixtu.eu (seul)
+#               Enable Relay = OFF (déjà fait)
+# =============================================================================
+---
+# 1) plex-service : LoadBalancer -> ClusterIP.
+#    Plus de VIP 192.168.0.31 ; seul Traefik (in-cluster) atteint Plex.
+apiVersion: v1
+kind: Service
+metadata:
+  name: plex-service
+  namespace: nas
+  annotations:
+    # Rattache le transport backend ci-dessous (timeouts longs pour le streaming).
+    traefik.ingress.kubernetes.io/service.serverstransport: nas-plex-transport@kubernetescrd
+spec:
+  type: ClusterIP            # <- était LoadBalancer
+  selector:
+    app: plex               # <- garde TON selector réel
+  ports:
+    - name: pms
+      port: 32400
+      targetPort: 32400
+      protocol: TCP
+---
+# 2) ServersTransport : connexion Traefik -> Plex.
+#    idleConnTimeout long = un flux en pause ne se fait pas couper.
+apiVersion: traefik.io/v1alpha1
+kind: ServersTransport
+metadata:
+  name: plex-transport
+  namespace: nas
+spec:
+  forwardingTimeouts:
+    dialTimeout: 30s
+    responseHeaderTimeout: 0s     # 0 = pas de limite (transcode qui démarre lentement)
+    idleConnTimeout: 3600s
+---
+# 3) Ingress durci. HTTPS terminé par Traefik (cert plex-tls déjà en place).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: plex-ingress
+  namespace: nas
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: plex.app.xixtu.eu
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: plex-service
+                port:
+                  number: 32400
+  tls:
+    - hosts: [plex.app.xixtu.eu]
+      secretName: plex-tls
+# =============================================================================
+# 4) CÔTÉ TRAEFIK (config statique / values Helm — hors de ce fichier car
+#    dépend de ton install). Le point qui fait tenir les flux longs :
+#
+#    entryPoints:
+#      websecure:
+#        address: ":443"
+#        transport:
+#          respondingTimeouts:
+#            readTimeout: 0        # pas de limite sur un stream client long
+#            writeTimeout: 0
+#            idleTimeout: 3600s    # défaut ~180s -> coupe les pauses ; à monter
+#
+#    (équivalent en args : --entryPoints.websecure.transport.respondingTimeouts.idleTimeout=3600s ...)
+# =============================================================================
