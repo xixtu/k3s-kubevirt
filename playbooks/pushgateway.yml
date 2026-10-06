@@ -1,0 +1,263 @@
+---
+# =============================================================
+# PLAYBOOK : Pushgateway - benchmark Wi-Fi des bornes kwaba-wifi
+# =============================================================
+# Usage : ansible-playbook -i inventory/hosts.yml playbooks/pushgateway.yml
+# Tags :
+#   pushgateway-install   → Pushgateway via Helm (+ ServiceMonitor, secret,
+#                           middleware basicAuth, Ingress TLS, IngressRoute)
+#   pushgateway-dashboard → dashboard Grafana « kwaba - benchmark Wi-Fi »
+#   pushgateway-verify    → Vérifier pod, certificat, URL
+# Prérequis : monitoring.yml (kube-prometheus-stack) + Traefik + cert-manager
+# Chart Helm : prometheus-community/prometheus-pushgateway
+# URL publique : https://pushgateway.app.xixtu.eu (login : pushgateway_auth)
+#
+# Les bornes OpenWrt (dépôt kwaba-wifi, script kwaba-bench) poussent leurs
+# mesures iperf3 en HTTPS (curl PUT) ; Prometheus lit le Pushgateway via son
+# ServiceMonitor (serviceMonitorSelectorNilUsesHelmValues: false dans
+# monitoring.yml : pas de label release à ajouter). Rien n'est modifié dans
+# la release kube-prometheus-stack.
+# =============================================================
+
+- name: "Pushgateway - benchmark Wi-Fi kwaba"
+  hosts: k3s-node-1
+  become: true
+  gather_facts: false
+  vars_files:
+    - "../group_vars/k3s_cluster.yml"
+
+  tasks:
+
+    # ==========================================================
+    # PRÉPARATION
+    # ==========================================================
+
+    - name: Ajouter le repo Helm prometheus-community
+      ansible.builtin.command: >
+        helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [pushgateway, pushgateway-install]
+
+    - name: Mettre à jour les repos Helm
+      ansible.builtin.command: helm repo update
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [pushgateway, pushgateway-install]
+
+    # ==========================================================
+    # FICHIER DE VALEURS HELM
+    # ==========================================================
+
+    - name: Écrire le fichier de valeurs prometheus-pushgateway
+      ansible.builtin.copy:
+        dest: /tmp/pushgateway-values.yml
+        mode: '0600'
+        content: |
+          # ==============================================
+          # prometheus-pushgateway Helm values - cluster k3s
+          # ==============================================
+          fullnameOverride: pushgateway
+
+          # Les mesures survivent à un redémarrage du pod
+          extraArgs:
+            - --persistence.file=/data/pushgateway.data
+            - --persistence.interval=5m
+          persistentVolume:
+            enabled: true
+            size: 1Gi
+            storageClass: "{{ monitoring_config.prometheus_storage_class }}"
+          strategy:
+            type: Recreate
+
+          resources:
+            requests:
+              cpu: "10m"
+              memory: "32Mi"
+            limits:
+              cpu: "200m"
+              memory: "128Mi"
+
+          # Prometheus (kube-prometheus-stack) lit le Pushgateway ;
+          # honorLabels : garder les labels poussés par les bornes (site, de, vers)
+          serviceMonitor:
+            enabled: true
+            namespace: monitoring
+            interval: 30s
+            honorLabels: true
+
+          # Exposition publique : login/mot de passe au niveau de Traefik
+          # (le service interne, lu par Prometheus, reste sans authentification)
+          extraManifests:
+            - apiVersion: v1
+              kind: Secret
+              metadata:
+                name: pushgateway-basic-auth
+                namespace: monitoring
+              type: kubernetes.io/basic-auth
+              stringData:
+                username: "{{ pushgateway_auth.username }}"
+                password: "{{ pushgateway_auth.password }}"
+            - apiVersion: traefik.io/v1alpha1
+              kind: Middleware
+              metadata:
+                name: pushgateway-auth
+                namespace: monitoring
+              spec:
+                basicAuth:
+                  secret: pushgateway-basic-auth
+                  removeHeader: true
+            # Ingress K8s : déclenche cert-manager (pattern du cluster)
+            - apiVersion: networking.k8s.io/v1
+              kind: Ingress
+              metadata:
+                name: pushgateway-ingress-tls
+                namespace: monitoring
+                annotations:
+                  cert-manager.io/cluster-issuer: letsencrypt-production
+                  cert-manager.io/private-key-algorithm: "ECDSA"
+                  cert-manager.io/private-key-size: "384"
+                  cert-manager.io/private-key-rotation-policy: "Always"
+                  traefik.ingress.kubernetes.io/router.entrypoints: "web"
+                  traefik.ingress.kubernetes.io/router.middlewares: "traefik-redirect-to-https@kubernetescrd"
+              spec:
+                ingressClassName: traefik
+                tls:
+                  - hosts:
+                      - "{{ external_domains.pushgateway }}"
+                    secretName: pushgateway-tls
+                rules:
+                  - host: "{{ external_domains.pushgateway }}"
+                    http:
+                      paths:
+                        - path: /
+                          pathType: Prefix
+                          backend:
+                            service:
+                              name: pushgateway
+                              port:
+                                number: 9091
+            # IngressRoute HTTPS, protégée par le middleware basicAuth
+            - apiVersion: traefik.io/v1alpha1
+              kind: IngressRoute
+              metadata:
+                name: pushgateway-https
+                namespace: monitoring
+              spec:
+                entryPoints:
+                  - websecure
+                routes:
+                  - match: Host(`{{ external_domains.pushgateway }}`)
+                    kind: Rule
+                    middlewares:
+                      - name: pushgateway-auth
+                    services:
+                      - name: pushgateway
+                        port: 9091
+                tls:
+                  secretName: pushgateway-tls
+      tags: [pushgateway, pushgateway-install]
+
+    # ==========================================================
+    # INSTALLATION
+    # ==========================================================
+
+    - name: Installer / Mettre à jour prometheus-pushgateway via Helm
+      ansible.builtin.command: >
+        helm upgrade --install pushgateway
+        prometheus-community/prometheus-pushgateway
+        --namespace monitoring
+        --version {{ pushgateway_chart_version }}
+        --values /tmp/pushgateway-values.yml
+        --wait
+        --timeout 5m
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      tags: [pushgateway, pushgateway-install]
+
+    - name: Supprimer le fichier de valeurs temporaire (contient le mot de passe)
+      ansible.builtin.file:
+        path: /tmp/pushgateway-values.yml
+        state: absent
+      tags: [pushgateway, pushgateway-install]
+
+    # ==========================================================
+    # DASHBOARD GRAFANA (ConfigMap lue par le sidecar Grafana)
+    # ==========================================================
+    # Appliqué hors Helm : le JSON contient des {{ }} (légendes Grafana)
+    # que le chart interpréterait (extraManifests passe par tpl).
+
+    - name: Copier le dashboard kwaba-bench
+      ansible.builtin.copy:
+        src: "../files/grafana/kwaba-bench.json"
+        dest: /tmp/kwaba-bench.json
+        mode: '0644'
+      tags: [pushgateway, pushgateway-dashboard]
+
+    - name: Appliquer le ConfigMap du dashboard kwaba-bench
+      ansible.builtin.shell: >
+        set -o pipefail &&
+        k3s kubectl -n monitoring create configmap grafana-dashboard-kwaba-bench
+        --from-file=kwaba-bench.json=/tmp/kwaba-bench.json --dry-run=client -o yaml
+        | k3s kubectl label --local -f - grafana_dashboard=1 -o yaml
+        | k3s kubectl apply -f -
+      args:
+        executable: /bin/bash
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: kwaba_dashboard
+      changed_when: "'unchanged' not in kwaba_dashboard.stdout"
+      tags: [pushgateway, pushgateway-dashboard]
+
+    - name: Supprimer le dashboard temporaire
+      ansible.builtin.file:
+        path: /tmp/kwaba-bench.json
+        state: absent
+      tags: [pushgateway, pushgateway-dashboard]
+
+    # ==========================================================
+    # VÉRIFICATION
+    # ==========================================================
+
+    - name: Vérifier le pod
+      ansible.builtin.command: >
+        k3s kubectl -n monitoring get pods -o wide
+        -l app.kubernetes.io/name=prometheus-pushgateway
+      register: pushgateway_state
+      changed_when: false
+      failed_when: false
+      tags: [pushgateway, pushgateway-verify]
+
+    - name: Vérifier le certificat TLS
+      ansible.builtin.command: k3s kubectl -n monitoring get certificate pushgateway-tls
+      register: pushgateway_cert
+      changed_when: false
+      failed_when: false
+      tags: [pushgateway, pushgateway-verify]
+
+    - name: Tester l'URL publique avec le login
+      ansible.builtin.uri:
+        url: "https://{{ external_domains.pushgateway }}/-/ready"
+        url_username: "{{ pushgateway_auth.username }}"
+        url_password: "{{ pushgateway_auth.password }}"
+        force_basic_auth: true
+        status_code: [200]
+      register: pushgateway_url
+      failed_when: false
+      no_log: true
+      tags: [pushgateway, pushgateway-verify]
+
+    - name: Résumé Pushgateway
+      ansible.builtin.debug:
+        msg:
+          - "================================================"
+          - "  Pushgateway (chart {{ pushgateway_chart_version }})"
+          - "================================================"
+          - "URL publique : https://{{ external_domains.pushgateway }} (login {{ pushgateway_auth.username }})"
+          - "Test /-/ready : {{ pushgateway_url.status | default('?') }} (200 attendu ; 401 = mauvais login)"
+          - "Dashboard    : Grafana → « kwaba - benchmark Wi-Fi »"
+          - "{{ pushgateway_state.stdout_lines | default([]) }}"
+          - "{{ pushgateway_cert.stdout_lines | default(['certificat en attente...']) }}"
+      tags: [pushgateway, pushgateway-verify]

@@ -14,6 +14,7 @@
 #   traefik   → Installation Traefik
 #   headlamp  → Installation Headlamp Dashboard
 #   monitoring→ Prometheus + Grafana + Alertmanager
+#   pushgateway → Pushgateway + dashboard benchmark Wi-Fi (bornes kwaba-wifi)
 #   kubevirt  → Installation KubeVirt
 #   rancher   → Installation Rancher UI
 # =============================================================
@@ -67,6 +68,11 @@
 - name: "PHASE 8 - Monitoring Stack"
   import_playbook: monitoring.yml
   tags: [monitoring]
+
+# PHASE 8b : Pushgateway (mesures poussées par les bornes Wi-Fi kwaba-wifi)
+- name: "PHASE 8b - Pushgateway"
+  import_playbook: pushgateway.yml
+  tags: [pushgateway]
 
 # PHASE 9 : KubeVirt (à venir)
 # - name: "PHASE 9 - KubeVirt"

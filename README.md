@@ -23,6 +23,7 @@ ansible/
 │   ├── metallb.yml                # MetalLB (à venir)
 │   ├── traefik.yml                # Traefik Ingress (à venir)
 │   ├── monitoring.yml             # Prometheus/Grafana (à venir)
+│   ├── pushgateway.yml            # Pushgateway + dashboard benchmark Wi-Fi (kwaba-wifi)
 │   ├── kubevirt.yml               # KubeVirt (à venir)
 │   └── rancher.yml                # Rancher UI (à venir)
 └── roles/                         # Roles réutilisables (à venir)
