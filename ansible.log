@@ -1536,3 +1536,103 @@ Origin: /home/administrator/git/k3s-kubevirt/playbooks/traefik.yml:189:7
 2026-02-28 00:09:57,886 p=3535921 u=administrator n=ansible INFO| Attendre que tous les pods Nextcloud soient Ready ------------------------------------------------------------------------------------------- 1.00s
 2026-02-28 00:09:57,886 p=3535921 u=administrator n=ansible INFO| Définir le mot de passe à ne jamais expirer ------------------------------------------------------------------------------------------------- 0.99s
 >>>>>>> origin/claude/deploy-longhorn-storage-BcyV5
+2026-10-06 22:51:57,775 p=2622156 u=administrator n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+
+2026-10-06 22:51:57,776 p=2622156 u=administrator n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be removed from collection 'community.general' version 12.0.0.
+
+2026-10-06 22:51:57,876 p=2622156 u=administrator n=ansible INFO| PLAY [Pushgateway - benchmark Wi-Fi kwaba] ****************************************************************************************
+2026-10-06 22:51:57,911 p=2622156 u=administrator n=ansible INFO| TASK [Ajouter le repo Helm prometheus-community] **********************************************************************************
+2026-10-06 22:51:57,912 p=2622156 u=administrator n=ansible INFO| mardi 06 octobre 2026  22:51:57 +0200 (0:00:00.085)       0:00:00.085 ********* 
+2026-10-06 22:51:58,379 p=2622156 u=administrator n=ansible ERROR| [ERROR]: Task failed: Data could not be sent to remote host "192.168.0.11". Make sure this host can be reached over ssh: administrator@192.168.0.11: Permission denied (publickey,password).
+Origin: /home/administrator/git/k3s-kubevirt/playbooks/pushgateway.yml:35:7
+
+33     # ==========================================================
+34
+35     - name: Ajouter le repo Helm prometheus-community
+         ^ column 7
+
+
+2026-10-06 22:51:58,380 p=2622156 u=administrator n=ansible INFO| fatal: [k3s-node-1]: UNREACHABLE! => changed=false 
+  msg: 'Task failed: Data could not be sent to remote host "192.168.0.11". Make sure this host can be reached over ssh: administrator@192.168.0.11: Permission denied (publickey,password).'
+  unreachable: true
+2026-10-06 22:51:58,381 p=2622156 u=administrator n=ansible INFO| PLAY RECAP ************************************************************************************************************************
+2026-10-06 22:51:58,382 p=2622156 u=administrator n=ansible INFO| k3s-node-1                 : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0   
+2026-10-06 22:51:58,382 p=2622156 u=administrator n=ansible INFO| PLAYBOOK RECAP ********************************************************************************************************************
+2026-10-06 22:51:58,382 p=2622156 u=administrator n=ansible INFO| Playbook run took 0 days, 0 hours, 0 minutes, 0 seconds
+
+2026-10-06 22:51:58,383 p=2622156 u=administrator n=ansible INFO| TASKS RECAP ***********************************************************************************************************************
+2026-10-06 22:51:58,383 p=2622156 u=administrator n=ansible INFO| mardi 06 octobre 2026  22:51:58 +0200 (0:00:00.471)       0:00:00.557 ********* 
+2026-10-06 22:51:58,383 p=2622156 u=administrator n=ansible INFO| =============================================================================== 
+2026-10-06 22:51:58,383 p=2622156 u=administrator n=ansible INFO| Ajouter le repo Helm prometheus-community ---------------------------------------------------------------------------------- 0.47s
+2026-10-06 22:52:16,128 p=2622718 u=administrator n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+
+2026-10-06 22:52:16,129 p=2622718 u=administrator n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be removed from collection 'community.general' version 12.0.0.
+
+2026-10-06 22:52:16,226 p=2622718 u=administrator n=ansible INFO| PLAY [Pushgateway - benchmark Wi-Fi kwaba] ****************************************************************************************
+2026-10-06 22:52:16,258 p=2622718 u=administrator n=ansible INFO| TASK [Ajouter le repo Helm prometheus-community] **********************************************************************************
+2026-10-06 22:52:16,258 p=2622718 u=administrator n=ansible INFO| mardi 06 octobre 2026  22:52:16 +0200 (0:00:00.082)       0:00:00.082 ********* 
+2026-10-06 22:52:20,254 p=2622718 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-06 22:52:20,281 p=2622718 u=administrator n=ansible INFO| TASK [Mettre à jour les repos Helm] ***********************************************************************************************
+2026-10-06 22:52:20,282 p=2622718 u=administrator n=ansible INFO| mardi 06 octobre 2026  22:52:20 +0200 (0:00:04.023)       0:00:04.106 ********* 
+2026-10-06 22:52:22,928 p=2622718 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-06 22:52:22,960 p=2622718 u=administrator n=ansible INFO| TASK [Écrire le fichier de valeurs prometheus-pushgateway] ************************************************************************
+2026-10-06 22:52:22,961 p=2622718 u=administrator n=ansible INFO| mardi 06 octobre 2026  22:52:22 +0200 (0:00:02.678)       0:00:06.785 ********* 
+2026-10-06 22:52:24,771 p=2622718 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-10-06 22:52:24,799 p=2622718 u=administrator n=ansible INFO| TASK [Installer / Mettre à jour prometheus-pushgateway via Helm] ******************************************************************
+2026-10-06 22:52:24,799 p=2622718 u=administrator n=ansible INFO| mardi 06 octobre 2026  22:52:24 +0200 (0:00:01.838)       0:00:08.623 ********* 
+2026-10-06 22:53:06,843 p=2622718 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-10-06 22:53:06,862 p=2622718 u=administrator n=ansible INFO| TASK [Supprimer le fichier de valeurs temporaire (contient le mot de passe)] ******************************************************
+2026-10-06 22:53:06,862 p=2622718 u=administrator n=ansible INFO| mardi 06 octobre 2026  22:53:06 +0200 (0:00:42.062)       0:00:50.686 ********* 
+2026-10-06 22:53:07,751 p=2622718 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-10-06 22:53:07,768 p=2622718 u=administrator n=ansible INFO| TASK [Copier le dashboard kwaba-bench] ********************************************************************************************
+2026-10-06 22:53:07,768 p=2622718 u=administrator n=ansible INFO| mardi 06 octobre 2026  22:53:07 +0200 (0:00:00.906)       0:00:51.592 ********* 
+2026-10-06 22:53:09,011 p=2622718 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-10-06 22:53:09,042 p=2622718 u=administrator n=ansible INFO| TASK [Appliquer le ConfigMap du dashboard kwaba-bench] ****************************************************************************
+2026-10-06 22:53:09,042 p=2622718 u=administrator n=ansible INFO| mardi 06 octobre 2026  22:53:09 +0200 (0:00:01.273)       0:00:52.866 ********* 
+2026-10-06 22:53:09,987 p=2622718 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-10-06 22:53:10,013 p=2622718 u=administrator n=ansible INFO| TASK [Supprimer le dashboard temporaire] ******************************************************************************************
+2026-10-06 22:53:10,013 p=2622718 u=administrator n=ansible INFO| mardi 06 octobre 2026  22:53:10 +0200 (0:00:00.970)       0:00:53.837 ********* 
+2026-10-06 22:53:10,604 p=2622718 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-10-06 22:53:10,624 p=2622718 u=administrator n=ansible INFO| TASK [Vérifier le pod] ************************************************************************************************************
+2026-10-06 22:53:10,624 p=2622718 u=administrator n=ansible INFO| mardi 06 octobre 2026  22:53:10 +0200 (0:00:00.611)       0:00:54.448 ********* 
+2026-10-06 22:53:11,400 p=2622718 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-06 22:53:11,430 p=2622718 u=administrator n=ansible INFO| TASK [Vérifier le certificat TLS] *************************************************************************************************
+2026-10-06 22:53:11,431 p=2622718 u=administrator n=ansible INFO| mardi 06 octobre 2026  22:53:11 +0200 (0:00:00.806)       0:00:55.255 ********* 
+2026-10-06 22:53:12,213 p=2622718 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-06 22:53:12,234 p=2622718 u=administrator n=ansible INFO| TASK [Tester l'URL publique avec le login] ****************************************************************************************
+2026-10-06 22:53:12,235 p=2622718 u=administrator n=ansible INFO| mardi 06 octobre 2026  22:53:12 +0200 (0:00:00.803)       0:00:56.059 ********* 
+2026-10-06 22:53:13,601 p=2622718 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-06 22:53:13,635 p=2622718 u=administrator n=ansible INFO| TASK [Résumé Pushgateway] *********************************************************************************************************
+2026-10-06 22:53:13,636 p=2622718 u=administrator n=ansible INFO| mardi 06 octobre 2026  22:53:13 +0200 (0:00:01.400)       0:00:57.459 ********* 
+2026-10-06 22:53:13,778 p=2622718 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg:
+  - ================================================
+  - '  Pushgateway (chart 3.9.0)'
+  - ================================================
+  - 'URL publique : https://pushgateway.app.xixtu.eu (login kwaba)'
+  - 'Test /-/ready : 200 (200 attendu ; 401 = mauvais login)'
+  - 'Dashboard    : Grafana → « kwaba - benchmark Wi-Fi »'
+  - - NAME                           READY   STATUS    RESTARTS   AGE   IP            NODE         NOMINATED NODE   READINESS GATES
+    - pushgateway-5d8d5f9474-d64lv   1/1     Running   0          43s   10.42.0.213   k3s-node-1   <none>           <none>
+  - - NAME              READY   SECRET            AGE
+    - pushgateway-tls   True    pushgateway-tls   44s
+2026-10-06 22:53:13,781 p=2622718 u=administrator n=ansible INFO| PLAY RECAP ************************************************************************************************************************
+2026-10-06 22:53:13,781 p=2622718 u=administrator n=ansible INFO| k3s-node-1                 : ok=12   changed=6    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+2026-10-06 22:53:13,782 p=2622718 u=administrator n=ansible INFO| PLAYBOOK RECAP ********************************************************************************************************************
+2026-10-06 22:53:13,782 p=2622718 u=administrator n=ansible INFO| Playbook run took 0 days, 0 hours, 0 minutes, 57 seconds
+
+2026-10-06 22:53:13,782 p=2622718 u=administrator n=ansible INFO| TASKS RECAP ***********************************************************************************************************************
+2026-10-06 22:53:13,782 p=2622718 u=administrator n=ansible INFO| mardi 06 octobre 2026  22:53:13 +0200 (0:00:00.146)       0:00:57.606 ********* 
+2026-10-06 22:53:13,783 p=2622718 u=administrator n=ansible INFO| =============================================================================== 
+2026-10-06 22:53:13,783 p=2622718 u=administrator n=ansible INFO| Installer / Mettre à jour prometheus-pushgateway via Helm ----------------------------------------------------------------- 42.06s
+2026-10-06 22:53:13,783 p=2622718 u=administrator n=ansible INFO| Ajouter le repo Helm prometheus-community ---------------------------------------------------------------------------------- 4.02s
+2026-10-06 22:53:13,783 p=2622718 u=administrator n=ansible INFO| Mettre à jour les repos Helm ----------------------------------------------------------------------------------------------- 2.68s
+2026-10-06 22:53:13,784 p=2622718 u=administrator n=ansible INFO| Écrire le fichier de valeurs prometheus-pushgateway ------------------------------------------------------------------------ 1.84s
+2026-10-06 22:53:13,784 p=2622718 u=administrator n=ansible INFO| Tester l'URL publique avec le login ---------------------------------------------------------------------------------------- 1.40s
+2026-10-06 22:53:13,784 p=2622718 u=administrator n=ansible INFO| Copier le dashboard kwaba-bench -------------------------------------------------------------------------------------------- 1.27s
+2026-10-06 22:53:13,784 p=2622718 u=administrator n=ansible INFO| Appliquer le ConfigMap du dashboard kwaba-bench ---------------------------------------------------------------------------- 0.97s
+2026-10-06 22:53:13,784 p=2622718 u=administrator n=ansible INFO| Supprimer le fichier de valeurs temporaire (contient le mot de passe) ------------------------------------------------------ 0.91s
+2026-10-06 22:53:13,785 p=2622718 u=administrator n=ansible INFO| Vérifier le pod ------------------------------------------------------------------------------------------------------------ 0.81s
+2026-10-06 22:53:13,785 p=2622718 u=administrator n=ansible INFO| Vérifier le certificat TLS ------------------------------------------------------------------------------------------------- 0.80s
+2026-10-06 22:53:13,785 p=2622718 u=administrator n=ansible INFO| Supprimer le dashboard temporaire ------------------------------------------------------------------------------------------ 0.61s
+2026-10-06 22:53:13,785 p=2622718 u=administrator n=ansible INFO| Résumé Pushgateway --------------------------------------------------------------------------------------------------------- 0.15s
