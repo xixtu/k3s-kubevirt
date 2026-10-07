@@ -1391,7 +1391,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Débit physique moyen des stations associées (mesh0 : liens vers les autres bornes).",
+      "description": "Débit physique moyen des stations associées (mesh0 : liens vers les autres bornes). Interfaces sans client masquées.",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -1428,7 +1428,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "collectd_iwinfo_bitrate{instance=~\"$borne\"}",
+          "expr": "collectd_iwinfo_bitrate{instance=~\"$borne\"} > 0",
           "legendFormat": "{{instance}} {{iwinfo}}",
           "datasource": {
             "type": "prometheus",
@@ -1482,7 +1482,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "collectd_iwinfo_signal_power{instance=~\"$borne\"}",
+          "expr": "collectd_iwinfo_signal_power{instance=~\"$borne\"} < 0",
           "legendFormat": "{{instance}} {{iwinfo}}",
           "datasource": {
             "type": "prometheus",
@@ -1536,7 +1536,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "collectd_iwinfo_signal_noise{instance=~\"$borne\"}",
+          "expr": "collectd_iwinfo_signal_noise{instance=~\"$borne\"} < 0",
           "legendFormat": "{{instance}} {{iwinfo}}",
           "datasource": {
             "type": "prometheus",
@@ -1590,7 +1590,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "collectd_iwinfo_signal_quality{instance=~\"$borne\"}",
+          "expr": "collectd_iwinfo_signal_quality{instance=~\"$borne\"} > 0",
           "legendFormat": "{{instance}} {{iwinfo}}",
           "datasource": {
             "type": "prometheus",
