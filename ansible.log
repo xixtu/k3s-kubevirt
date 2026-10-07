@@ -1827,3 +1827,53 @@ Origin: /home/administrator/git/k3s-kubevirt/playbooks/pushgateway.yml:35:7
 2026-10-07 20:18:43,429 p=389808 u=administrator n=ansible INFO| Copier le dashboard kwaba-bornes --------------------------------------------------------------------------- 4.82s
 2026-10-07 20:18:43,429 p=389808 u=administrator n=ansible INFO| Appliquer le ConfigMap du dashboard kwaba-bornes ----------------------------------------------------------- 1.50s
 2026-10-07 20:18:43,429 p=389808 u=administrator n=ansible INFO| Supprimer le dashboard temporaire -------------------------------------------------------------------------- 0.93s
+2026-10-07 20:50:31,029 p=439876 u=administrator n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+
+2026-10-07 20:50:31,029 p=439876 u=administrator n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be removed from collection 'community.general' version 12.0.0.
+
+2026-10-07 20:50:31,124 p=439876 u=administrator n=ansible INFO| PLAY [collectd-exporter - métriques des bornes kwaba] *************************************************************
+2026-10-07 20:50:31,155 p=439876 u=administrator n=ansible INFO| TASK [Copier le dashboard kwaba-bornes] ***************************************************************************
+2026-10-07 20:50:31,155 p=439876 u=administrator n=ansible INFO| mercredi 07 octobre 2026  20:50:31 +0200 (0:00:00.078)       0:00:00.078 ****** 
+2026-10-07 20:50:34,145 p=439876 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-10-07 20:50:34,174 p=439876 u=administrator n=ansible INFO| TASK [Appliquer le ConfigMap du dashboard kwaba-bornes] ***********************************************************
+2026-10-07 20:50:34,175 p=439876 u=administrator n=ansible INFO| mercredi 07 octobre 2026  20:50:34 +0200 (0:00:03.019)       0:00:03.097 ****** 
+2026-10-07 20:50:35,716 p=439876 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-10-07 20:50:35,737 p=439876 u=administrator n=ansible INFO| TASK [Supprimer le dashboard temporaire] **************************************************************************
+2026-10-07 20:50:35,738 p=439876 u=administrator n=ansible INFO| mercredi 07 octobre 2026  20:50:35 +0200 (0:00:01.562)       0:00:04.660 ****** 
+2026-10-07 20:50:36,642 p=439876 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-10-07 20:50:36,644 p=439876 u=administrator n=ansible INFO| PLAY RECAP ********************************************************************************************************
+2026-10-07 20:50:36,644 p=439876 u=administrator n=ansible INFO| k3s-node-1                 : ok=3    changed=3    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+2026-10-07 20:50:36,644 p=439876 u=administrator n=ansible INFO| PLAYBOOK RECAP ****************************************************************************************************
+2026-10-07 20:50:36,645 p=439876 u=administrator n=ansible INFO| Playbook run took 0 days, 0 hours, 0 minutes, 5 seconds
+
+2026-10-07 20:50:36,645 p=439876 u=administrator n=ansible INFO| TASKS RECAP *******************************************************************************************************
+2026-10-07 20:50:36,645 p=439876 u=administrator n=ansible INFO| mercredi 07 octobre 2026  20:50:36 +0200 (0:00:00.907)       0:00:05.568 ****** 
+2026-10-07 20:50:36,645 p=439876 u=administrator n=ansible INFO| =============================================================================== 
+2026-10-07 20:50:36,645 p=439876 u=administrator n=ansible INFO| Copier le dashboard kwaba-bornes --------------------------------------------------------------------------- 3.02s
+2026-10-07 20:50:36,645 p=439876 u=administrator n=ansible INFO| Appliquer le ConfigMap du dashboard kwaba-bornes ----------------------------------------------------------- 1.56s
+2026-10-07 20:50:36,646 p=439876 u=administrator n=ansible INFO| Supprimer le dashboard temporaire -------------------------------------------------------------------------- 0.91s
+2026-10-07 21:16:48,060 p=479939 u=administrator n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+
+2026-10-07 21:16:48,061 p=479939 u=administrator n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be removed from collection 'community.general' version 12.0.0.
+
+2026-10-07 21:16:48,156 p=479939 u=administrator n=ansible INFO| PLAY [collectd-exporter - métriques des bornes kwaba] *************************************************************
+2026-10-07 21:16:48,187 p=479939 u=administrator n=ansible INFO| TASK [Copier le dashboard kwaba-bornes] ***************************************************************************
+2026-10-07 21:16:48,187 p=479939 u=administrator n=ansible INFO| mercredi 07 octobre 2026  21:16:48 +0200 (0:00:00.080)       0:00:00.080 ****** 
+2026-10-07 21:16:51,174 p=479939 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-10-07 21:16:51,206 p=479939 u=administrator n=ansible INFO| TASK [Appliquer le ConfigMap du dashboard kwaba-bornes] ***********************************************************
+2026-10-07 21:16:51,206 p=479939 u=administrator n=ansible INFO| mercredi 07 octobre 2026  21:16:51 +0200 (0:00:03.018)       0:00:03.099 ****** 
+2026-10-07 21:16:52,747 p=479939 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-10-07 21:16:52,772 p=479939 u=administrator n=ansible INFO| TASK [Supprimer le dashboard temporaire] **************************************************************************
+2026-10-07 21:16:52,772 p=479939 u=administrator n=ansible INFO| mercredi 07 octobre 2026  21:16:52 +0200 (0:00:01.565)       0:00:04.665 ****** 
+2026-10-07 21:16:53,678 p=479939 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-10-07 21:16:53,680 p=479939 u=administrator n=ansible INFO| PLAY RECAP ********************************************************************************************************
+2026-10-07 21:16:53,681 p=479939 u=administrator n=ansible INFO| k3s-node-1                 : ok=3    changed=3    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+2026-10-07 21:16:53,681 p=479939 u=administrator n=ansible INFO| PLAYBOOK RECAP ****************************************************************************************************
+2026-10-07 21:16:53,681 p=479939 u=administrator n=ansible INFO| Playbook run took 0 days, 0 hours, 0 minutes, 5 seconds
+
+2026-10-07 21:16:53,681 p=479939 u=administrator n=ansible INFO| TASKS RECAP *******************************************************************************************************
+2026-10-07 21:16:53,682 p=479939 u=administrator n=ansible INFO| mercredi 07 octobre 2026  21:16:53 +0200 (0:00:00.909)       0:00:05.574 ****** 
+2026-10-07 21:16:53,682 p=479939 u=administrator n=ansible INFO| =============================================================================== 
+2026-10-07 21:16:53,682 p=479939 u=administrator n=ansible INFO| Copier le dashboard kwaba-bornes --------------------------------------------------------------------------- 3.02s
+2026-10-07 21:16:53,682 p=479939 u=administrator n=ansible INFO| Appliquer le ConfigMap du dashboard kwaba-bornes ----------------------------------------------------------- 1.57s
+2026-10-07 21:16:53,683 p=479939 u=administrator n=ansible INFO| Supprimer le dashboard temporaire -------------------------------------------------------------------------- 0.91s
