@@ -241,7 +241,7 @@
         },
         {
           "refId": "G",
-          "expr": "max by (instance) (max by (instance) (collectd_thermal_temperature{instance=~\"$borne\"}))",
+          "expr": "max by (instance) (max by (instance) (collectd_sensors_temperature{instance=~\"$borne\"}))",
           "format": "table",
           "instant": true,
           "datasource": {
@@ -671,13 +671,13 @@
     },
     {
       "type": "timeseries",
-      "title": "Température (°C)",
+      "title": "Température des puces Wi-Fi (°C)",
       "id": 9,
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Plugin thermal : les bornes IPQ4019 (MR8300, WHW03) n'exposent pas de sonde de température sous OpenWrt.",
+      "description": "Plugin sensors (hwmon) : capteurs des puces Wi-Fi ath10k. L'IPQ4019 n'a pas de zone thermique (plugin thermal) sous OpenWrt.",
       "gridPos": {
         "h": 8,
         "w": 8,
@@ -694,7 +694,7 @@
               "mode": "none"
             }
           },
-          "noValue": "pas de sonde exposée (IPQ4019)"
+          "noValue": "plugin sensors pas encore actif"
         },
         "overrides": []
       },
@@ -715,8 +715,8 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "collectd_thermal_temperature{instance=~\"$borne\"}",
-          "legendFormat": "{{instance}} {{thermal}}",
+          "expr": "label_replace(label_replace(label_replace(collectd_sensors_temperature{instance=~\"$borne\"}, \"puce\", \"radio intégrée a000000\", \"sensors\", \".*isa-a000000\"), \"puce\", \"radio intégrée a800000\", \"sensors\", \".*isa-a800000\"), \"puce\", \"3e radio (PCI)\", \"sensors\", \".*pci.*\")",
+          "legendFormat": "{{instance}} {{puce}}",
           "datasource": {
             "type": "prometheus",
             "uid": "${datasource}"
