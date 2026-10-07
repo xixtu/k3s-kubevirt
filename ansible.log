@@ -1732,3 +1732,48 @@ Origin: /home/administrator/git/k3s-kubevirt/playbooks/pushgateway.yml:35:7
 2026-10-07 19:34:52,199 p=318358 u=administrator n=ansible INFO| Copier le dashboard kwaba-bench ------------------------------------------------------------------------------------------- 1.83s
 2026-10-07 19:34:52,199 p=318358 u=administrator n=ansible INFO| Appliquer le ConfigMap du dashboard kwaba-bench --------------------------------------------------------------------------- 1.47s
 2026-10-07 19:34:52,199 p=318358 u=administrator n=ansible INFO| Supprimer le dashboard temporaire ----------------------------------------------------------------------------------------- 0.89s
+2026-10-07 19:43:10,600 p=334539 u=administrator n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+
+2026-10-07 19:43:10,601 p=334539 u=administrator n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be removed from collection 'community.general' version 12.0.0.
+
+2026-10-07 19:43:10,694 p=334539 u=administrator n=ansible INFO| PLAY [collectd-exporter - métriques des bornes kwaba] ******************************
+2026-10-07 19:43:10,724 p=334539 u=administrator n=ansible INFO| TASK [Vérifier le pod] *************************************************************
+2026-10-07 19:43:10,725 p=334539 u=administrator n=ansible INFO| mercredi 07 octobre 2026  19:43:10 +0200 (0:00:00.078)       0:00:00.078 ****** 
+2026-10-07 19:43:13,012 p=334539 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-07 19:43:13,039 p=334539 u=administrator n=ansible INFO| TASK [Vérifier le certificat TLS] **************************************************
+2026-10-07 19:43:13,039 p=334539 u=administrator n=ansible INFO| mercredi 07 octobre 2026  19:43:13 +0200 (0:00:02.314)       0:00:02.393 ****** 
+2026-10-07 19:43:13,831 p=334539 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-07 19:43:13,862 p=334539 u=administrator n=ansible INFO| TASK [Tester l'envoi public avec le login (liste vide = OK)] ***********************
+2026-10-07 19:43:13,862 p=334539 u=administrator n=ansible INFO| mercredi 07 octobre 2026  19:43:13 +0200 (0:00:00.822)       0:00:03.215 ****** 
+2026-10-07 19:43:15,127 p=334539 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-07 19:43:15,157 p=334539 u=administrator n=ansible INFO| TASK [Bornes qui envoient (lu dans l'exporter)] ************************************
+2026-10-07 19:43:15,157 p=334539 u=administrator n=ansible INFO| mercredi 07 octobre 2026  19:43:15 +0200 (0:00:01.294)       0:00:04.510 ****** 
+2026-10-07 19:43:16,417 p=334539 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-07 19:43:16,443 p=334539 u=administrator n=ansible INFO| TASK [Résumé collectd-exporter] ****************************************************
+2026-10-07 19:43:16,444 p=334539 u=administrator n=ansible INFO| mercredi 07 octobre 2026  19:43:16 +0200 (0:00:01.286)       0:00:05.797 ****** 
+2026-10-07 19:43:16,518 p=334539 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg:
+  - ================================================
+  - '  collectd-exporter (métriques des bornes)'
+  - ================================================
+  - 'URL d''envoi  : https://collectd.app.xixtu.eu/collectd-post (login kwaba)'
+  - 'Test POST    : 200 (200 attendu ; 401 = mauvais login)'
+  - 'Bornes vues  : Satellite02 Satellite03 Satellite04 Satellite05 Satellite06 mr8300'
+  - 'Dashboard    : Grafana → « kwaba - bornes »'
+  - - NAME                                 READY   STATUS    RESTARTS   AGE    IP            NODE         NOMINATED NODE   READINESS GATES
+    - collectd-exporter-66bfbf8b6d-dhf7f   1/1     Running   0          9m7s   10.42.0.217   k3s-node-1   <none>           <none>
+  - - NAME           READY   SECRET         AGE
+    - collectd-tls   True    collectd-tls   9m8s
+2026-10-07 19:43:16,520 p=334539 u=administrator n=ansible INFO| PLAY RECAP *************************************************************************
+2026-10-07 19:43:16,520 p=334539 u=administrator n=ansible INFO| k3s-node-1                 : ok=5    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+2026-10-07 19:43:16,521 p=334539 u=administrator n=ansible INFO| PLAYBOOK RECAP *********************************************************************
+2026-10-07 19:43:16,521 p=334539 u=administrator n=ansible INFO| Playbook run took 0 days, 0 hours, 0 minutes, 5 seconds
+
+2026-10-07 19:43:16,521 p=334539 u=administrator n=ansible INFO| TASKS RECAP ************************************************************************
+2026-10-07 19:43:16,521 p=334539 u=administrator n=ansible INFO| mercredi 07 octobre 2026  19:43:16 +0200 (0:00:00.077)       0:00:05.875 ****** 
+2026-10-07 19:43:16,521 p=334539 u=administrator n=ansible INFO| =============================================================================== 
+2026-10-07 19:43:16,522 p=334539 u=administrator n=ansible INFO| Vérifier le pod ------------------------------------------------------------- 2.31s
+2026-10-07 19:43:16,522 p=334539 u=administrator n=ansible INFO| Tester l'envoi public avec le login (liste vide = OK) ----------------------- 1.29s
+2026-10-07 19:43:16,522 p=334539 u=administrator n=ansible INFO| Bornes qui envoient (lu dans l'exporter) ------------------------------------ 1.29s
+2026-10-07 19:43:16,522 p=334539 u=administrator n=ansible INFO| Vérifier le certificat TLS -------------------------------------------------- 0.82s
+2026-10-07 19:43:16,522 p=334539 u=administrator n=ansible INFO| Résumé collectd-exporter ---------------------------------------------------- 0.08s
