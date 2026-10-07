@@ -24,6 +24,7 @@ ansible/
 │   ├── traefik.yml                # Traefik Ingress (à venir)
 │   ├── monitoring.yml             # Prometheus/Grafana (à venir)
 │   ├── pushgateway.yml            # Pushgateway + dashboard benchmark Wi-Fi (kwaba-wifi)
+│   ├── collectd-exporter.yml      # collectd_exporter + dashboard métriques des bornes (kwaba-wifi)
 │   ├── kubevirt.yml               # KubeVirt (à venir)
 │   └── rancher.yml                # Rancher UI (à venir)
 └── roles/                         # Roles réutilisables (à venir)

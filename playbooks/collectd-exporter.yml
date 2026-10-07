@@ -1,0 +1,155 @@
+---
+# =============================================================
+# PLAYBOOK : collectd-exporter - métriques des bornes kwaba-wifi
+# =============================================================
+# Usage : ansible-playbook -i inventory/hosts.yml playbooks/collectd-exporter.yml
+# Tags :
+#   collectd-install   → collectd_exporter via Helm (chart local
+#                        charts/collectd-exporter : exporter, ServiceMonitor,
+#                        Ingress TLS, IngressRoute /collectd-post avec login)
+#   collectd-dashboard → dashboard Grafana « kwaba - bornes »
+#   collectd-verify    → Vérifier pod, certificat, URL
+# Prérequis : pushgateway.yml (le login des bornes : middleware Traefik
+#             pushgateway-auth, secret pushgateway-basic-auth)
+# URL publique : https://collectd.app.xixtu.eu/collectd-post (POST, login)
+#
+# Les bornes OpenWrt (template « 6 Métriques - collectd » de kwaba-wifi)
+# envoient toutes les 30 s ce que mesure collectd (plugin write_http, JSON).
+# collectd_exporter le garde en mémoire et Prometheus le lit (ServiceMonitor,
+# honorLabels : label instance = nom de la borne).
+# =============================================================
+
+- name: "collectd-exporter - métriques des bornes kwaba"
+  hosts: k3s-node-1
+  become: true
+  gather_facts: false
+  vars_files:
+    - "../group_vars/k3s_cluster.yml"
+
+  tasks:
+
+    # ==========================================================
+    # INSTALLATION (chart Helm local)
+    # ==========================================================
+
+    - name: Copier le chart collectd-exporter
+      ansible.builtin.copy:
+        src: "../charts/collectd-exporter/"
+        dest: /tmp/charts/collectd-exporter/
+        mode: '0644'
+        directory_mode: '0755'
+      tags: [collectd, collectd-install]
+
+    - name: Installer / Mettre à jour collectd-exporter via Helm
+      ansible.builtin.command: >
+        helm upgrade --install collectd-exporter
+        /tmp/charts/collectd-exporter
+        --namespace monitoring
+        --set ingress.host={{ external_domains.collectd }}
+        --wait
+        --timeout 5m
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      tags: [collectd, collectd-install]
+
+    - name: Supprimer le chart temporaire
+      ansible.builtin.file:
+        path: /tmp/charts
+        state: absent
+      tags: [collectd, collectd-install]
+
+    # ==========================================================
+    # DASHBOARD GRAFANA (ConfigMap lue par le sidecar Grafana)
+    # ==========================================================
+
+    - name: Copier le dashboard kwaba-bornes
+      ansible.builtin.copy:
+        src: "../files/grafana/kwaba-bornes.json"
+        dest: /tmp/kwaba-bornes.json
+        mode: '0644'
+      tags: [collectd, collectd-dashboard]
+
+    - name: Appliquer le ConfigMap du dashboard kwaba-bornes
+      ansible.builtin.shell: >
+        set -o pipefail &&
+        k3s kubectl -n monitoring create configmap grafana-dashboard-kwaba-bornes
+        --from-file=kwaba-bornes.json=/tmp/kwaba-bornes.json --dry-run=client -o yaml
+        | k3s kubectl label --local -f - grafana_dashboard=1 -o yaml
+        | k3s kubectl apply -f -
+      args:
+        executable: /bin/bash
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: kwaba_bornes_dashboard
+      changed_when: "'unchanged' not in kwaba_bornes_dashboard.stdout"
+      tags: [collectd, collectd-dashboard]
+
+    - name: Supprimer le dashboard temporaire
+      ansible.builtin.file:
+        path: /tmp/kwaba-bornes.json
+        state: absent
+      tags: [collectd, collectd-dashboard]
+
+    # ==========================================================
+    # VÉRIFICATION
+    # ==========================================================
+
+    - name: Vérifier le pod
+      ansible.builtin.command: >
+        k3s kubectl -n monitoring get pods -o wide
+        -l app.kubernetes.io/name=collectd-exporter
+      register: collectd_state
+      changed_when: false
+      failed_when: false
+      tags: [collectd, collectd-verify]
+
+    - name: Vérifier le certificat TLS
+      ansible.builtin.command: k3s kubectl -n monitoring get certificate collectd-tls
+      register: collectd_cert
+      changed_when: false
+      failed_when: false
+      tags: [collectd, collectd-verify]
+
+    - name: Tester l'envoi public avec le login (liste vide = OK)
+      ansible.builtin.uri:
+        url: "https://{{ external_domains.collectd }}/collectd-post"
+        method: POST
+        body: "[]"
+        body_format: raw
+        url_username: "{{ pushgateway_auth.username }}"
+        url_password: "{{ pushgateway_auth.password }}"
+        force_basic_auth: true
+        status_code: [200]
+      register: collectd_url
+      failed_when: false
+      no_log: true
+      tags: [collectd, collectd-verify]
+
+    - name: Bornes qui envoient (lu dans l'exporter)
+      ansible.builtin.shell: >
+        set -o pipefail &&
+        k3s kubectl -n monitoring exec deploy/collectd-exporter --
+        wget -qO- http://127.0.0.1:9103/metrics 2>/dev/null
+        | sed -n 's/^collectd_uptime{.*instance="\([^"]*\)".*/\1/p' | sort | tr '\n' ' '
+      args:
+        executable: /bin/bash
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: collectd_bornes
+      changed_when: false
+      failed_when: false
+      tags: [collectd, collectd-verify]
+
+    - name: Résumé collectd-exporter
+      ansible.builtin.debug:
+        msg:
+          - "================================================"
+          - "  collectd-exporter (métriques des bornes)"
+          - "================================================"
+          - "URL d'envoi  : https://{{ external_domains.collectd }}/collectd-post (login {{ pushgateway_auth.username }})"
+          - "Test POST    : {{ collectd_url.status | default('?') }} (200 attendu ; 401 = mauvais login)"
+          - "Bornes vues  : {{ collectd_bornes.stdout | default('') | trim or 'aucune pour l instant' }}"
+          - "Dashboard    : Grafana → « kwaba - bornes »"
+          - "{{ collectd_state.stdout_lines | default([]) }}"
+          - "{{ collectd_cert.stdout_lines | default(['certificat en attente...']) }}"
+      tags: [collectd, collectd-verify]

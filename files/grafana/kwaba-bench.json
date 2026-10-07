@@ -1008,5 +1008,17 @@
   ],
   "annotations": {
     "list": []
-  }
+  },
+  "links": [
+    {
+      "title": "Autres dashboards kwaba",
+      "type": "dashboards",
+      "tags": [
+        "kwaba"
+      ],
+      "asDropdown": false,
+      "includeVars": false,
+      "keepTime": true
+    }
+  ]
 }

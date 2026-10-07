@@ -1,0 +1,28 @@
+image:
+  repository: prom/collectd-exporter
+  tag: v0.7.1
+  pullPolicy: IfNotPresent
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 32Mi
+  limits:
+    cpu: 300m
+    memory: 256Mi
+
+# Prometheus (kube-prometheus-stack) lit l'exporter
+serviceMonitor:
+  enabled: true
+  interval: 30s
+
+# Exposition publique : seulement le chemin d'envoi (/collectd-post),
+# derrière un middleware Traefik basicAuth existant ; /metrics reste interne
+ingress:
+  enabled: true
+  host: collectd.example.com
+  clusterIssuer: letsencrypt-production
+  tlsSecret: collectd-tls
+  # middleware Traefik (même namespace) : login des bornes
+  authMiddleware: pushgateway-auth
+  redirectMiddleware: traefik-redirect-to-https@kubernetescrd

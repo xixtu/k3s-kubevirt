@@ -15,6 +15,7 @@
 #   headlamp  → Installation Headlamp Dashboard
 #   monitoring→ Prometheus + Grafana + Alertmanager
 #   pushgateway → Pushgateway + dashboard benchmark Wi-Fi (bornes kwaba-wifi)
+#   collectd  → collectd-exporter + dashboard métriques des bornes (kwaba-wifi)
 #   kubevirt  → Installation KubeVirt
 #   rancher   → Installation Rancher UI
 # =============================================================
@@ -73,6 +74,11 @@
 - name: "PHASE 8b - Pushgateway"
   import_playbook: pushgateway.yml
   tags: [pushgateway]
+
+# PHASE 8c : collectd-exporter (métriques envoyées par les bornes kwaba-wifi)
+- name: "PHASE 8c - collectd-exporter"
+  import_playbook: collectd-exporter.yml
+  tags: [collectd]
 
 # PHASE 9 : KubeVirt (à venir)
 # - name: "PHASE 9 - KubeVirt"

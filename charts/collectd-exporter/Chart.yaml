@@ -1,0 +1,9 @@
+apiVersion: v2
+name: collectd-exporter
+description: >-
+  collectd_exporter (prometheus/collectd_exporter) : reçoit les mesures que
+  collectd envoie en JSON (plugin write_http) et les expose à Prometheus.
+  Utilisé par les bornes OpenWrt kwaba-wifi (playbooks/collectd-exporter.yml).
+type: application
+version: 0.1.0
+appVersion: "v0.7.1"
