@@ -126,6 +126,15 @@ nas_config:
       path: /nas/shared
       comment: "Partage commun"
       ad_group: "NAS-shared-rw"
+    # Sauvegardes des bornes (volume dédié sftp-data, écrit par SFTPGo :
+    # playbooks/sftpgo.yml, à lancer AVANT ce playbook). Lecture seule : la
+    # rétention (20 jours) est faite par SFTPGo.
+    - name: sftp
+      path: /sftp
+      comment: "Sauvegardes (SFTPGo)"
+      ad_group: "NAS-sftp-rw"
+      read_only: true
+      pvc: sftp-data
 
 # --- Nextcloud Configuration ---
 # Se connecte au NAS via plugin "External Storage: SMB/CIFS"
@@ -175,6 +184,7 @@ external_domains:
   plex: "plex.app.xixtu.eu"
   pushgateway: "pushgateway.app.xixtu.eu"
   collectd: "collectd.app.xixtu.eu"
+  sftp: "sftp.app.xixtu.eu"
 
 # --- Monitoring ---
 monitoring_config:
@@ -194,6 +204,32 @@ monitoring_config:
 pushgateway_auth:
   username: "kwaba"
   password: "1f1ae42dee39f3cf84b841f8b34a7bba"
+
+# --- SFTP : sauvegardes des bornes kwaba-wifi (playbooks/sftpgo.yml) ---
+# SFTPGo n'a accès qu'à son volume (sftp-data), monté aussi par Samba
+# (partage « sftp », groupe AD NAS-sftp-rw, lecture seule).
+# Un compte par client : dépôt seulement (WebDAV/HTTPS), dans
+# openwrt/sauvegarde/<name>. kwaba-wifi (import-devices.py) relit les mots de
+# passe dans le secret nas/sftpgo-comptes : changer ici, relancer le playbook,
+# puis « ./deploy.sh devices » côté kwaba-wifi.
+sftp_config:
+  version_chart: "0.1.0"
+  ip_lan: "192.168.0.32"           # SFTP (lecture), réseau local seulement
+  retention_jours: 20
+  lecture:                         # compte SFTP de lecture (toutes les sauvegardes)
+    username: "lecture"
+    password: "ae8c7d07b9c2add04c6b481f536122d5"
+  clients:
+    - name: nchocdi
+      username: sftp_nchocdi
+      password: "501b8cf495559326d8fecaf6d1446825"
+
+# --- Alertes des bornes kwaba-wifi (playbooks/collectd-exporter.yml, tag collectd-alertes) ---
+kwaba_alertes:
+  temperature_avertissement: 75    # °C, puce Wi-Fi, pendant 10 min
+  temperature_critique: 85         # °C, pendant 5 min
+  sauvegarde_max_heures: 30        # pas de sauvegarde réussie depuis
+  erreurs_cable_par_s: 0.1         # erreurs en réception sur lan*/wan/eth*, pendant 15 min
 
 # --- Telegram Alerting ---
 # ⚠ Envisager ansible-vault pour chiffrer le token en production :

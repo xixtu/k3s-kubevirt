@@ -271,6 +271,16 @@
         },
         {
           "refId": "J",
+          "expr": "max by (instance) (time() - max by (instance) (kwaba_sauvegarde_timestamp_seconds{instance=~\"$borne\"}))",
+          "format": "table",
+          "instant": true,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
+        },
+        {
+          "refId": "K",
           "expr": "max by (instance) (100 * sum by (instance) (collectd_df_df_complex{instance=~\"$borne\",df=\"overlay\",type=\"used\"}) / sum by (instance) (collectd_df_df_complex{instance=~\"$borne\",df=\"overlay\"}))",
           "format": "table",
           "instant": true,
@@ -311,7 +321,8 @@
               "Value #G": "Temp. max °C",
               "Value #H": "Ping Internet ms",
               "Value #I": "Ping routeur ms",
-              "Value #J": "Flash /overlay %"
+              "Value #J": "Dernière sauvegarde",
+              "Value #K": "Flash /overlay %"
             }
           }
         }
@@ -429,6 +440,18 @@
               {
                 "id": "unit",
                 "value": "ms"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Dernière sauvegarde"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
               }
             ]
           },

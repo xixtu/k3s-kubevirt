@@ -8,6 +8,8 @@
 #                        charts/collectd-exporter : exporter, ServiceMonitor,
 #                        Ingress TLS, IngressRoute /collectd-post avec login)
 #   collectd-dashboard → dashboard Grafana « kwaba - bornes »
+#   collectd-alertes   → alertes Telegram des bornes (PrometheusRule kwaba-bornes,
+#                        seuils : kwaba_alertes dans group_vars)
 #   collectd-verify    → Vérifier pod, certificat, URL
 # Prérequis : pushgateway.yml (le login des bornes : middleware Traefik
 #             pushgateway-auth, secret pushgateway-basic-auth)
@@ -89,6 +91,102 @@
         path: /tmp/kwaba-bornes.json
         state: absent
       tags: [collectd, collectd-dashboard]
+
+    # ==========================================================
+    # ALERTES (Alertmanager → Telegram, routes de monitoring.yml)
+    # ==========================================================
+
+    - name: Écrire les alertes des bornes kwaba
+      ansible.builtin.copy:
+        dest: /tmp/kwaba-alertes.yml
+        mode: '0644'
+        content: |
+          apiVersion: monitoring.coreos.com/v1
+          kind: PrometheusRule
+          metadata:
+            name: kwaba-bornes
+            namespace: monitoring
+          spec:
+            groups:
+              - name: kwaba-bornes
+                rules:
+                  # vue dans les dernières 24 h, plus de mesure collectd depuis 5 min
+                  - alert: KwabaBorneInjoignable
+                    expr: max by (instance) (max_over_time(collectd_uptime[24h])) unless max by (instance) (collectd_uptime)
+                    for: 5m
+                    labels:
+                      severity: critical
+                    annotations:
+                      summary: "Borne {{ '{{' }} $labels.instance {{ '}}' }} injoignable"
+                      description: "Plus aucune mesure de {{ '{{' }} $labels.instance {{ '}}' }} depuis 5 min : borne éteinte, sans courant ou sans accès Internet."
+
+                  - alert: KwabaTemperatureElevee
+                    expr: max by (instance) (collectd_sensors_temperature) > {{ kwaba_alertes.temperature_avertissement }}
+                    for: 10m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: "Borne {{ '{{' }} $labels.instance {{ '}}' }} chaude"
+                      description: "Puce Wi-Fi à {{ '{{' }} $value | printf \"%.0f\" {{ '}}' }} °C (seuil {{ kwaba_alertes.temperature_avertissement }} °C)."
+
+                  - alert: KwabaTemperatureCritique
+                    expr: max by (instance) (collectd_sensors_temperature) > {{ kwaba_alertes.temperature_critique }}
+                    for: 5m
+                    labels:
+                      severity: critical
+                    annotations:
+                      summary: "Borne {{ '{{' }} $labels.instance {{ '}}' }} en surchauffe"
+                      description: "Puce Wi-Fi à {{ '{{' }} $value | printf \"%.0f\" {{ '}}' }} °C (seuil {{ kwaba_alertes.temperature_critique }} °C) : ventilation, emplacement."
+
+                  # bornes qui envoient leurs métriques mais sans sauvegarde récente
+                  # (sauvegardes poussées au Pushgateway : job kwaba_sauvegarde, label instance)
+                  - alert: KwabaSauvegardeAbsente
+                    expr: >-
+                      max by (instance) (collectd_uptime)
+                      unless on (instance)
+                      (time() - max by (instance) (kwaba_sauvegarde_timestamp_seconds) < {{ kwaba_alertes.sauvegarde_max_heures }} * 3600)
+                    for: 30m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: "Borne {{ '{{' }} $labels.instance {{ '}}' }} sans sauvegarde"
+                      description: "Pas de sauvegarde réussie depuis plus de {{ kwaba_alertes.sauvegarde_max_heures }} h (journal : logread -e kwaba-sauvegarde)."
+
+                  # moins de voisins mesh que de bornes du mesh en marche
+                  - alert: KwabaLienMeshPerdu
+                    expr: >-
+                      collectd_iwinfo_stations{iwinfo="mesh0"}
+                      < on () group_left () (count(collectd_iwinfo_stations{iwinfo="mesh0"}) - 1)
+                    for: 10m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: "Borne {{ '{{' }} $labels.instance {{ '}}' }} : lien mesh perdu"
+                      description: "{{ '{{' }} $labels.instance {{ '}}' }} ne voit que {{ '{{' }} $value {{ '}}' }} voisin(s) mesh."
+
+                  - alert: KwabaErreursCable
+                    expr: rate(collectd_interface_if_errors_rx_total{interface=~"lan.*|wan|eth.*"}[15m]) > {{ kwaba_alertes.erreurs_cable_par_s }}
+                    for: 15m
+                    labels:
+                      severity: warning
+                    annotations:
+                      summary: "Borne {{ '{{' }} $labels.instance {{ '}}' }} : erreurs sur {{ '{{' }} $labels.interface {{ '}}' }}"
+                      description: "{{ '{{' }} $value | printf \"%.2f\" {{ '}}' }} erreurs/s en réception : câble ou connecteur à vérifier."
+      tags: [collectd, collectd-alertes]
+
+    - name: Appliquer les alertes des bornes kwaba
+      ansible.builtin.command: k3s kubectl apply -f /tmp/kwaba-alertes.yml
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: kwaba_alertes_apply
+      changed_when: "'unchanged' not in kwaba_alertes_apply.stdout"
+      tags: [collectd, collectd-alertes]
+
+    - name: Supprimer le fichier d'alertes temporaire
+      ansible.builtin.file:
+        path: /tmp/kwaba-alertes.yml
+        state: absent
+      tags: [collectd, collectd-alertes]
 
     # ==========================================================
     # VÉRIFICATION

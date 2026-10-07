@@ -16,6 +16,7 @@
 #   monitoring→ Prometheus + Grafana + Alertmanager
 #   pushgateway → Pushgateway + dashboard benchmark Wi-Fi (bornes kwaba-wifi)
 #   collectd  → collectd-exporter + dashboard métriques des bornes (kwaba-wifi)
+#   sftpgo    → SFTPGo : sauvegardes des bornes kwaba-wifi (puis nas.yml --tags nas-samba)
 #   kubevirt  → Installation KubeVirt
 #   rancher   → Installation Rancher UI
 # =============================================================
@@ -79,6 +80,11 @@
 - name: "PHASE 8c - collectd-exporter"
   import_playbook: collectd-exporter.yml
   tags: [collectd]
+
+# PHASE 8d : SFTPGo (sauvegardes des bornes kwaba-wifi, volume dédié lu par Samba)
+- name: "PHASE 8d - SFTPGo"
+  import_playbook: sftpgo.yml
+  tags: [sftpgo]
 
 # PHASE 9 : KubeVirt (à venir)
 # - name: "PHASE 9 - KubeVirt"

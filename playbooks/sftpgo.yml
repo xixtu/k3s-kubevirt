@@ -1,0 +1,134 @@
+---
+# =============================================================
+# PLAYBOOK : SFTPGo - sauvegardes des bornes kwaba-wifi
+# =============================================================
+# Usage : ansible-playbook -i inventory/hosts.yml playbooks/sftpgo.yml
+# Tags :
+#   sftpgo-install → SFTPGo via Helm (chart local charts/sftpgo)
+#   sftpgo-verify  → pod, certificat, test d'envoi WebDAV avec chaque compte
+# Ensuite : playbooks/nas.yml --tags nas-samba (partage « sftp » sur le NAS)
+#
+# Sécurité :
+#   - SFTPGo ne monte QUE son volume (sftp-data) : ni media, ni documents,
+#     ni shared ; Samba monte sftp-data en plus (partage sftp, lecture seule,
+#     groupe AD NAS-sftp-rw)
+#   - comptes locaux déclarés dans group_vars (sftp_config) et chargés au
+#     démarrage ; pas d'interface d'administration, pas d'API, pas d'AD
+#   - bornes : un compte par client, dépôt seulement (pas de lecture, de
+#     suppression ni d'écrasement), WebDAV en HTTPS uniquement
+#   - SFTP (compte « lecture ») sur le réseau local seulement (IP MetalLB)
+#   - pod sans root, système de fichiers en lecture seule, aucune capacité,
+#     NetworkPolicy : entrée Traefik / réseau local, aucune sortie
+#   - rétention : CronJob qui supprime au-delà de retention_jours
+# URL d'envoi : https://sftp.app.xixtu.eu/dav/<borne>/<archive> (comptes clients)
+# SFTP (LAN)  : sftp -P 22 lecture@<ip_lan>
+# =============================================================
+
+- name: "SFTPGo - sauvegardes des bornes kwaba"
+  hosts: k3s-node-1
+  become: true
+  gather_facts: false
+  vars_files:
+    - "../group_vars/k3s_cluster.yml"
+
+  tasks:
+
+    - name: Copier le chart sftpgo
+      ansible.builtin.copy:
+        src: "../charts/sftpgo/"
+        dest: /tmp/charts/sftpgo/
+        mode: '0644'
+        directory_mode: '0755'
+      tags: [sftpgo, sftpgo-install]
+
+    - name: Écrire les valeurs (contient les mots de passe)
+      ansible.builtin.copy:
+        dest: /tmp/sftpgo-values.yml
+        mode: '0600'
+        content: |
+          webdav:
+            host: "{{ external_domains.sftp }}"
+          sftp:
+            loadBalancerIP: "{{ sftp_config.ip_lan }}"
+          retention:
+            days: {{ sftp_config.retention_jours }}
+          lecture: {{ sftp_config.lecture | to_json }}
+          clients: {{ sftp_config.clients | to_json }}
+      no_log: true
+      tags: [sftpgo, sftpgo-install]
+
+    - name: Installer / Mettre à jour SFTPGo via Helm (namespace nas)
+      ansible.builtin.command: >
+        helm upgrade --install sftpgo /tmp/charts/sftpgo
+        --namespace nas
+        --values /tmp/sftpgo-values.yml
+        --wait
+        --timeout 5m
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      tags: [sftpgo, sftpgo-install]
+
+    - name: Supprimer le chart et les valeurs temporaires
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/charts
+        - /tmp/sftpgo-values.yml
+      tags: [sftpgo, sftpgo-install]
+
+    # ==========================================================
+    # VÉRIFICATION
+    # ==========================================================
+
+    - name: Vérifier le pod
+      ansible.builtin.command: >
+        k3s kubectl -n nas get pods -o wide -l app.kubernetes.io/name=sftpgo
+      register: sftpgo_pod
+      changed_when: false
+      failed_when: false
+      tags: [sftpgo, sftpgo-verify]
+
+    - name: Vérifier le certificat TLS
+      ansible.builtin.command: k3s kubectl -n nas get certificate sftp-tls
+      register: sftpgo_cert
+      changed_when: false
+      failed_when: false
+      tags: [sftpgo, sftpgo-verify]
+
+    # dépôt d'un petit fichier par client (_verification/), effacé par la rétention
+    - name: Tester le dépôt WebDAV de chaque client
+      ansible.builtin.shell: >
+        curl -s -o /dev/null -w '%{http_code}' -u '{{ item.username }}:{{ item.password }}'
+        -X MKCOL 'https://{{ external_domains.sftp }}/dav/_verification/';
+        echo " MKCOL";
+        echo "test $(date)" | curl -s -o /dev/null -w '%{http_code}' -u '{{ item.username }}:{{ item.password }}'
+        -T - 'https://{{ external_domains.sftp }}/dav/_verification/test-{{ '%Y%m%d%H%M%S' | strftime }}.txt';
+        echo " PUT";
+        curl -s -o /dev/null -w '%{http_code}' -u '{{ item.username }}:{{ item.password }}'
+        'https://{{ external_domains.sftp }}/dav/_verification/';
+        echo " GET (403 attendu : pas de lecture)"
+      loop: "{{ sftp_config.clients }}"
+      loop_control:
+        label: "{{ item.username }}"
+      register: sftpgo_tests
+      changed_when: false
+      failed_when: false
+      no_log: true
+      tags: [sftpgo, sftpgo-verify]
+
+    - name: Résumé SFTPGo
+      ansible.builtin.debug:
+        msg:
+          - "================================================"
+          - "  SFTPGo (sauvegardes des bornes)"
+          - "================================================"
+          - "Envoi (bornes) : https://{{ external_domains.sftp }}/dav/<borne>/<archive>"
+          - "SFTP (LAN)     : sftp {{ sftp_config.lecture.username }}@{{ sftp_config.ip_lan }} (lecture seule)"
+          - "NAS            : \\\\{{ nas_config.samba_ip }}\\sftp (groupe AD NAS-sftp-rw, après nas.yml --tags nas-samba)"
+          - "Rétention      : {{ sftp_config.retention_jours }} jours"
+          - "Tests de dépôt (201/405 MKCOL, 201 PUT, 403 GET attendus) :"
+          - "{{ sftpgo_tests.results | default([]) | map(attribute='stdout_lines') | list }}"
+          - "{{ sftpgo_pod.stdout_lines | default([]) }}"
+          - "{{ sftpgo_cert.stdout_lines | default(['certificat en attente...']) }}"
+      tags: [sftpgo, sftpgo-verify]

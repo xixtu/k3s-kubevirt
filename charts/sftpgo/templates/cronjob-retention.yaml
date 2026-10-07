@@ -1,0 +1,50 @@
+# Rétention : supprime les sauvegardes de plus de {{ .Values.retention.days }} jours
+# (les comptes des bornes n'ont pas le droit de supprimer)
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Release.Name }}-retention
+  labels:
+    {{- include "sftpgo.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.retention.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: sftpgo-retention
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          enableServiceLinks: false
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: retention
+              image: busybox:1.36
+              command:
+                - sh
+                - -c
+                - |
+                  echo "suppression des sauvegardes de plus de {{ .Values.retention.days }} jours :"
+                  find /data/openwrt/sauvegarde -type f -mtime +{{ sub (int .Values.retention.days) 1 }} -print -delete
+                  find /data/openwrt/sauvegarde -mindepth 2 -type d -empty -print -delete
+                  echo "fin"
+              securityContext:
+                {{- include "sftpgo.securite" . | nindent 16 }}
+              volumeMounts:
+                - name: donnees
+                  mountPath: /data
+          volumes:
+            - name: donnees
+              persistentVolumeClaim:
+                claimName: {{ .Values.data.pvcName }}

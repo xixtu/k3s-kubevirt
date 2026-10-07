@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-webdav
+  labels:
+    {{- include "sftpgo.labels" . | nindent 4 }}
+spec:
+  selector:
+    {{- include "sftpgo.selector" . | nindent 4 }}
+  ports:
+    - name: webdav
+      port: 8090
+      targetPort: webdav
+{{- if .Values.sftp.loadBalancerIP }}
+---
+# SFTP sur le réseau local uniquement (IP MetalLB, non exposée sur Internet)
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-sftp
+  labels:
+    {{- include "sftpgo.labels" . | nindent 4 }}
+  annotations:
+    metallb.universe.tf/loadBalancerIPs: {{ .Values.sftp.loadBalancerIP | quote }}
+spec:
+  type: LoadBalancer
+  # IP source réelle conservée (filtrage par la NetworkPolicy, bannissement)
+  externalTrafficPolicy: Local
+  selector:
+    {{- include "sftpgo.selector" . | nindent 4 }}
+  ports:
+    - name: sftp
+      port: 22
+      targetPort: sftp
+{{- end }}

@@ -1,0 +1,135 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    {{- include "sftpgo.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate                # volume d'état en RWO
+  selector:
+    matchLabels:
+      {{- include "sftpgo.selector" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "sftpgo.selector" . | nindent 8 }}
+      annotations:
+        # comptes modifiés → redémarrage, pour les recharger
+        checksum/comptes: {{ include (print $.Template.BasePath "/secret-comptes.yaml") . | sha256sum }}
+    spec:
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        # arborescence openwrt/sauvegarde/<client>, propriété de SFTPGo (1000).
+        # Seul conteneur root, limité à chown/mkdir sur le volume des sauvegardes.
+        - name: arborescence
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              {{- range .Values.clients }}
+              mkdir -p /data/openwrt/sauvegarde/{{ .name }}
+              {{- end }}
+              chown 1000:1000 /data /data/openwrt /data/openwrt/sauvegarde /data/openwrt/sauvegarde/*
+              chmod 0755 /data /data/openwrt /data/openwrt/sauvegarde /data/openwrt/sauvegarde/*
+          securityContext:
+            runAsNonRoot: false
+            runAsUser: 0
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+              add: ["CHOWN", "FOWNER", "DAC_OVERRIDE"]
+          volumeMounts:
+            - name: donnees
+              mountPath: /data
+      containers:
+        - name: sftpgo
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - sftpgo
+            - serve
+            - --config-dir=/var/lib/sftpgo
+            - --config-file=/etc/sftpgo/sftpgo.json
+            - --loaddata-from=/etc/sftpgo-comptes/comptes.json
+            - --loaddata-mode=0
+          env:
+            - name: SFTPGO_DATA_PROVIDER__NAME
+              value: /var/lib/sftpgo/sftpgo.db
+            - name: SFTPGO_DATA_PROVIDER__CREATE_DEFAULT_ADMIN
+              value: "false"
+            # pas d'interface d'administration ni web client ni API REST
+            - name: SFTPGO_HTTPD__BINDINGS__0__PORT
+              value: "0"
+            - name: SFTPGO_TELEMETRY__BIND_PORT
+              value: "0"
+            # WebDAV (bornes, via Traefik en HTTPS), préfixe /dav
+            - name: SFTPGO_WEBDAVD__BINDINGS__0__PORT
+              value: "8090"
+            - name: SFTPGO_WEBDAVD__BINDINGS__0__PREFIX
+              value: /dav
+            - name: SFTPGO_WEBDAVD__BINDINGS__0__CLIENT_IP_PROXY_HEADER
+              value: X-Forwarded-For
+            - name: SFTPGO_WEBDAVD__BINDINGS__0__PROXY_ALLOWED
+              value: 10.42.0.0/16
+            # SFTP (réseau local, compte de lecture)
+            - name: SFTPGO_SFTPD__BINDINGS__0__PORT
+              value: "2022"
+            # bannissement automatique après échecs de connexion
+            - name: SFTPGO_COMMON__DEFENDER__ENABLED
+              value: "true"
+            - name: SFTPGO_COMMON__DEFENDER__BAN_TIME
+              value: "60"
+            - name: SFTPGO_COMMON__DEFENDER__THRESHOLD
+              value: "10"
+          ports:
+            - name: webdav
+              containerPort: 8090
+            - name: sftp
+              containerPort: 2022
+          readinessProbe:
+            tcpSocket:
+              port: webdav
+          livenessProbe:
+            tcpSocket:
+              port: webdav
+          securityContext:
+            {{- include "sftpgo.securite" . | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: donnees
+              mountPath: /srv/sftpgo/data
+            - name: etat
+              mountPath: /var/lib/sftpgo
+            - name: comptes
+              mountPath: /etc/sftpgo-comptes
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: donnees
+          persistentVolumeClaim:
+            claimName: {{ .Values.data.pvcName }}
+        - name: etat
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-etat
+        - name: comptes
+          secret:
+            secretName: {{ .Release.Name }}-comptes
+            defaultMode: 0400
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi

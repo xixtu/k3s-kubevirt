@@ -25,6 +25,7 @@ ansible/
 │   ├── monitoring.yml             # Prometheus/Grafana (à venir)
 │   ├── pushgateway.yml            # Pushgateway + dashboard benchmark Wi-Fi (kwaba-wifi)
 │   ├── collectd-exporter.yml      # collectd_exporter + dashboard métriques des bornes (kwaba-wifi)
+│   ├── sftpgo.yml                 # SFTPGo : sauvegardes des bornes (kwaba-wifi), partage NAS « sftp »
 │   ├── kubevirt.yml               # KubeVirt (à venir)
 │   └── rancher.yml                # Rancher UI (à venir)
 └── roles/                         # Roles réutilisables (à venir)

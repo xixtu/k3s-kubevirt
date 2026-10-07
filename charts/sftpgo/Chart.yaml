@@ -1,0 +1,10 @@
+apiVersion: v2
+name: sftpgo
+description: >-
+  SFTPGo durci pour les sauvegardes des bornes kwaba-wifi : volume dédié
+  (sftp-data, seul monté), comptes locaux déclarés ici (dépôt seulement),
+  WebDAV en HTTPS pour les bornes, SFTP en lecture sur le réseau local.
+  Utilisé par playbooks/sftpgo.yml.
+type: application
+version: 0.1.0
+appVersion: "v2.7.6"

@@ -140,7 +140,7 @@
                   path = {{ share.path }}
                   comment = {{ share.comment }}
                   browseable = yes
-                  read only = no
+                  read only = {{ 'yes' if share.read_only | default(false) else 'no' }}
                   valid users = @"{{ nas_config.ad_workgroup }}\{{ share.ad_group }}"
                   force group = {{ share.ad_group }}
                   create mask = 0664
@@ -421,6 +421,10 @@
                       # Données NAS (RW)
                       - name: nas-data
                         mountPath: /nas
+                      # Partages sur un volume dédié (ex. sftp : sauvegardes SFTPGo)
+                      {% for share in nas_config.shares if share.pvc is defined %}- name: partage-{{ share.name }}
+                        mountPath: {{ share.path }}
+                      {% endfor %}
                       # État Samba (machine account AD, tdb)
                       - name: samba-state
                         mountPath: /var/lib/samba
@@ -442,6 +446,11 @@
                   - name: samba-state
                     persistentVolumeClaim:
                       claimName: samba-state
+                  {% for share in nas_config.shares if share.pvc is defined %}- name: partage-{{ share.name }}
+                    persistentVolumeClaim:
+                      claimName: {{ share.pvc }}
+                  {% endfor %}
+                  # (fin des volumes)
                   - name: samba-config
                     configMap:
                       name: samba-config

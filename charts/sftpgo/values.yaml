@@ -1,0 +1,51 @@
+image:
+  repository: drakkan/sftpgo
+  tag: v2.7.6-distroless-slim     # sans shell : surface d'attaque minimale
+  pullPolicy: IfNotPresent
+
+# Volume des sauvegardes : le SEUL volume de données monté dans SFTPGo.
+# Samba le monte aussi (partage « sftp »). Conservé si la release est
+# supprimée (helm.sh/resource-policy: keep).
+data:
+  pvcName: sftp-data
+  storageClass: longhorn-slow
+  size: 5Gi
+# État de SFTPGo (base sqlite, clés d'hôte SFTP)
+state:
+  storageClass: longhorn-fast
+  size: 1Gi
+
+# Clients : un compte local par client, dépôt seulement, dans
+# openwrt/sauvegarde/<nom>
+clients: []
+#  - name: nchocdi
+#    username: sftp_nchocdi
+#    password: "..."
+# Compte de lecture (SFTP, réseau local) : voit toutes les sauvegardes
+lecture:
+  username: ""
+  password: ""
+
+retention:
+  days: 20
+  schedule: "45 5 * * *"          # UTC
+
+webdav:
+  host: sftp.example.com
+  clusterIssuer: letsencrypt-production
+  tlsSecret: sftp-tls
+  redirectMiddleware: traefik-redirect-to-https@kubernetescrd
+  # pods autorisés à joindre le WebDAV (Traefik)
+  traefikNamespace: traefik
+
+sftp:
+  loadBalancerIP: ""              # IP MetalLB (réseau local)
+  allowedCIDR: 192.168.0.0/24
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 32Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
