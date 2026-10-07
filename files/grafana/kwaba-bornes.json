@@ -156,6 +156,7 @@
         {
           "refId": "A",
           "expr": "count(collectd_uptime{instance=~\"$borne\"}) or vector(0)",
+          "instant": true,
           "datasource": {
             "type": "prometheus",
             "uid": "${datasource}"
@@ -180,7 +181,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "collectd_uptime{instance=~\"$borne\"}",
+          "expr": "max by (instance) (collectd_uptime{instance=~\"$borne\"})",
           "format": "table",
           "instant": true,
           "datasource": {
@@ -190,7 +191,7 @@
         },
         {
           "refId": "B",
-          "expr": "collectd_load_shortterm{instance=~\"$borne\"}",
+          "expr": "max by (instance) (collectd_load_shortterm{instance=~\"$borne\"})",
           "format": "table",
           "instant": true,
           "datasource": {
@@ -200,7 +201,7 @@
         },
         {
           "refId": "C",
-          "expr": "sum by (instance) (collectd_cpu_percent{instance=~\"$borne\",type!=\"idle\"}) / count by (instance) (collectd_cpu_percent{instance=~\"$borne\",type=\"user\"})",
+          "expr": "max by (instance) (sum by (instance) (collectd_cpu_percent{instance=~\"$borne\",type!=\"idle\"}) / count by (instance) (collectd_cpu_percent{instance=~\"$borne\",type=\"user\"}))",
           "format": "table",
           "instant": true,
           "datasource": {
@@ -210,7 +211,7 @@
         },
         {
           "refId": "D",
-          "expr": "collectd_memory_percent{instance=~\"$borne\",memory=\"used\"}",
+          "expr": "max by (instance) (collectd_memory_percent{instance=~\"$borne\",memory=\"used\"})",
           "format": "table",
           "instant": true,
           "datasource": {
@@ -220,7 +221,7 @@
         },
         {
           "refId": "E",
-          "expr": "sum by (instance) (collectd_iwinfo_stations{instance=~\"$borne\"})",
+          "expr": "max by (instance) (sum by (instance) (collectd_iwinfo_stations{instance=~\"$borne\",iwinfo!~\"mesh.*\"}))",
           "format": "table",
           "instant": true,
           "datasource": {
@@ -230,7 +231,7 @@
         },
         {
           "refId": "F",
-          "expr": "max by (instance) (collectd_thermal_temperature{instance=~\"$borne\"})",
+          "expr": "max by (instance) (sum by (instance) (collectd_iwinfo_stations{instance=~\"$borne\",iwinfo=~\"mesh.*\"}))",
           "format": "table",
           "instant": true,
           "datasource": {
@@ -240,7 +241,7 @@
         },
         {
           "refId": "G",
-          "expr": "max by (instance) (collectd_ping{instance=~\"$borne\",ping=\"1.1.1.1\"})",
+          "expr": "max by (instance) (max by (instance) (collectd_thermal_temperature{instance=~\"$borne\"}))",
           "format": "table",
           "instant": true,
           "datasource": {
@@ -250,7 +251,7 @@
         },
         {
           "refId": "H",
-          "expr": "max by (instance) (collectd_ping{instance=~\"$borne\",ping=\"192.168.1.1\"})",
+          "expr": "max by (instance) (max by (instance) (collectd_ping{instance=~\"$borne\",ping=\"1.1.1.1\"}))",
           "format": "table",
           "instant": true,
           "datasource": {
@@ -260,7 +261,17 @@
         },
         {
           "refId": "I",
-          "expr": "100 * sum by (instance) (collectd_df_df_complex{instance=~\"$borne\",df=\"overlay\",type=\"used\"}) / sum by (instance) (collectd_df_df_complex{instance=~\"$borne\",df=\"overlay\"})",
+          "expr": "max by (instance) (max by (instance) (collectd_ping{instance=~\"$borne\",ping=\"192.168.1.1\"}))",
+          "format": "table",
+          "instant": true,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          }
+        },
+        {
+          "refId": "J",
+          "expr": "max by (instance) (100 * sum by (instance) (collectd_df_df_complex{instance=~\"$borne\",df=\"overlay\",type=\"used\"}) / sum by (instance) (collectd_df_df_complex{instance=~\"$borne\",df=\"overlay\"}))",
           "format": "table",
           "instant": true,
           "datasource": {
@@ -286,7 +297,8 @@
               "service": true,
               "container": true,
               "memory": true,
-              "ping": true
+              "ping": true,
+              "__name__": true
             },
             "renameByName": {
               "instance": "Borne",
@@ -295,10 +307,11 @@
               "Value #C": "CPU %",
               "Value #D": "Mémoire %",
               "Value #E": "Clients Wi-Fi",
-              "Value #F": "Temp. max °C",
-              "Value #G": "Ping Internet ms",
-              "Value #H": "Ping routeur ms",
-              "Value #I": "Flash /overlay %"
+              "Value #F": "Voisins mesh",
+              "Value #G": "Temp. max °C",
+              "Value #H": "Ping Internet ms",
+              "Value #I": "Ping routeur ms",
+              "Value #J": "Flash /overlay %"
             }
           }
         }
@@ -363,6 +376,18 @@
             "matcher": {
               "id": "byName",
               "options": "Clients Wi-Fi"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Voisins mesh"
             },
             "properties": [
               {
