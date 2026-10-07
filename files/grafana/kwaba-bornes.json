@@ -76,12 +76,32 @@
         "definition": "label_values(collectd_interface_if_octets_rx_total{instance=~\"$borne\"}, interface)",
         "multi": true,
         "includeAll": true,
-        "current": {
-          "text": "All",
-          "value": "$__all"
-        },
         "refresh": 2,
-        "sort": 1
+        "sort": 1,
+        "current": {
+          "text": [
+            "br-lan",
+            "mesh0",
+            "wan",
+            "lan",
+            "lan1",
+            "lan2",
+            "lan3",
+            "lan4",
+            "eth0"
+          ],
+          "value": [
+            "br-lan",
+            "mesh0",
+            "wan",
+            "lan",
+            "lan1",
+            "lan2",
+            "lan3",
+            "lan4",
+            "eth0"
+          ]
+        }
       }
     ]
   },
@@ -632,7 +652,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "",
+      "description": "Plugin thermal : les bornes IPQ4019 (MR8300, WHW03) n'exposent pas de sonde de température sous OpenWrt.",
       "gridPos": {
         "h": 8,
         "w": 8,
@@ -648,7 +668,8 @@
             "stacking": {
               "mode": "none"
             }
-          }
+          },
+          "noValue": "pas de sonde exposée (IPQ4019)"
         },
         "overrides": []
       },
@@ -1037,7 +1058,7 @@
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "Doit rester à 0. Des erreurs en réception sur un port câblé (lan*, wan) : câble ou connecteur à vérifier.",
+      "description": "Doit rester vide (aucune erreur). Des erreurs en réception sur un port câblé (lan*, wan) : câble ou connecteur à vérifier.",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -1054,7 +1075,8 @@
               "mode": "none"
             }
           },
-          "min": 0
+          "min": 0,
+          "noValue": "aucune erreur"
         },
         "overrides": []
       },
@@ -1118,7 +1140,8 @@
               "mode": "none"
             }
           },
-          "min": 0
+          "min": 0,
+          "noValue": "aucune perte"
         },
         "overrides": []
       },
