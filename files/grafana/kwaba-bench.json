@@ -294,7 +294,31 @@
                 "value": 150
               }
             ]
-          }
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null+nan",
+                "result": {
+                  "text": "—",
+                  "color": "#000000",
+                  "index": 0
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "empty",
+                "result": {
+                  "text": "—",
+                  "color": "#000000",
+                  "index": 1
+                }
+              }
+            }
+          ]
         },
         "overrides": [
           {
@@ -389,7 +413,31 @@
                 "value": 150
               }
             ]
-          }
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null+nan",
+                "result": {
+                  "text": "—",
+                  "color": "#000000",
+                  "index": 0
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "empty",
+                "result": {
+                  "text": "—",
+                  "color": "#000000",
+                  "index": 1
+                }
+              }
+            }
+          ]
         },
         "overrides": [
           {
@@ -484,7 +532,31 @@
                 "value": 30
               }
             ]
-          }
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null+nan",
+                "result": {
+                  "text": "—",
+                  "color": "#000000",
+                  "index": 0
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "empty",
+                "result": {
+                  "text": "—",
+                  "color": "#000000",
+                  "index": 1
+                }
+              }
+            }
+          ]
         },
         "overrides": [
           {
@@ -579,7 +651,31 @@
                 "value": 150
               }
             ]
-          }
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null+nan",
+                "result": {
+                  "text": "—",
+                  "color": "#000000",
+                  "index": 0
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "empty",
+                "result": {
+                  "text": "—",
+                  "color": "#000000",
+                  "index": 1
+                }
+              }
+            }
+          ]
         },
         "overrides": [
           {
@@ -674,7 +770,31 @@
                 "value": 150
               }
             ]
-          }
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null+nan",
+                "result": {
+                  "text": "—",
+                  "color": "#000000",
+                  "index": 0
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "empty",
+                "result": {
+                  "text": "—",
+                  "color": "#000000",
+                  "index": 1
+                }
+              }
+            }
+          ]
         },
         "overrides": [
           {
@@ -769,7 +889,31 @@
                 "value": 5
               }
             ]
-          }
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null+nan",
+                "result": {
+                  "text": "—",
+                  "color": "#000000",
+                  "index": 0
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "empty",
+                "result": {
+                  "text": "—",
+                  "color": "#000000",
+                  "index": 1
+                }
+              }
+            }
+          ]
         },
         "overrides": [
           {

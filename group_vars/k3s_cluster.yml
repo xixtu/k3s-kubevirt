@@ -226,8 +226,8 @@ sftp_config:
 
 # --- Alertes des bornes kwaba-wifi (playbooks/collectd-exporter.yml, tag collectd-alertes) ---
 kwaba_alertes:
-  temperature_avertissement: 75    # °C, puce Wi-Fi, pendant 10 min
-  temperature_critique: 85         # °C, pendant 5 min
+  temperature_avertissement: 90    # °C, puce Wi-Fi, pendant 10 min (normal : 73-80 °C)
+  temperature_critique: 100        # °C, pendant 5 min
   sauvegarde_max_heures: 30        # pas de sauvegarde réussie depuis
   erreurs_cable_par_s: 0.1         # erreurs en réception sur lan*/wan/eth*, pendant 15 min
 
