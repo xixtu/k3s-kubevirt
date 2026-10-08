@@ -1,0 +1,22 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: guacamole-postgresql
+  namespace: guacamole
+  labels:
+    app.kubernetes.io/name: postgresql
+    app.kubernetes.io/part-of: guacamole
+    app.kubernetes.io/component: database
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5432
+      targetPort: postgres
+      name: postgres
+    - port: 9187
+      targetPort: metrics
+      name: metrics
+  selector:
+    app.kubernetes.io/name: postgresql
+    app.kubernetes.io/part-of: guacamole
