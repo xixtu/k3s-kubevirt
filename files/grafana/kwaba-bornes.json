@@ -120,9 +120,24 @@
       "panels": []
     },
     {
+      "type": "text",
+      "title": "Lecture",
+      "id": 3,
+      "gridPos": {
+        "h": 3,
+        "w": 24,
+        "x": 0,
+        "y": 1
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "Mesures **collectd** de chaque borne, envoyées toutes les **30 s**. En haut : **Borne** et **Interface** (par défaut les liens physiques et le mesh ; VLAN et SSID au choix). Une borne absente du tableau n'envoie plus depuis plus d'une minute (éteinte, sans Internet). Repères au calme : CPU ~4 %, mémoire ~20 %, puces Wi-Fi 73 à 80 °C, ping routeur < 1 ms (câble) ou 2 à 6 ms (mesh), 8 voisins mesh. Survoler le **i** d'un panneau pour le détail. Doc : docs/metriques.md (kwaba-wifi)."
+      }
+    },
+    {
       "type": "stat",
       "title": "Bornes qui envoient",
-      "id": 3,
+      "id": 4,
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -132,7 +147,7 @@
         "h": 7,
         "w": 4,
         "x": 0,
-        "y": 1
+        "y": 4
       },
       "fieldConfig": {
         "defaults": {
@@ -167,7 +182,7 @@
     {
       "type": "table",
       "title": "État des bornes",
-      "id": 4,
+      "id": 5,
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -176,7 +191,7 @@
         "h": 7,
         "w": 20,
         "x": 4,
-        "y": 1
+        "y": 4
       },
       "targets": [
         {
@@ -512,25 +527,26 @@
             "desc": false
           }
         ]
-      }
+      },
+      "description": "Une ligne par borne : uptime, charge 1 min, CPU (moyenne des cœurs hors idle), mémoire utilisée, clients Wi-Fi (hors mesh), voisins mesh (8 attendus à CDI), température la plus haute des puces Wi-Fi, ping vers Internet (1.1.1.1) et vers le routeur, âge de la dernière sauvegarde, flash utilisée."
     },
     {
       "type": "row",
       "title": "Système",
-      "id": 5,
+      "id": 6,
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 8
+        "y": 11
       },
       "panels": []
     },
     {
       "type": "timeseries",
       "title": "CPU utilisé (%)",
-      "id": 6,
+      "id": 7,
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -540,7 +556,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 9
+        "y": 12
       },
       "fieldConfig": {
         "defaults": {
@@ -585,17 +601,17 @@
     {
       "type": "timeseries",
       "title": "Charge (1 min)",
-      "id": 7,
+      "id": 8,
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "",
+      "description": "Nombre moyen de tâches en attente du processeur (4 cœurs) : < 1 au calme, monte pendant le benchmark.",
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 9
+        "y": 12
       },
       "fieldConfig": {
         "defaults": {
@@ -640,17 +656,17 @@
     {
       "type": "timeseries",
       "title": "Mémoire utilisée (%)",
-      "id": 8,
+      "id": 9,
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "",
+      "description": "Mémoire utilisée hors cache. Au-delà de 85 % : risque de redémarrage (manque de mémoire).",
       "gridPos": {
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 17
+        "y": 20
       },
       "fieldConfig": {
         "defaults": {
@@ -695,7 +711,7 @@
     {
       "type": "timeseries",
       "title": "Température des puces Wi-Fi (°C)",
-      "id": 9,
+      "id": 10,
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -705,7 +721,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 17
+        "y": 20
       },
       "fieldConfig": {
         "defaults": {
@@ -750,7 +766,7 @@
     {
       "type": "timeseries",
       "title": "CPU par état (%)",
-      "id": 10,
+      "id": 11,
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -760,7 +776,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 17
+        "y": 20
       },
       "fieldConfig": {
         "defaults": {
@@ -805,17 +821,17 @@
     {
       "type": "timeseries",
       "title": "Connexions suivies (conntrack)",
-      "id": 11,
+      "id": 12,
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "",
+      "description": "Connexions suivies par le pare-feu (surtout sur le routeur : clients vers Internet).",
       "gridPos": {
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 25
+        "y": 28
       },
       "fieldConfig": {
         "defaults": {
@@ -869,17 +885,17 @@
     {
       "type": "timeseries",
       "title": "Changements de contexte /s",
-      "id": 12,
+      "id": 13,
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "",
+      "description": "Activité du noyau : monte avec le trafic (benchmark, test de charge).",
       "gridPos": {
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 25
+        "y": 28
       },
       "fieldConfig": {
         "defaults": {
@@ -923,17 +939,17 @@
     {
       "type": "timeseries",
       "title": "Espace flash /overlay utilisé (%)",
-      "id": 13,
+      "id": 14,
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "",
+      "description": "Place utilisée sur la mémoire flash (paquets, configuration). Au-delà de 85 % : plus de place pour les paquets.",
       "gridPos": {
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 25
+        "y": 28
       },
       "fieldConfig": {
         "defaults": {
@@ -978,30 +994,30 @@
     {
       "type": "row",
       "title": "Réseau (interfaces)",
-      "id": 14,
+      "id": 15,
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 33
+        "y": 36
       },
       "panels": []
     },
     {
       "type": "timeseries",
       "title": "Trafic reçu (bit/s)",
-      "id": 15,
+      "id": 16,
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "",
+      "description": "Débit reçu par interface. wan / lan* / eth0 : câbles ; mesh0 : liaison mesh ; br-lan : pont du réseau principal.",
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 34
+        "y": 37
       },
       "fieldConfig": {
         "defaults": {
@@ -1046,17 +1062,17 @@
     {
       "type": "timeseries",
       "title": "Trafic émis (bit/s)",
-      "id": 16,
+      "id": 17,
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "",
+      "description": "Débit émis par interface (mêmes interfaces que le trafic reçu).",
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 34
+        "y": 37
       },
       "fieldConfig": {
         "defaults": {
@@ -1101,7 +1117,7 @@
     {
       "type": "timeseries",
       "title": "Erreurs /s (câble, radio)",
-      "id": 17,
+      "id": 18,
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1111,7 +1127,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 42
+        "y": 45
       },
       "fieldConfig": {
         "defaults": {
@@ -1166,17 +1182,17 @@
     {
       "type": "timeseries",
       "title": "Paquets perdus /s (drops)",
-      "id": 18,
+      "id": 19,
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "",
+      "description": "Paquets abandonnés (files pleines, trafic non voulu). Quelques-uns sont normaux ; une hausse durable sous charge = saturation.",
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 42
+        "y": 45
       },
       "fieldConfig": {
         "defaults": {
@@ -1231,7 +1247,7 @@
     {
       "type": "timeseries",
       "title": "Latence ping (ms)",
-      "id": 19,
+      "id": 20,
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1241,7 +1257,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 50
+        "y": 53
       },
       "fieldConfig": {
         "defaults": {
@@ -1286,17 +1302,17 @@
     {
       "type": "timeseries",
       "title": "Perte ping (%)",
-      "id": 20,
+      "id": 21,
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "",
+      "description": "Part des pings sans réponse. Doit rester à 0.",
       "gridPos": {
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 50
+        "y": 53
       },
       "fieldConfig": {
         "defaults": {
@@ -1341,20 +1357,20 @@
     {
       "type": "row",
       "title": "Wi-Fi (iwinfo)",
-      "id": 21,
+      "id": 22,
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 58
+        "y": 61
       },
       "panels": []
     },
     {
       "type": "timeseries",
       "title": "Clients par interface Wi-Fi",
-      "id": 22,
+      "id": 23,
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1364,7 +1380,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 59
+        "y": 62
       },
       "fieldConfig": {
         "defaults": {
@@ -1409,7 +1425,7 @@
     {
       "type": "timeseries",
       "title": "Débit radio moyen",
-      "id": 23,
+      "id": 24,
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1419,7 +1435,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 59
+        "y": 62
       },
       "fieldConfig": {
         "defaults": {
@@ -1463,17 +1479,17 @@
     {
       "type": "timeseries",
       "title": "Signal (dBm)",
-      "id": 24,
+      "id": 25,
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "",
+      "description": "Signal moyen des clients (ou voisins mesh) reçu par la borne. -40 à -65 : bon ; < -75 : faible. Bornes collées (banc d'intégration) : -5 dBm, trop fort, à revoir une fois les bornes installées.",
       "gridPos": {
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 67
+        "y": 70
       },
       "fieldConfig": {
         "defaults": {
@@ -1517,17 +1533,17 @@
     {
       "type": "timeseries",
       "title": "Bruit (dBm)",
-      "id": 25,
+      "id": 26,
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "",
+      "description": "Bruit de fond du canal : vers -95 dBm = canal calme ; plus haut (-85) = interférences.",
       "gridPos": {
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 67
+        "y": 70
       },
       "fieldConfig": {
         "defaults": {
@@ -1571,17 +1587,17 @@
     {
       "type": "timeseries",
       "title": "Qualité du signal",
-      "id": 26,
+      "id": 27,
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "",
+      "description": "Qualité calculée par le pilote (sur 70).",
       "gridPos": {
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 67
+        "y": 70
       },
       "fieldConfig": {
         "defaults": {
@@ -1625,30 +1641,30 @@
     {
       "type": "row",
       "title": "Services",
-      "id": 27,
+      "id": 28,
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 75
+        "y": 78
       },
       "panels": []
     },
     {
       "type": "timeseries",
       "title": "Baux DHCP (routeur)",
-      "id": 28,
+      "id": 29,
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "",
+      "description": "Adresses distribuées par le serveur DHCP (routeur). Sur les satellites : sans objet.",
       "gridPos": {
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 76
+        "y": 79
       },
       "fieldConfig": {
         "defaults": {
@@ -1693,17 +1709,17 @@
     {
       "type": "timeseries",
       "title": "Connexions TCP établies",
-      "id": 29,
+      "id": 30,
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "",
+      "description": "Connexions TCP ouvertes par port local (22 SSH, 80/443 LuCI, 5201 iperf3).",
       "gridPos": {
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 76
+        "y": 79
       },
       "fieldConfig": {
         "defaults": {
@@ -1748,17 +1764,17 @@
     {
       "type": "timeseries",
       "title": "Processus surveillés (nombre)",
-      "id": 30,
+      "id": 31,
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
       },
-      "description": "",
+      "description": "Présence des processus clés (hostapd, wpa_supplicant, netifd, dnsmasq, usteerd, iperf3, collectd). 0 = processus arrêté.",
       "gridPos": {
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 76
+        "y": 79
       },
       "fieldConfig": {
         "defaults": {

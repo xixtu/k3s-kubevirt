@@ -115,7 +115,8 @@
             "lastNotNull"
           ]
         }
-      }
+      },
+      "description": "Âge de la mesure la plus récente du site et du mode choisis. Étoile : un passage par heure (heures bench_etoile_heures) ; matrice : toutes les 4 h (bench_matrice_heures). Orange au-delà de 25 h, rouge au-delà de 50 h."
     },
     {
       "id": 2,
@@ -154,7 +155,8 @@
             "lastNotNull"
           ]
         }
-      }
+      },
+      "description": "Nombre de paires (de → vers) connues. CDI : étoile 8 (chaque satellite vers le routeur), matrice 72 (chaque borne vers les 8 autres)."
     },
     {
       "id": 3,
@@ -210,7 +212,8 @@
             "lastNotNull"
           ]
         }
-      }
+      },
+      "description": "Paires dont au moins un test a échoué ou a été sauté (fin du créneau, borne injoignable, serveur occupé). Doit rester à 0."
     },
     {
       "id": 4,
@@ -224,7 +227,7 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "Ligne = borne qui lance le test (**de**), colonne = borne testée (**vers**).\n**aller** : de → vers, **retour** : vers → de.\nMode **etoile** : satellites ↔ routeur (chaque nuit) ; **matrice** : toutes les paires (à la demande)."
+        "content": "**Lecture** : ligne = borne qui lance le test (**de**), colonne = borne testée (**vers**). **aller** : de → vers ; **retour** : vers → de.\n\n**etoile** : chaque satellite ↔ routeur, toutes les heures libres ; **matrice** : chaque borne vers toutes les autres, toutes les 4 h. Un seul test à la fois sur le site. Case noire « — » : pas de mesure. Survoler le **i** d'un panneau pour le détail. Doc : docs/benchmark.md (kwaba-wifi)."
       }
     },
     {
@@ -344,7 +347,8 @@
       "options": {
         "showHeader": true,
         "cellHeight": "sm"
-      }
+      },
+      "description": "Débit TCP de la borne en ligne (de) vers la borne en colonne (vers), en Mbit/s. Repères CDI : câble ↔ câble 600 à 930, liaisons en mesh 200 à 330. Rouge < 50, orange < 150. Case noire « — » : pas de mesure (la borne elle-même, ou paire pas encore mesurée)."
     },
     {
       "id": 6,
@@ -463,7 +467,8 @@
       "options": {
         "showHeader": true,
         "cellHeight": "sm"
-      }
+      },
+      "description": "Débit TCP dans l'autre sens (iperf3 -R : vers → de), mesuré dans le même passage. Dans la matrice, la case symétrique (B → A, aller) doit donner un chiffre proche : un grand écart signale une mesure douteuse."
     },
     {
       "id": 7,
@@ -582,248 +587,11 @@
       "options": {
         "showHeader": true,
         "cellHeight": "sm"
-      }
+      },
+      "description": "Ping moyen (5 pings, au repos, après les iperf3). Repères : câble ~1 ms, mesh 2 à 3 ms. Orange > 10 ms, rouge > 30 ms."
     },
     {
       "id": 8,
-      "type": "table",
-      "title": "UDP aller, débit max (Mbit/s)",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 13,
-        "w": 8,
-        "h": 9
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "expr": "kwaba_bench_udp_mbps{site=\"$site\",mode=\"$mode\",sens=\"aller\"}",
-          "instant": true,
-          "format": "table"
-        }
-      ],
-      "transformations": [
-        {
-          "id": "groupingToMatrix",
-          "options": {
-            "columnField": "vers",
-            "rowField": "de",
-            "valueField": "Value",
-            "emptyValue": "null"
-          }
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none",
-          "decimals": 0,
-          "custom": {
-            "align": "center",
-            "cellOptions": {
-              "type": "color-background",
-              "mode": "basic"
-            }
-          },
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 50
-              },
-              {
-                "color": "green",
-                "value": 150
-              }
-            ]
-          },
-          "mappings": [
-            {
-              "type": "special",
-              "options": {
-                "match": "null+nan",
-                "result": {
-                  "text": "—",
-                  "color": "#000000",
-                  "index": 0
-                }
-              }
-            },
-            {
-              "type": "special",
-              "options": {
-                "match": "empty",
-                "result": {
-                  "text": "—",
-                  "color": "#000000",
-                  "index": 1
-                }
-              }
-            }
-          ]
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "de\\vers"
-            },
-            "properties": [
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "type": "auto"
-                }
-              },
-              {
-                "id": "displayName",
-                "value": "de \\ vers"
-              }
-            ]
-          }
-        ]
-      },
-      "options": {
-        "showHeader": true,
-        "cellHeight": "sm"
-      }
-    },
-    {
-      "id": 9,
-      "type": "table",
-      "title": "UDP retour, débit max (Mbit/s)",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "x": 8,
-        "y": 13,
-        "w": 8,
-        "h": 9
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${datasource}"
-          },
-          "expr": "kwaba_bench_udp_mbps{site=\"$site\",mode=\"$mode\",sens=\"retour\"}",
-          "instant": true,
-          "format": "table"
-        }
-      ],
-      "transformations": [
-        {
-          "id": "groupingToMatrix",
-          "options": {
-            "columnField": "vers",
-            "rowField": "de",
-            "valueField": "Value",
-            "emptyValue": "null"
-          }
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "none",
-          "decimals": 0,
-          "custom": {
-            "align": "center",
-            "cellOptions": {
-              "type": "color-background",
-              "mode": "basic"
-            }
-          },
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "orange",
-                "value": 50
-              },
-              {
-                "color": "green",
-                "value": 150
-              }
-            ]
-          },
-          "mappings": [
-            {
-              "type": "special",
-              "options": {
-                "match": "null+nan",
-                "result": {
-                  "text": "—",
-                  "color": "#000000",
-                  "index": 0
-                }
-              }
-            },
-            {
-              "type": "special",
-              "options": {
-                "match": "empty",
-                "result": {
-                  "text": "—",
-                  "color": "#000000",
-                  "index": 1
-                }
-              }
-            }
-          ]
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "de\\vers"
-            },
-            "properties": [
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "type": "auto"
-                }
-              },
-              {
-                "id": "displayName",
-                "value": "de \\ vers"
-              }
-            ]
-          }
-        ]
-      },
-      "options": {
-        "showHeader": true,
-        "cellHeight": "sm"
-      }
-    },
-    {
-      "id": 10,
       "type": "table",
       "title": "UDP perte aller (%)",
       "datasource": {
@@ -831,7 +599,7 @@
         "uid": "${datasource}"
       },
       "gridPos": {
-        "x": 16,
+        "x": 0,
         "y": 13,
         "w": 8,
         "h": 9
@@ -939,7 +707,248 @@
       "options": {
         "showHeader": true,
         "cellHeight": "sm"
-      }
+      },
+      "description": "UDP envoyé à débit fixe (bench_udp_debit, 100 Mbit/s par défaut : ordre de grandeur d'un flux caméra ou d'appels) de → vers : part des paquets perdus. Doit rester proche de 0 ; orange > 1 %, rouge > 5 %. Des pertes à ce débit = lien dégradé ou saturé."
+    },
+    {
+      "id": 9,
+      "type": "table",
+      "title": "UDP perte retour (%)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 13,
+        "w": 8,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "kwaba_bench_udp_perte_pct{site=\"$site\",mode=\"$mode\",sens=\"retour\"}",
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "groupingToMatrix",
+          "options": {
+            "columnField": "vers",
+            "rowField": "de",
+            "valueField": "Value",
+            "emptyValue": "null"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 1,
+          "custom": {
+            "align": "center",
+            "cellOptions": {
+              "type": "color-background",
+              "mode": "basic"
+            }
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null+nan",
+                "result": {
+                  "text": "—",
+                  "color": "#000000",
+                  "index": 0
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "empty",
+                "result": {
+                  "text": "—",
+                  "color": "#000000",
+                  "index": 1
+                }
+              }
+            }
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "de\\vers"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "auto"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "de \\ vers"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      },
+      "description": "Même test UDP dans l'autre sens (vers → de)."
+    },
+    {
+      "id": 10,
+      "type": "table",
+      "title": "UDP gigue aller (ms)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 13,
+        "w": 8,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "kwaba_bench_udp_gigue_ms{site=\"$site\",mode=\"$mode\",sens=\"aller\"}",
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "groupingToMatrix",
+          "options": {
+            "columnField": "vers",
+            "rowField": "de",
+            "valueField": "Value",
+            "emptyValue": "null"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 1,
+          "custom": {
+            "align": "center",
+            "cellOptions": {
+              "type": "color-background",
+              "mode": "basic"
+            }
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 5
+              },
+              {
+                "color": "red",
+                "value": 20
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null+nan",
+                "result": {
+                  "text": "—",
+                  "color": "#000000",
+                  "index": 0
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "empty",
+                "result": {
+                  "text": "—",
+                  "color": "#000000",
+                  "index": 1
+                }
+              }
+            }
+          ]
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "de\\vers"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "auto"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "de \\ vers"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      },
+      "description": "Variation du délai entre paquets UDP (gigue), en ms. Gênant pour la voix et la vidéo au-delà de ~20 ms ; orange > 5, rouge > 20."
     },
     {
       "id": 11,
@@ -991,7 +1000,8 @@
         "tooltip": {
           "mode": "multi"
         }
-      }
+      },
+      "description": "Évolution du débit TCP par paire : chaque marche = une nouvelle mesure (la valeur reste affichée jusqu'à la suivante). Une baisse durable sur une paire = lien qui se dégrade (distance, obstacle, interférences)."
     },
     {
       "id": 12,
@@ -1043,12 +1053,13 @@
         "tooltip": {
           "mode": "multi"
         }
-      }
+      },
+      "description": "Évolution de la latence moyenne par paire."
     },
     {
       "id": 13,
       "type": "timeseries",
-      "title": "Historique UDP (Mbit/s)",
+      "title": "Historique UDP reçu (Mbit/s)",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -1095,7 +1106,8 @@
         "tooltip": {
           "mode": "multi"
         }
-      }
+      },
+      "description": "Débit UDP reçu (au plus bench_udp_debit) : en dessous du débit d'envoi = pertes."
     },
     {
       "id": 14,
@@ -1147,7 +1159,8 @@
         "tooltip": {
           "mode": "multi"
         }
-      }
+      },
+      "description": "Évolution des pertes UDP par paire."
     }
   ],
   "annotations": {
