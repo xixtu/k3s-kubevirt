@@ -1,0 +1,187 @@
+---
+# ============================================================
+# PLAYBOOK : Apache Guacamole - Bastion HTTPS
+# ============================================================
+# Deploie Guacamole (web + guacd + PostgreSQL) dans k3s
+# Auth : Active Directory via LDAP
+# Monitoring : postgres-exporter + blackbox probe + Grafana
+#
+# Pre-requis :
+#   1. Executer guacamole/scripts/ad-prerequisites.ps1 sur le DC
+#   2. DNS : guacamole.app.corp.lcl -> 192.168.0.20 (Traefik)
+#
+# Usage :
+#   ansible-playbook playbooks/guacamole.yml
+#   ansible-playbook playbooks/guacamole.yml --tags deploy
+#   ansible-playbook playbooks/guacamole.yml --tags monitoring
+# ============================================================
+
+- name: Deploy Apache Guacamole
+  hosts: k3s-node-1
+  become: true
+  gather_facts: false
+
+  vars:
+    guacamole_namespace: guacamole
+    guacamole_manifests_dir: "{{ playbook_dir }}/../guacamole"
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
+
+  environment:
+    KUBECONFIG: "{{ kubeconfig }}"
+
+  tasks:
+    # ==========================================================
+    # Namespace
+    # ==========================================================
+    - name: Create guacamole namespace
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ guacamole_manifests_dir }}/namespace.yaml"
+      tags: [deploy]
+
+    # ==========================================================
+    # Secrets
+    # ==========================================================
+    - name: Apply secrets
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ guacamole_manifests_dir }}/secrets.yaml"
+      tags: [deploy]
+
+    # ==========================================================
+    # ConfigMaps
+    # ==========================================================
+    - name: Apply Guacamole config
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ guacamole_manifests_dir }}/configmap.yaml"
+      tags: [deploy]
+
+    - name: Create initdb ConfigMap from SQL seed
+      ansible.builtin.shell: |
+        kubectl -n {{ guacamole_namespace }} create configmap guacamole-initdb \
+          --from-file=02-seed-connections.sql={{ guacamole_manifests_dir }}/initdb/seed-connections.sql \
+          --dry-run=client -o yaml | kubectl apply -f -
+      tags: [deploy]
+
+    # ==========================================================
+    # PostgreSQL
+    # ==========================================================
+    - name: Deploy PostgreSQL StatefulSet
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ guacamole_manifests_dir }}/postgresql/statefulset.yaml"
+      tags: [deploy]
+
+    - name: Deploy PostgreSQL Service
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ guacamole_manifests_dir }}/postgresql/service.yaml"
+      tags: [deploy]
+
+    - name: Wait for PostgreSQL to be ready
+      ansible.builtin.shell: |
+        kubectl -n {{ guacamole_namespace }} rollout status statefulset/guacamole-postgresql --timeout=120s
+      tags: [deploy]
+
+    # ==========================================================
+    # guacd (proxy daemon)
+    # ==========================================================
+    - name: Deploy guacd
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ guacamole_manifests_dir }}/guacd/deployment.yaml"
+      tags: [deploy]
+
+    - name: Deploy guacd Service
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ guacamole_manifests_dir }}/guacd/service.yaml"
+      tags: [deploy]
+
+    # ==========================================================
+    # Guacamole Web
+    # ==========================================================
+    - name: Deploy Guacamole web
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ guacamole_manifests_dir }}/web/deployment.yaml"
+      tags: [deploy]
+
+    - name: Deploy Guacamole web Service
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ guacamole_manifests_dir }}/web/service.yaml"
+      tags: [deploy]
+
+    - name: Deploy Guacamole Ingress
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ guacamole_manifests_dir }}/web/ingress.yaml"
+      tags: [deploy]
+
+    - name: Wait for Guacamole web to be ready
+      ansible.builtin.shell: |
+        kubectl -n {{ guacamole_namespace }} rollout status deployment/guacamole-web --timeout=180s
+      tags: [deploy]
+
+    # ==========================================================
+    # Monitoring
+    # ==========================================================
+    - name: Deploy ServiceMonitor and alerts
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ guacamole_manifests_dir }}/monitoring/servicemonitor.yaml"
+      tags: [monitoring]
+
+    - name: Deploy Grafana dashboard
+      ansible.builtin.shell: |
+        kubectl -n monitoring create configmap guacamole-grafana-dashboard \
+          --from-file=guacamole-bastion.json={{ guacamole_manifests_dir }}/monitoring/grafana-dashboard.json \
+          --dry-run=client -o yaml | \
+          kubectl label --local -f - grafana_dashboard=1 -o yaml | \
+          kubectl apply -f -
+      tags: [monitoring]
+
+    # ==========================================================
+    # Verification
+    # ==========================================================
+    - name: Show deployment status
+      ansible.builtin.shell: |
+        echo "=== Pods ==="
+        kubectl -n {{ guacamole_namespace }} get pods -o wide
+        echo ""
+        echo "=== Services ==="
+        kubectl -n {{ guacamole_namespace }} get svc
+        echo ""
+        echo "=== Ingress ==="
+        kubectl -n {{ guacamole_namespace }} get ingress
+      register: guac_status
+      tags: [deploy, monitoring, status]
+
+    - name: Display status
+      ansible.builtin.debug:
+        msg: "{{ guac_status.stdout_lines }}"
+      tags: [deploy, monitoring, status]
+
+    - name: Display access info
+      ansible.builtin.debug:
+        msg:
+          - "============================================"
+          - "Apache Guacamole deploye avec succes !"
+          - "============================================"
+          - "URL : https://guacamole.app.corp.lcl/guacamole/"
+          - "Auth : Active Directory (corp.lcl)"
+          - ""
+          - "Connexions pre-configurees :"
+          - "  - dc1 (RDP)        : 192.168.0.100"
+          - "  - k3s-node-1 (SSH) : 192.168.0.11"
+          - ""
+          - "Groupes AD requis :"
+          - "  - GRP_Guac_Admins -> admin Guacamole"
+          - "  - GRP_Guac_DC1    -> acces dc1"
+          - "  - GRP_Guac_K3S1   -> acces k3s-node-1"
+          - ""
+          - "Grafana : dashboard 'Apache Guacamole - Bastion'"
+          - "============================================"
+      tags: [deploy]

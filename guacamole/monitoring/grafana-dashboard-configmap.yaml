@@ -1,0 +1,12 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: guacamole-grafana-dashboard
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/part-of: guacamole
+    grafana_dashboard: "1"
+data:
+  guacamole-bastion.json: |
+    {{ lookup('file', '../monitoring/grafana-dashboard.json') | indent(4) }}
