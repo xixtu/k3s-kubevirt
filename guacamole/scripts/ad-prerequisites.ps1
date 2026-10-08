@@ -26,7 +26,7 @@ $ServiceAccountOU = "OU=service_accounts,OU=CORP,DC=corp,DC=lcl"
 $GroupOU           = "OU=Technical,OU=groups,OU=CORP,DC=corp,DC=lcl"
 
 $ServiceAccountName     = "s_guacamole"
-$ServiceAccountPassword = "CHANGE_ME_GUACAMOLE_SVC_PASSWORD"
+$ServiceAccountPassword = "YcJVZOpl8boCDn9C2M2o"
 $ServiceAccountUPN      = "$ServiceAccountName@$Domain"
 
 $Groups = @(
