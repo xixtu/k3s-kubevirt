@@ -65,7 +65,7 @@ metadata:
     app.kubernetes.io/name: guacd
     app.kubernetes.io/part-of: guacamole
 spec:
-  accessModes: ["ReadWriteOnce"]
+  accessModes: ["ReadWriteMany"]
   storageClassName: longhorn-fast
   resources:
     requests:
