@@ -31,8 +31,6 @@ spec:
             - configMapRef:
                 name: guacamole-config
             - secretRef:
-                name: guacamole-db-credentials
-            - secretRef:
                 name: guacamole-ldap-credentials
           env:
             - name: POSTGRESQL_USERNAME

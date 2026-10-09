@@ -134,5 +134,5 @@ Write-Host ""
 Write-Host "Prochaines etapes :" -ForegroundColor Yellow
 Write-Host "  1. Ajouter les utilisateurs dans les groupes AD ci-dessus"
 Write-Host "  2. Deployer Guacamole dans k3s : ansible-playbook playbooks/guacamole.yml"
-Write-Host "  3. Acceder a https://guacamole.app.corp.lcl/guacamole/"
+Write-Host "  3. Acceder a https://guacamole.app.xixtu.eu/guacamole/"
 Write-Host ""
