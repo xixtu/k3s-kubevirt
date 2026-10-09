@@ -8,7 +8,7 @@
 image:
   prestashop:
     repository: prestashop/prestashop
-    tag: "8"
+    tag: "8.2.4"
     pullPolicy: IfNotPresent
   mariadb:
     repository: mariadb

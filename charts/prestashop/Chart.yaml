@@ -6,7 +6,7 @@ description: |
   Inspiré de la structure Bitnami, adapté pour K3s + Traefik + cert-manager.
 type: application
 version: 1.0.0
-appVersion: "8"
+appVersion: "8.2.4"
 keywords:
   - prestashop
   - ecommerce

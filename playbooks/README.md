@@ -94,6 +94,7 @@ Tags de `site.yml` : `k3s`, `storage`, `longhorn`, `metallb`, `traefik`, `headla
 | Playbook | Rôle | Documentation |
 |---|---|---|
 | `guacamole.yml` | Apache Guacamole : bastion HTTPS SSH/RDP avec AD, TOTP et enregistrement | [`guacamole/README.md`](../guacamole/README.md) |
+| `prestashop.yml` | PrestaShop : boutique e-commerce Barista (Helm) | [`charts/prestashop/README.md`](../charts/prestashop/README.md) |
 | `letsencrypt.yml` | cert-manager et Let's Encrypt | |
 | `nextcloud.yml` | Nextcloud, cloud personnel | |
 | `paheko.yml` | Paheko, comptabilité associative | |

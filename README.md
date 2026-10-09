@@ -27,6 +27,7 @@ ansible/
 │   ├── collectd-exporter.yml      # collectd_exporter + dashboard métriques des bornes (kwaba-wifi)
 │   ├── sftpgo.yml                 # SFTPGo : sauvegardes des bornes (kwaba-wifi), partage NAS « sftp »
 │   ├── guacamole.yml              # Apache Guacamole : bastion HTTPS SSH/RDP (voir guacamole/README.md)
+│   ├── prestashop.yml             # PrestaShop : boutique Barista (voir charts/prestashop/README.md)
 │   ├── ...                        # nextcloud, paheko, mobilizon, nas, letsencrypt, etc.
 │   ├── kubevirt.yml               # KubeVirt (à venir)
 │   └── rancher.yml                # Rancher UI (à venir)
@@ -43,6 +44,7 @@ ansible/
 |---|---|
 | [`playbooks/README.md`](playbooks/README.md) | Liste des playbooks, ordre de déploiement, comment les lancer |
 | [`guacamole/README.md`](guacamole/README.md) | Bastion Guacamole : architecture, fonctionnement, déploiement, dépannage |
+| [`charts/prestashop/README.md`](charts/prestashop/README.md) | Boutique PrestaShop : architecture, démarrage, réparation, dépannage |
 
 ---
 

@@ -3,7 +3,7 @@
 - Boutique : `https://barista.app.xixtu.eu`
 - Administration : `https://barista.app.xixtu.eu/admin-barista`
 - Chart Helm local, déployé par `playbooks/prestashop.yml`
-- Images officielles Docker Hub : `prestashop/prestashop:8` et `mariadb:10.11`
+- Images officielles Docker Hub : `prestashop/prestashop:8.2.4` (version figée) et `mariadb:10.11`
 
 ## Architecture
 
@@ -70,6 +70,27 @@ kubectl -n prestashop get pods
 kubectl -n prestashop logs -l app.kubernetes.io/component=app -f --all-containers
 ```
 
+## Réparer un volume abîmé
+
+Une ancienne version du chart supprimait au démarrage tous les fichiers dont le nom contient
+`lock` (`find -name "*lock*" -delete`), ce qui détruisait aussi les fichiers `*Block*.php`
+de PrestaShop (erreur 500 avec `Class ... not found`). Le chart actuel ne fait plus rien de tel.
+Si un volume a été touché, on restaure les fichiers manquants depuis les sources de l'image,
+sans rien écraser :
+
+```bash
+kubectl -n prestashop exec deploy/prestashop -c prestashop -- sh -c '
+cd /tmp/data-ps/prestashop
+find . -type f ! -path "./install/*" ! -path "./admin/*" | while IFS= read -r f; do
+  [ -e "/var/www/html/$f" ] || echo "$f"
+done > /tmp/missing.txt
+wc -l /tmp/missing.txt
+while IFS= read -r f; do cp -p --parents "$f" /var/www/html/; chown www-data:www-data "/var/www/html/$f"; done < /tmp/missing.txt
+rm -rf /var/www/html/var/cache/*'
+```
+
+À faire avec la même version d'image que celle installée (`8.2.4`).
+
 ## Recommencer l'installation de zéro
 
 Seulement si la boutique ne contient rien à garder. Cela supprime le code, les médias et la
@@ -85,6 +106,7 @@ ansible-playbook playbooks/prestashop.yml -K --connection=local
 
 | Symptôme | Cause et solution |
 |---|---|
+| Erreur 500 avec `Class ... not found` dans les logs | Fichiers manquants dans le volume : voir « Réparer un volume abîmé » |
 | Pod `Running` mais `0/1` pendant longtemps | Installation en cours : attendre jusqu'à 30 min, suivre les logs |
 | Pod redémarré en boucle avant la fin de l'installation | Mémoire insuffisante (OOM) : vérifier `kubectl -n prestashop describe pod`, augmenter la limite dans `values.yaml` |
 | Liens ou images pointant vers un mauvais domaine | `PS_DOMAIN` est écrit en base à l'installation : corriger le domaine puis recommencer l'installation de zéro |
