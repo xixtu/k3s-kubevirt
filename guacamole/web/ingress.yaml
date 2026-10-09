@@ -1,0 +1,34 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: guacamole-ingress
+  namespace: guacamole
+  labels:
+    app.kubernetes.io/name: guacamole-web
+    app.kubernetes.io/part-of: guacamole
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-production"
+    cert-manager.io/private-key-algorithm: "ECDSA"
+    cert-manager.io/private-key-size: "384"
+    cert-manager.io/private-key-rotation-policy: "Always"
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+    traefik.ingress.kubernetes.io/router.middlewares: guacamole-guacamole-addprefix@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - guacamole.app.xixtu.eu
+      secretName: guacamole-tls
+  rules:
+    - host: guacamole.app.xixtu.eu
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: guacamole-web
+                port:
+                  name: http

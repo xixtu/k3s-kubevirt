@@ -1,0 +1,109 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: guacamole-postgresql
+  namespace: guacamole
+  labels:
+    app.kubernetes.io/part-of: guacamole
+    app.kubernetes.io/component: monitoring
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: postgresql
+      app.kubernetes.io/part-of: guacamole
+  endpoints:
+    - port: metrics
+      interval: 30s
+      path: /metrics
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: guacamole-alerts
+  namespace: guacamole
+  labels:
+    app.kubernetes.io/part-of: guacamole
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: guacamole
+      rules:
+        - alert: GuacamoleWebDown
+          expr: |
+            up{job="guacamole-web"} == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Guacamole web est down"
+            description: "Le pod guacamole-web ne repond plus depuis 2 minutes."
+
+        - alert: GuacamolePostgreSQLDown
+          expr: |
+            pg_up{job="guacamole-postgresql"} == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "PostgreSQL Guacamole est down"
+            description: "La base de donnees Guacamole ne repond plus depuis 2 minutes."
+
+        - alert: GuacamolePostgreSQLHighConnections
+          expr: |
+            pg_stat_activity_count{datname="guacamole_db"} > 80
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Nombre eleve de connexions PostgreSQL"
+            description: "{{ $value }} connexions actives sur guacamole_db."
+
+        - alert: GuacamolePodRestarting
+          expr: |
+            increase(kube_pod_container_status_restarts_total{namespace="guacamole"}[1h]) > 3
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pod Guacamole en boucle de redemarrage"
+            description: "Le pod {{ $labels.pod }} a redemarre {{ $value }} fois en 1h."
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: guacamole-web-metrics
+  namespace: guacamole
+  labels:
+    app.kubernetes.io/name: guacamole-web
+    app.kubernetes.io/part-of: guacamole
+    app.kubernetes.io/component: monitoring
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: http
+      name: http
+  selector:
+    app.kubernetes.io/name: guacamole-web
+    app.kubernetes.io/part-of: guacamole
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: guacamole-web-health
+  namespace: guacamole
+  labels:
+    app.kubernetes.io/part-of: guacamole
+    release: kube-prometheus-stack
+spec:
+  jobName: guacamole-web
+  prober:
+    url: blackbox-exporter-prometheus-blackbox-exporter.monitoring.svc.cluster.local:9115
+    path: /probe
+  targets:
+    staticConfig:
+      static:
+        - guacamole-web.guacamole.svc.cluster.local/guacamole/
+  module: http_2xx
