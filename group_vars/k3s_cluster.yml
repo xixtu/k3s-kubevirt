@@ -184,7 +184,7 @@ external_domains:
   plex: "plex.app.xixtu.eu"
   pushgateway: "pushgateway.app.xixtu.eu"
   collectd: "collectd.app.xixtu.eu"
-  guacamole: "guacamole.app.corp.lcl"
+  guacamole: "guacamole.app.xixtu.eu"
   sftp: "sftp.app.xixtu.eu"
 
 # --- Monitoring ---

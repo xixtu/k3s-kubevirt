@@ -8,11 +8,20 @@ metadata:
     app.kubernetes.io/name: guacamole-web
     app.kubernetes.io/part-of: guacamole
   annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-production"
+    cert-manager.io/private-key-algorithm: "ECDSA"
+    cert-manager.io/private-key-size: "384"
+    cert-manager.io/private-key-rotation-policy: "Always"
     traefik.ingress.kubernetes.io/router.entrypoints: websecure
     traefik.ingress.kubernetes.io/router.tls: "true"
 spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - guacamole.app.xixtu.eu
+      secretName: guacamole-tls
   rules:
-    - host: guacamole.app.corp.lcl
+    - host: guacamole.app.xixtu.eu
       http:
         paths:
           - path: /

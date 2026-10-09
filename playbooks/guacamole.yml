@@ -8,7 +8,7 @@
 #
 # Pre-requis :
 #   1. Executer guacamole/scripts/ad-prerequisites.ps1 sur le DC
-#   2. DNS : guacamole.app.corp.lcl -> 192.168.0.20 (Traefik)
+#   2. DNS : guacamole.app.xixtu.eu -> IP publique (DNS A/AAAA) (Traefik)
 #
 # Usage :
 #   ansible-playbook playbooks/guacamole.yml
@@ -170,7 +170,7 @@
           - "============================================"
           - "Apache Guacamole deploye avec succes !"
           - "============================================"
-          - "URL : https://guacamole.app.corp.lcl/guacamole/"
+          - "URL : https://guacamole.app.xixtu.eu/guacamole/"
           - "Auth : Active Directory (corp.lcl)"
           - ""
           - "Connexions pre-configurees :"
