@@ -1,0 +1,12 @@
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: guacamole-addprefix
+  namespace: guacamole
+  labels:
+    app.kubernetes.io/name: guacamole-web
+    app.kubernetes.io/part-of: guacamole
+spec:
+  addPrefix:
+    prefix: /guacamole

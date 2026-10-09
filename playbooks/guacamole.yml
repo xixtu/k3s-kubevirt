@@ -114,6 +114,12 @@
         src: "{{ guacamole_manifests_dir }}/web/service.yaml"
       tags: [deploy]
 
+    - name: Deploy Traefik middleware (addPrefix)
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ guacamole_manifests_dir }}/web/middleware.yaml"
+      tags: [deploy]
+
     - name: Deploy Guacamole Ingress
       kubernetes.core.k8s:
         state: present
@@ -170,7 +176,7 @@
           - "============================================"
           - "Apache Guacamole deploye avec succes !"
           - "============================================"
-          - "URL : https://guacamole.app.xixtu.eu/guacamole/"
+          - "URL : https://guacamole.app.xixtu.eu/"
           - "Auth : Active Directory (corp.lcl)"
           - ""
           - "Connexions pre-configurees :"
