@@ -28,6 +28,7 @@ data:
   LDAP_DEREFERENCE_ALIASES: "never"
   LDAP_MAX_SEARCH_RESULTS: "1000"
   LDAP_FOLLOW_REFERRALS: "false"
+  RECORDING_SEARCH_PATH: /var/lib/guacamole/recordings
   TOTP_ENABLED: "true"
   TOTP_ISSUER: "Guacamole"
   TOTP_DIGITS: "6"

@@ -43,15 +43,6 @@ spec:
                 secretKeyRef:
                   name: guacamole-db-credentials
                   key: POSTGRES_PASSWORD
-          lifecycle:
-            postStart:
-              exec:
-                command:
-                  - /bin/sh
-                  - -c
-                  - |
-                    while [ ! -f /opt/guacamole/guacamole.properties ]; do sleep 1; done
-                    echo 'recording-search-path: /var/lib/guacamole/recordings' >> /opt/guacamole/guacamole.properties
           volumeMounts:
             - name: guacd-data
               mountPath: /var/lib/guacamole
