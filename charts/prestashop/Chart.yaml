@@ -1,0 +1,19 @@
+apiVersion: v2
+name: prestashop
+description: |
+  Boutique e-commerce PrestaShop avec MariaDB.
+  Images officielles Docker Hub (prestashop/prestashop + mariadb).
+  Inspiré de la structure Bitnami, adapté pour K3s + Traefik + cert-manager.
+type: application
+version: 1.0.0
+appVersion: "8"
+keywords:
+  - prestashop
+  - ecommerce
+  - mariadb
+home: https://www.prestashop.com
+sources:
+  - https://hub.docker.com/r/prestashop/prestashop
+  - https://hub.docker.com/_/mariadb
+maintainers:
+  - name: xixtu

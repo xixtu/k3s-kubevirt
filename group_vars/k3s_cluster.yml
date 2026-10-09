@@ -11,6 +11,7 @@ metallb_version: "v0.13.12"
 cert_manager_version: "v1.13.0"
 traefik_version: "34.2.0"
 headlamp_version: "0.40.0"
+prestashop_version: "8"           # Docker Hub : prestashop/prestashop (tag 8 = dernière PS 8.x stable)
 prometheus_stack_version: "55.5.0"
 pushgateway_chart_version: "3.9.0"
 rancher_version: "2.8.0"
@@ -186,6 +187,44 @@ external_domains:
   collectd: "collectd.app.xixtu.eu"
   guacamole: "guacamole.app.xixtu.eu"
   sftp: "sftp.app.xixtu.eu"
+  barista: "barista.app.xixtu.eu"
+
+# --- PrestaShop e-commerce café capsules ---
+# Boutique : https://barista.app.xixtu.eu
+# Admin    : https://barista.app.xixtu.eu/admin-barista
+#
+# Images Docker officielles (Docker Hub - gratuites) :
+#   prestashop/prestashop:{{ prestashop_version }}  (cf. variable ci-dessus)
+#   mariadb:{{ prestashop_config.mariadb_image_tag }}
+#
+# ⚠ Changer les mots de passe en production :
+#   ansible-vault encrypt_string '<password>' --name 'prestashop_config'
+prestashop_config:
+  # Images Docker
+  mariadb_image_tag: "10.11"              # mariadb LTS (Docker Hub officiel)
+
+  # Compte administrateur backoffice PrestaShop
+  admin_user: "admin"
+  admin_password: "ch4nge-me-barista"      # ⚠ Changer en production (ou ansible-vault)
+
+  # Base de données MariaDB
+  db_name: "prestashop"
+  db_user: "prestashop"
+  db_password: "ps-db-s3cret"             # ⚠ Changer en production (ou ansible-vault)
+  db_root_password: "ps-root-s3cret"      # ⚠ Changer en production (ou ansible-vault)
+
+  # Stockage Longhorn (longhorn-fast par défaut)
+  data_storage_size: "20Gi"               # /var/www/html (code, modules, thèmes, médias)
+  db_storage_size: "10Gi"                 # /var/lib/mysql (base de données MariaDB)
+
+  # Ressources applicatives PrestaShop (Apache + PHP)
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+    limits:
+      cpu: "1000m"
+      memory: "2Gi"
 
 # --- Monitoring ---
 monitoring_config:

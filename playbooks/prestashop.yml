@@ -1,0 +1,443 @@
+---
+# =============================================================
+# PLAYBOOK : PrestaShop - Boutique e-commerce café capsules
+# =============================================================
+# Usage : ansible-playbook -i inventory/hosts.yml playbooks/prestashop.yml
+# Tags :
+#   prestashop-install → Déployer PrestaShop + MariaDB via Helm
+#   prestashop-tls     → Forcer renouvellement certificat ECDSA P-384
+#   prestashop-verify  → Vérifier pods, PVCs, Ingress, certificat, HPA
+#
+# Images Docker officielles (Docker Hub - gratuites) :
+#   prestashop/prestashop:{{ prestashop_version }}
+#   mariadb:{{ prestashop_config.mariadb_image_tag }}
+#   alpine:3.19  (init container cleanup-lock)
+#
+# Architecture :
+#   [init] alpine    → cleanup locks stales dans le PVC
+#   [init] mariadb   → wait-for-mariadb (mysqladmin ping)
+#   MariaDB Deployment  → ClusterIP :3306 (interne uniquement)
+#   PrestaShop Deployment → ClusterIP :80  → Ingress + IngressRoute
+#   Ingress standard    → HTTP-01 challenge cert-manager (port 80)
+#   IngressRoute CRD    → HTTPS websecure + security-headers middleware
+#   HPA                 → min=1 max=3 CPU=70% Memory=80%
+#
+# URL publique  : https://barista.app.xixtu.eu
+# Admin panel   : https://barista.app.xixtu.eu/admin-barista
+#
+# Prérequis :
+#   - K3s + MetalLB + Traefik + cert-manager + Helm installés
+#   - DNS : barista.app.xixtu.eu → <IP publique Traefik>
+#   - Ports 80 et 443 accessibles depuis Internet (challenge HTTP-01)
+# =============================================================
+
+- name: "PrestaShop - Boutique e-commerce café capsules Barista (Helm)"
+  hosts: k3s-node-1
+  become: true
+  gather_facts: false
+  vars_files:
+    - "../group_vars/k3s_cluster.yml"
+
+  tasks:
+
+    # ==========================================================
+    # VÉRIFICATION HELM
+    # ==========================================================
+
+    - name: Vérifier que Helm est installé
+      ansible.builtin.command: helm version --short
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: helm_version
+      changed_when: false
+      failed_when: helm_version.rc != 0
+      tags: [prestashop, prestashop-install]
+
+    - name: Afficher la version Helm
+      ansible.builtin.debug:
+        msg: "Helm détecté : {{ helm_version.stdout }}"
+      tags: [prestashop, prestashop-install]
+
+    # ==========================================================
+    # NAMESPACE + PSA LABEL
+    # ==========================================================
+
+    - name: Créer le namespace prestashop (si absent)
+      ansible.builtin.command: k3s kubectl create namespace prestashop
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: ns_create
+      failed_when: ns_create.rc != 0 and 'already exists' not in ns_create.stderr
+      changed_when: ns_create.rc == 0
+      tags: [prestashop, prestashop-install, prestashop-tls]
+
+    - name: Labelliser le namespace prestashop (PSA baseline - Apache www-data)
+      ansible.builtin.command: >
+        k3s kubectl label namespace prestashop
+        pod-security.kubernetes.io/enforce=baseline
+        pod-security.kubernetes.io/warn=baseline
+        pod-security.kubernetes.io/audit=baseline
+        --overwrite
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      changed_when: false
+      tags: [prestashop, prestashop-install, prestashop-tls]
+
+    # ==========================================================
+    # COPIER LE CHART SUR LE NŒUD
+    # ==========================================================
+
+    - name: Créer le répertoire de travail pour le chart Helm
+      ansible.builtin.file:
+        path: /tmp/helm-prestashop
+        state: directory
+        mode: '0755'
+      tags: [prestashop, prestashop-install]
+
+    - name: Copier le chart Helm PrestaShop sur le nœud
+      ansible.builtin.copy:
+        src: "../charts/prestashop/"
+        dest: /tmp/helm-prestashop/
+        mode: '0644'
+      tags: [prestashop, prestashop-install]
+
+    # ==========================================================
+    # VALUES HELM (surcharge des valeurs depuis group_vars)
+    # ==========================================================
+
+    - name: Écrire le fichier values Helm (overrides depuis group_vars)
+      ansible.builtin.copy:
+        dest: /tmp/helm-prestashop-values.yaml
+        mode: '0600'
+        content: |
+          image:
+            prestashop:
+              tag: "{{ prestashop_version }}"
+            mariadb:
+              tag: "{{ prestashop_config.mariadb_image_tag }}"
+
+          prestashop:
+            domain: "{{ external_domains.barista }}"
+            adminMail: "{{ letsencrypt_email }}"
+            adminPassword: "{{ prestashop_config.admin_password }}"
+
+          mariadb:
+            dbName: "{{ prestashop_config.db_name }}"
+            dbUser: "{{ prestashop_config.db_user }}"
+            dbPassword: "{{ prestashop_config.db_password }}"
+            dbRootPassword: "{{ prestashop_config.db_root_password }}"
+
+          persistence:
+            app:
+              size: "{{ prestashop_config.data_storage_size }}"
+            db:
+              size: "{{ prestashop_config.db_storage_size }}"
+
+          resources:
+            prestashop:
+              requests:
+                cpu: "{{ prestashop_config.resources.requests.cpu }}"
+                memory: "{{ prestashop_config.resources.requests.memory }}"
+              limits:
+                cpu: "{{ prestashop_config.resources.limits.cpu }}"
+                memory: "{{ prestashop_config.resources.limits.memory }}"
+      tags: [prestashop, prestashop-install]
+
+    # ==========================================================
+    # HELM UPGRADE --INSTALL + DIAGNOSTIC K8S (toujours affiché)
+    # ==========================================================
+
+    - name: Déployer PrestaShop via Helm (upgrade --install)
+      tags: [prestashop, prestashop-install]
+      block:
+
+        - name: "Helm | upgrade --install prestashop"
+          ansible.builtin.command: >
+            helm upgrade --install prestashop /tmp/helm-prestashop
+            --namespace prestashop
+            --values /tmp/helm-prestashop-values.yaml
+            --wait-for-jobs
+            --timeout 30m
+          environment:
+            KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+          register: helm_deploy
+          changed_when: "'has been upgraded' in helm_deploy.stdout or 'has been deployed' in helm_deploy.stdout"
+
+        - name: "Helm | résultat"
+          ansible.builtin.debug:
+            msg: "{{ helm_deploy.stdout_lines }}"
+
+      rescue:
+
+        - name: "Helm | ÉCHEC - stderr"
+          ansible.builtin.debug:
+            msg: "{{ helm_deploy.stderr_lines | default(['(pas de stderr)']) }}"
+
+        - name: "Helm | re-raise l'erreur"
+          ansible.builtin.fail:
+            msg: "helm upgrade --install a échoué (voir stderr ci-dessus)"
+
+      always:
+
+        - name: "Diag K8s | pods -n prestashop"
+          ansible.builtin.command: k3s kubectl get pods -n prestashop -o wide
+          environment:
+            KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+          register: diag_pods
+          changed_when: false
+          failed_when: false
+
+        - name: "Diag K8s | afficher pods"
+          ansible.builtin.debug:
+            msg: "{{ diag_pods.stdout_lines | default(['(aucun pod)']) }}"
+
+        - name: "Diag K8s | events (triés par date)"
+          ansible.builtin.command: >
+            k3s kubectl get events -n prestashop
+            --sort-by='.lastTimestamp'
+          environment:
+            KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+          register: diag_events
+          changed_when: false
+          failed_when: false
+
+        - name: "Diag K8s | afficher events"
+          ansible.builtin.debug:
+            msg: "{{ diag_events.stdout_lines | default(['(aucun event)']) }}"
+
+        - name: "Diag K8s | logs PrestaShop (50 dernières lignes)"
+          ansible.builtin.shell: >
+            k3s kubectl logs -n prestashop
+            -l app.kubernetes.io/component=app
+            --tail=50 --all-containers --prefix
+            2>&1 || echo "(pas encore de pod prestashop)"
+          environment:
+            KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+          register: diag_ps_logs
+          changed_when: false
+          failed_when: false
+
+        - name: "Diag K8s | afficher logs PrestaShop"
+          ansible.builtin.debug:
+            msg: "{{ diag_ps_logs.stdout_lines | default(['(vide)']) }}"
+
+        - name: "Diag K8s | logs MariaDB (30 dernières lignes)"
+          ansible.builtin.shell: >
+            k3s kubectl logs -n prestashop
+            -l app.kubernetes.io/component=mariadb
+            --tail=30 --all-containers --prefix
+            2>&1 || echo "(pas encore de pod mariadb)"
+          environment:
+            KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+          register: diag_db_logs
+          changed_when: false
+          failed_when: false
+
+        - name: "Diag K8s | afficher logs MariaDB"
+          ansible.builtin.debug:
+            msg: "{{ diag_db_logs.stdout_lines | default(['(vide)']) }}"
+
+    # ==========================================================
+    # NETTOYAGE TEMPORAIRES
+    # ==========================================================
+
+    - name: Supprimer le chart et les values temporaires
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/helm-prestashop
+        - /tmp/helm-prestashop-values.yaml
+      tags: [prestashop, prestashop-install]
+
+    # ==========================================================
+    # RENOUVELLEMENT CERTIFICAT ECDSA (si ancien certificat RSA)
+    # ==========================================================
+
+    - name: Vérifier le type de clé du certificat actuel
+      ansible.builtin.shell: >
+        k3s kubectl get secret prestashop-tls -n prestashop -o jsonpath='{.data.tls\.key}'
+        | base64 -d | openssl ec -noout 2>/dev/null && echo "ECDSA" || echo "RSA"
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: cert_key_type
+      changed_when: false
+      failed_when: false
+      tags: [prestashop, prestashop-install, prestashop-tls]
+
+    - name: Supprimer l'ancien certificat RSA pour forcer le renouvellement ECDSA
+      ansible.builtin.command: >
+        k3s kubectl delete certificate prestashop-tls -n prestashop --ignore-not-found
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      when: cert_key_type.stdout is defined and 'ECDSA' not in cert_key_type.stdout
+      changed_when: true
+      tags: [prestashop, prestashop-install, prestashop-tls]
+
+    - name: Supprimer l'ancien secret TLS RSA
+      ansible.builtin.command: >
+        k3s kubectl delete secret prestashop-tls -n prestashop --ignore-not-found
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      when: cert_key_type.stdout is defined and 'ECDSA' not in cert_key_type.stdout
+      changed_when: true
+      tags: [prestashop, prestashop-install, prestashop-tls]
+
+    # ==========================================================
+    # VÉRIFICATION
+    # ==========================================================
+
+    - name: Attendre que MariaDB soit Ready
+      ansible.builtin.command: >
+        k3s kubectl wait --for=condition=Ready pods
+        -l app.kubernetes.io/component=mariadb,app.kubernetes.io/instance=prestashop
+        -n prestashop
+        --timeout=300s
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: mariadb_ready
+      changed_when: false
+      tags: [prestashop, prestashop-verify]
+
+    - name: Attendre que PrestaShop soit Ready (installation DB au 1er boot = ~15min)
+      ansible.builtin.command: >
+        k3s kubectl wait --for=condition=Ready pods
+        -l app.kubernetes.io/component=app,app.kubernetes.io/instance=prestashop
+        -n prestashop
+        --timeout=1200s
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: prestashop_ready
+      changed_when: false
+      ignore_errors: true
+      tags: [prestashop, prestashop-verify]
+
+    - name: Avertissement si PrestaShop pas encore Ready
+      ansible.builtin.debug:
+        msg:
+          - "⚠ PrestaShop pas encore Ready après 20min."
+          - "L'installation peut prendre jusqu'à 30min selon les ressources."
+          - "Vérifier avec : kubectl logs -n prestashop -l app.kubernetes.io/component=app -f"
+      when: prestashop_ready.rc is defined and prestashop_ready.rc != 0
+      tags: [prestashop, prestashop-verify]
+
+    - name: Vérifier les pods PrestaShop
+      ansible.builtin.command: k3s kubectl get pods -n prestashop -o wide
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: prestashop_pods
+      changed_when: false
+      tags: [prestashop, prestashop-verify]
+
+    - name: Vérifier les services PrestaShop
+      ansible.builtin.command: k3s kubectl get svc -n prestashop
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: prestashop_svc
+      changed_when: false
+      tags: [prestashop, prestashop-verify]
+
+    - name: Vérifier l'Ingress PrestaShop
+      ansible.builtin.command: k3s kubectl get ingress -n prestashop
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: prestashop_ingress
+      changed_when: false
+      tags: [prestashop, prestashop-verify]
+
+    - name: Vérifier l'IngressRoute HTTPS
+      ansible.builtin.command: k3s kubectl get ingressroute -n prestashop
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: prestashop_ir
+      changed_when: false
+      tags: [prestashop, prestashop-verify]
+
+    - name: Vérifier le certificat TLS
+      ansible.builtin.command: k3s kubectl get certificate -n prestashop
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: prestashop_cert
+      changed_when: false
+      tags: [prestashop, prestashop-verify]
+
+    - name: Vérifier les PersistentVolumeClaims
+      ansible.builtin.command: k3s kubectl get pvc -n prestashop
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: prestashop_pvc
+      changed_when: false
+      tags: [prestashop, prestashop-verify]
+
+    - name: Vérifier le HorizontalPodAutoscaler
+      ansible.builtin.command: k3s kubectl get hpa -n prestashop
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: prestashop_hpa
+      changed_when: false
+      tags: [prestashop, prestashop-verify]
+
+    - name: Vérifier la release Helm
+      ansible.builtin.command: helm list -n prestashop
+      environment:
+        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+      register: helm_list
+      changed_when: false
+      tags: [prestashop, prestashop-verify]
+
+    # ==========================================================
+    # RÉSUMÉ
+    # ==========================================================
+
+    - name: Résumé PrestaShop
+      ansible.builtin.debug:
+        msg:
+          - "============================================================"
+          - "  PrestaShop {{ prestashop_version }} - Boutique Barista"
+          - "  Déploiement Helm réussi ✓"
+          - "============================================================"
+          - "URL boutique  : https://{{ external_domains.barista }}"
+          - "Admin panel   : https://{{ external_domains.barista }}/admin-barista"
+          - "Admin user    : {{ letsencrypt_email }}"
+          - "Langue        : Français (fr) | Pays : France"
+          - "------------------------------------------------------------"
+          - "Images Docker  : prestashop/prestashop:{{ prestashop_version }}"
+          - "               : mariadb:{{ prestashop_config.mariadb_image_tag }}"
+          - "               : alpine:3.19 (init cleanup-lock)"
+          - "Helm release   : prestashop (namespace prestashop)"
+          - "Chart          : charts/prestashop v1.0.0"
+          - "------------------------------------------------------------"
+          - "Ingress        : traefik (web → redirect HTTPS, websecure TLS)"
+          - "TLS            : cert-manager / letsencrypt-production"
+          - "Certificat     : ECDSA P-384 (rotation automatique)"
+          - "Headers        : security-headers (HSTS 2 ans, X-Frame, XSS)"
+          - "PSA namespace  : baseline (Apache www-data)"
+          - "------------------------------------------------------------"
+          - "Storage        : longhorn-fast (répliques: 2)"
+          - "Données app    : {{ prestashop_config.data_storage_size }} (/var/www/html)"
+          - "Base de données: MariaDB {{ prestashop_config.db_storage_size }}"
+          - "HPA            : min=1 max=3 | CPU=70% | Memory=80%"
+          - "------------------------------------------------------------"
+          - "Helm releases  : {{ helm_list.stdout_lines }}"
+          - "Pods    : {{ prestashop_pods.stdout_lines }}"
+          - "Services: {{ prestashop_svc.stdout_lines }}"
+          - "Ingress : {{ prestashop_ingress.stdout_lines }}"
+          - "IR HTTPS: {{ prestashop_ir.stdout_lines }}"
+          - "Certs   : {{ prestashop_cert.stdout_lines }}"
+          - "PVCs    : {{ prestashop_pvc.stdout_lines }}"
+          - "HPA     : {{ prestashop_hpa.stdout_lines }}"
+          - "============================================================"
+          - "COMMANDES UTILES :"
+          - "  helm list -n prestashop"
+          - "  helm history prestashop -n prestashop"
+          - "  helm rollback prestashop -n prestashop"
+          - "  kubectl logs -n prestashop -l app.kubernetes.io/component=app -f"
+          - "  kubectl logs -n prestashop -l app.kubernetes.io/component=mariadb -f"
+          - "============================================================"
+          - "MODULES PAIEMENT À INSTALLER (Marketplace PrestaShop) :"
+          - "  ✓ Virement bancaire   → natif"
+          - "  ✓ Chèque              → natif (ps_checkpayment)"
+          - "  ✓ Cash à la livraison → natif (ps_cashondelivery)"
+          - "  ★ Wero / Stripe       → modules Marketplace"
+          - "============================================================"
+      tags: [prestashop, prestashop-verify]
