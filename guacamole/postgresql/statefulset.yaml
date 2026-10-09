@@ -62,12 +62,12 @@ spec:
               memory: 512Mi
           livenessProbe:
             exec:
-              command: ["pg_isready", "-U", "guacamole"]
+              command: ["pg_isready", "-U", "guacamole", "-d", "guacamole_db"]
             initialDelaySeconds: 30
             periodSeconds: 10
           readinessProbe:
             exec:
-              command: ["pg_isready", "-U", "guacamole"]
+              command: ["pg_isready", "-U", "guacamole", "-d", "guacamole_db"]
             initialDelaySeconds: 5
             periodSeconds: 5
 
