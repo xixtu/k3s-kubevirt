@@ -43,6 +43,10 @@ spec:
                 secretKeyRef:
                   name: guacamole-db-credentials
                   key: POSTGRES_PASSWORD
+          volumeMounts:
+            - name: guacd-data
+              mountPath: /var/lib/guacamole
+              readOnly: true
           resources:
             requests:
               cpu: 200m
@@ -62,3 +66,7 @@ spec:
               port: 8080
             initialDelaySeconds: 60
             periodSeconds: 30
+      volumes:
+        - name: guacd-data
+          persistentVolumeClaim:
+            claimName: guacd-data
