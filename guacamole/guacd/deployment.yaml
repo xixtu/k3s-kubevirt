@@ -10,6 +10,8 @@ metadata:
     app.kubernetes.io/component: proxy
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app.kubernetes.io/name: guacd
@@ -27,6 +29,9 @@ spec:
           ports:
             - containerPort: 4822
               name: guacd
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/guacamole
           resources:
             requests:
               cpu: 200m
@@ -44,3 +49,22 @@ spec:
               port: 4822
             initialDelaySeconds: 10
             periodSeconds: 30
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: guacd-data
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: guacd-data
+  namespace: guacamole
+  labels:
+    app.kubernetes.io/name: guacd
+    app.kubernetes.io/part-of: guacamole
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: longhorn-fast
+  resources:
+    requests:
+      storage: 10Gi

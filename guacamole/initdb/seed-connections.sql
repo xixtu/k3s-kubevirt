@@ -32,12 +32,26 @@ CROSS JOIN (VALUES
   ('port',                  '3389'),
   ('security',              'nla'),
   ('ignore-cert',           'true'),
-  ('enable-drive',          'false'),
   ('enable-wallpaper',      'false'),
   ('enable-font-smoothing', 'true'),
   ('resize-method',         'display-update'),
   ('color-depth',           '24'),
-  ('timezone',              'Europe/Paris')
+  ('timezone',              'Europe/Paris'),
+  -- Transfert de fichiers (drive redirection)
+  ('enable-drive',          'true'),
+  ('drive-name',            'Guacamole'),
+  ('drive-path',            '/var/lib/guacamole/drive'),
+  ('create-drive-path',     'true'),
+  -- Copier-coller ameliore
+  ('normalize-clipboard',   'windows'),
+  -- Impression PDF
+  ('enable-printing',       'true'),
+  ('printer-name',          'Guacamole PDF'),
+  -- Enregistrement session
+  ('recording-path',        '/var/lib/guacamole/recordings'),
+  ('create-recording-path', 'true'),
+  ('recording-name',        '${GUAC_DATE}-${GUAC_TIME}-${GUAC_USERNAME}-dc1'),
+  ('recording-include-keys', 'true')
 ) AS p(param_name, param_value)
 WHERE c.connection_name = 'dc1 - 192.168.0.100 (RDP)';
 
@@ -57,12 +71,24 @@ INSERT INTO guacamole_connection_parameter (connection_id, parameter_name, param
 SELECT c.connection_id, p.param_name, p.param_value
 FROM guacamole_connection c
 CROSS JOIN (VALUES
-  ('hostname',    '192.168.0.11'),
-  ('port',        '22'),
-  ('color-scheme', 'gray-black'),
-  ('font-size',   '14'),
-  ('timezone',    'Europe/Paris'),
-  ('terminal-type', 'xterm-256color')
+  ('hostname',        '192.168.0.11'),
+  ('port',            '22'),
+  ('color-scheme',    'gray-black'),
+  ('font-size',       '14'),
+  ('timezone',        'Europe/Paris'),
+  ('terminal-type',   'xterm-256color'),
+  -- Transfert de fichiers (SFTP)
+  ('enable-sftp',     'true'),
+  ('sftp-root-directory', '/'),
+  -- Enregistrement session (graphique)
+  ('recording-path',        '/var/lib/guacamole/recordings'),
+  ('create-recording-path', 'true'),
+  ('recording-name',        '${GUAC_DATE}-${GUAC_TIME}-${GUAC_USERNAME}-k3s1'),
+  ('recording-include-keys', 'true'),
+  -- Enregistrement session (typescript texte)
+  ('typescript-path',        '/var/lib/guacamole/recordings/typescripts'),
+  ('create-typescript-path', 'true'),
+  ('typescript-name',        '${GUAC_DATE}-${GUAC_TIME}-${GUAC_USERNAME}-k3s1')
 ) AS p(param_name, param_value)
 WHERE c.connection_name = 'k3s-node-1 - 192.168.0.11 (SSH)';
 
