@@ -21,6 +21,8 @@ spec:
         app.kubernetes.io/part-of: guacamole
         app.kubernetes.io/component: web
     spec:
+      securityContext:
+        supplementalGroups: [1000]
       containers:
         - name: guacamole
           image: guacamole/guacamole:1.6.0
