@@ -15,25 +15,60 @@ ansible/
 │   ├── k3s-node-1.yml             # (à créer si différences)
 │   ├── k3s-node-2.yml
 │   └── k3s-node-3.yml
-├── playbooks/
+├── playbooks/                     # Un playbook par brique (voir playbooks/README.md)
 │   ├── prerequisites.yml          # Git + packages + système
 │   ├── lvm.yml                    # Configuration LVM 3 tiers
-│   ├── k3s.yml                    # Installation K3s (à venir)
-│   ├── longhorn.yml               # Installation Longhorn (à venir)
-│   ├── metallb.yml                # MetalLB (à venir)
-│   ├── traefik.yml                # Traefik Ingress (à venir)
-│   ├── monitoring.yml             # Prometheus/Grafana (à venir)
+│   ├── k3s.yml                    # Installation K3s HA
+│   ├── longhorn.yml               # Installation Longhorn
+│   ├── metallb.yml                # MetalLB
+│   ├── traefik.yml                # Traefik Ingress
+│   ├── monitoring.yml             # Prometheus/Grafana
 │   ├── pushgateway.yml            # Pushgateway + dashboard benchmark Wi-Fi (kwaba-wifi)
 │   ├── collectd-exporter.yml      # collectd_exporter + dashboard métriques des bornes (kwaba-wifi)
 │   ├── sftpgo.yml                 # SFTPGo : sauvegardes des bornes (kwaba-wifi), partage NAS « sftp »
+│   ├── guacamole.yml              # Apache Guacamole : bastion HTTPS SSH/RDP (voir guacamole/README.md)
+│   ├── ...                        # nextcloud, paheko, mobilizon, nas, letsencrypt, etc.
 │   ├── kubevirt.yml               # KubeVirt (à venir)
 │   └── rancher.yml                # Rancher UI (à venir)
+├── guacamole/                     # Manifests Kubernetes de Guacamole + README
+├── charts/                        # Charts Helm locaux (sftpgo, ...)
 └── roles/                         # Roles réutilisables (à venir)
     ├── common/
     ├── lvm/
     ├── k3s/
     └── longhorn/
 ```
+
+| Documentation | Contenu |
+|---|---|
+| [`playbooks/README.md`](playbooks/README.md) | Liste des playbooks, ordre de déploiement, comment les lancer |
+| [`guacamole/README.md`](guacamole/README.md) | Bastion Guacamole : architecture, fonctionnement, déploiement, dépannage |
+
+---
+
+## 🔐 Bastion Guacamole (SSH / RDP)
+
+Accès HTTPS aux serveurs depuis un navigateur : `https://guacamole.app.xixtu.eu/`.
+Authentification Active Directory + TOTP, transfert de fichiers, enregistrement et relecture
+des sessions.
+
+```mermaid
+flowchart LR
+    U([Navigateur]) -->|HTTPS| T[Traefik]
+    T --> W[Guacamole web]
+    W -->|LDAP| AD[(Active Directory)]
+    W --> DB[(PostgreSQL)]
+    W --> G[guacd]
+    G -->|RDP| DC1[dc1]
+    G -->|SSH| N1[k3s-node-1]
+```
+
+```bash
+git pull
+ansible-playbook playbooks/guacamole.yml -K --connection=local
+```
+
+Détails, schémas et dépannage : [`guacamole/README.md`](guacamole/README.md).
 
 ---
 
