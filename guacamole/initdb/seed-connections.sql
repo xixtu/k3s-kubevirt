@@ -48,9 +48,9 @@ CROSS JOIN (VALUES
   ('enable-printing',       'true'),
   ('printer-name',          'Guacamole PDF'),
   -- Enregistrement session
-  ('recording-path',        '/var/lib/guacamole/recordings'),
+  ('recording-path',        '${HISTORY_PATH}/${HISTORY_UUID}'),
   ('create-recording-path', 'true'),
-  ('recording-name',        '${GUAC_DATE}-${GUAC_TIME}-${GUAC_USERNAME}-dc1'),
+  ('recording-name',        'recording'),
   ('recording-include-keys', 'true')
 ) AS p(param_name, param_value)
 WHERE c.connection_name = 'dc1 - 192.168.0.100 (RDP)';
@@ -81,14 +81,14 @@ CROSS JOIN (VALUES
   ('enable-sftp',     'true'),
   ('sftp-root-directory', '/'),
   -- Enregistrement session (graphique)
-  ('recording-path',        '/var/lib/guacamole/recordings'),
+  ('recording-path',        '${HISTORY_PATH}/${HISTORY_UUID}'),
   ('create-recording-path', 'true'),
-  ('recording-name',        '${GUAC_DATE}-${GUAC_TIME}-${GUAC_USERNAME}-k3s1'),
+  ('recording-name',        'recording'),
   ('recording-include-keys', 'true'),
-  -- Enregistrement session (typescript texte)
-  ('typescript-path',        '/var/lib/guacamole/recordings/typescripts'),
+  -- Enregistrement session (typescript texte, meme dossier)
+  ('typescript-path',        '${HISTORY_PATH}/${HISTORY_UUID}'),
   ('create-typescript-path', 'true'),
-  ('typescript-name',        '${GUAC_DATE}-${GUAC_TIME}-${GUAC_USERNAME}-k3s1')
+  ('typescript-name',        'typescript')
 ) AS p(param_name, param_value)
 WHERE c.connection_name = 'k3s-node-1 - 192.168.0.11 (SSH)';
 
