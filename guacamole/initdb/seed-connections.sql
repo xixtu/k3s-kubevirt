@@ -37,6 +37,7 @@ CROSS JOIN (VALUES
   ('resize-method',         'display-update'),
   ('color-depth',           '24'),
   ('timezone',              'Europe/Paris'),
+  ('server-layout',         'fr-fr-azerty'),
   -- Transfert de fichiers (drive redirection)
   ('enable-drive',          'true'),
   ('drive-name',            'Guacamole'),

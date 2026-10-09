@@ -84,6 +84,24 @@
         kubectl -n {{ guacamole_namespace }} rollout status statefulset/guacamole-postgresql --timeout=120s
       tags: [deploy]
 
+    - name: Reconcile connection parameters (recording paths, RDP keyboard layout)
+      ansible.builtin.shell: |
+        kubectl -n {{ guacamole_namespace }} exec -i guacamole-postgresql-0 -c postgresql -- \
+          psql -U guacamole -d guacamole_db -v ON_ERROR_STOP=1 <<'SQL'
+        UPDATE guacamole_connection_parameter
+          SET parameter_value = '${HISTORY_PATH}/${HISTORY_UUID}'
+          WHERE parameter_name IN ('recording-path', 'typescript-path');
+        UPDATE guacamole_connection_parameter SET parameter_value = 'recording'
+          WHERE parameter_name = 'recording-name';
+        UPDATE guacamole_connection_parameter SET parameter_value = 'typescript'
+          WHERE parameter_name = 'typescript-name';
+        INSERT INTO guacamole_connection_parameter (connection_id, parameter_name, parameter_value)
+          SELECT connection_id, 'server-layout', 'fr-fr-azerty'
+          FROM guacamole_connection WHERE protocol = 'rdp'
+          ON CONFLICT (connection_id, parameter_name) DO UPDATE SET parameter_value = EXCLUDED.parameter_value;
+        SQL
+      tags: [deploy]
+
     # ==========================================================
     # guacd (proxy daemon)
     # ==========================================================
@@ -120,6 +138,11 @@
         src: "{{ guacamole_manifests_dir }}/web/middleware.yaml"
       tags: [deploy]
 
+    - name: Preserve client source IP on Traefik service
+      ansible.builtin.shell: |
+        kubectl -n traefik patch svc traefik -p '{"spec":{"externalTrafficPolicy":"Local"}}'
+      tags: [deploy]
+
     - name: Deploy Guacamole Ingress
       kubernetes.core.k8s:
         state: present
@@ -130,6 +153,12 @@
       ansible.builtin.shell: |
         kubectl -n {{ guacamole_namespace }} rollout status deployment/guacamole-web --timeout=180s
       tags: [deploy]
+
+    - name: Restart Guacamole web (apply ConfigMap changes on an existing deployment)
+      ansible.builtin.shell: |
+        kubectl -n {{ guacamole_namespace }} rollout restart deployment/guacamole-web
+        kubectl -n {{ guacamole_namespace }} rollout status deployment/guacamole-web --timeout=180s
+      tags: [never, restart]
 
     # ==========================================================
     # Monitoring
