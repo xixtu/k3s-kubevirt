@@ -1877,3 +1877,318 @@ Origin: /home/administrator/git/k3s-kubevirt/playbooks/pushgateway.yml:35:7
 2026-10-07 21:16:53,682 p=479939 u=administrator n=ansible INFO| Copier le dashboard kwaba-bornes --------------------------------------------------------------------------- 3.02s
 2026-10-07 21:16:53,682 p=479939 u=administrator n=ansible INFO| Appliquer le ConfigMap du dashboard kwaba-bornes ----------------------------------------------------------- 1.57s
 2026-10-07 21:16:53,683 p=479939 u=administrator n=ansible INFO| Supprimer le dashboard temporaire -------------------------------------------------------------------------- 0.91s
+2026-10-09 08:21:13,784 p=4062174 u=administrator n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+
+2026-10-09 08:21:13,785 p=4062174 u=administrator n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be removed from collection 'community.general' version 12.0.0.
+
+2026-10-09 08:21:13,838 p=4062174 u=administrator n=ansible INFO| PLAY [Deploy Apache Guacamole] ********************************************************************************************************************************************
+2026-10-09 08:21:13,857 p=4062174 u=administrator n=ansible INFO| TASK [Create guacamole namespace] *****************************************************************************************************************************************
+2026-10-09 08:21:13,857 p=4062174 u=administrator n=ansible INFO| vendredi 09 octobre 2026  08:21:13 +0200 (0:00:00.026)       0:00:00.026 ****** 
+2026-10-09 08:21:14,031 p=4062174 u=administrator n=ansible ERROR| [ERROR]: Task failed: Failed to connect to the host via ssh: administrator@192.168.0.11: Permission denied (publickey,password).
+Origin: /home/administrator/git/k3s-kubevirt/playbooks/guacamole.yml:36:7
+
+34     # Namespace
+35     # ==========================================================
+36     - name: Create guacamole namespace
+         ^ column 7
+
+
+2026-10-09 08:21:14,033 p=4062174 u=administrator n=ansible INFO| fatal: [k3s-node-1]: UNREACHABLE! => changed=false 
+  msg: 'Task failed: Failed to connect to the host via ssh: administrator@192.168.0.11: Permission denied (publickey,password).'
+  unreachable: true
+2026-10-09 08:21:14,035 p=4062174 u=administrator n=ansible INFO| PLAY RECAP ****************************************************************************************************************************************************************
+2026-10-09 08:21:14,035 p=4062174 u=administrator n=ansible INFO| k3s-node-1                 : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0   
+2026-10-09 08:21:14,035 p=4062174 u=administrator n=ansible INFO| PLAYBOOK RECAP ************************************************************************************************************************************************************
+2026-10-09 08:21:14,036 p=4062174 u=administrator n=ansible INFO| Playbook run took 0 days, 0 hours, 0 minutes, 0 seconds
+
+2026-10-09 08:21:14,036 p=4062174 u=administrator n=ansible INFO| TASKS RECAP ***************************************************************************************************************************************************************
+2026-10-09 08:21:14,036 p=4062174 u=administrator n=ansible INFO| vendredi 09 octobre 2026  08:21:14 +0200 (0:00:00.178)       0:00:00.205 ****** 
+2026-10-09 08:21:14,036 p=4062174 u=administrator n=ansible INFO| =============================================================================== 
+2026-10-09 08:21:14,037 p=4062174 u=administrator n=ansible INFO| Create guacamole namespace ----------------------------------------------------------------------------------------------------------------------------------------- 0.18s
+2026-10-09 08:21:25,324 p=4062549 u=administrator n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+
+2026-10-09 08:21:25,325 p=4062549 u=administrator n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be removed from collection 'community.general' version 12.0.0.
+
+2026-10-09 08:21:25,379 p=4062549 u=administrator n=ansible INFO| PLAY [Deploy Apache Guacamole] ********************************************************************************************************************************************
+2026-10-09 08:21:25,398 p=4062549 u=administrator n=ansible INFO| TASK [Create guacamole namespace] *****************************************************************************************************************************************
+2026-10-09 08:21:25,399 p=4062549 u=administrator n=ansible INFO| vendredi 09 octobre 2026  08:21:25 +0200 (0:00:00.027)       0:00:00.027 ****** 
+2026-10-09 08:21:28,599 p=4062549 u=administrator n=ansible WARNING| [WARNING]: Collection cloud.common does not support Ansible version 2.19.0
+
+2026-10-09 08:21:28,600 p=4062549 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-09 08:21:28,602 p=4062549 u=administrator n=ansible INFO| TASK [Apply secrets] ******************************************************************************************************************************************************
+2026-10-09 08:21:28,603 p=4062549 u=administrator n=ansible INFO| vendredi 09 octobre 2026  08:21:28 +0200 (0:00:03.203)       0:00:03.231 ****** 
+2026-10-09 08:21:30,237 p=4062549 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-09 08:21:30,241 p=4062549 u=administrator n=ansible INFO| TASK [Apply Guacamole config] *********************************************************************************************************************************************
+2026-10-09 08:21:30,241 p=4062549 u=administrator n=ansible INFO| vendredi 09 octobre 2026  08:21:30 +0200 (0:00:01.638)       0:00:04.870 ****** 
+2026-10-09 08:21:31,815 p=4062549 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-09 08:21:31,820 p=4062549 u=administrator n=ansible INFO| TASK [Create initdb ConfigMap from SQL seed] ******************************************************************************************************************************
+2026-10-09 08:21:31,821 p=4062549 u=administrator n=ansible INFO| vendredi 09 octobre 2026  08:21:31 +0200 (0:00:01.579)       0:00:06.450 ****** 
+2026-10-09 08:21:33,269 p=4062549 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-10-09 08:21:33,272 p=4062549 u=administrator n=ansible INFO| TASK [Deploy PostgreSQL StatefulSet] **************************************************************************************************************************************
+2026-10-09 08:21:33,272 p=4062549 u=administrator n=ansible INFO| vendredi 09 octobre 2026  08:21:33 +0200 (0:00:01.450)       0:00:07.901 ****** 
+2026-10-09 08:21:34,891 p=4062549 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-09 08:21:34,895 p=4062549 u=administrator n=ansible INFO| TASK [Deploy PostgreSQL Service] ******************************************************************************************************************************************
+2026-10-09 08:21:34,895 p=4062549 u=administrator n=ansible INFO| vendredi 09 octobre 2026  08:21:34 +0200 (0:00:01.623)       0:00:09.524 ****** 
+2026-10-09 08:21:36,525 p=4062549 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-09 08:21:36,527 p=4062549 u=administrator n=ansible INFO| TASK [Wait for PostgreSQL to be ready] ************************************************************************************************************************************
+2026-10-09 08:21:36,528 p=4062549 u=administrator n=ansible INFO| vendredi 09 octobre 2026  08:21:36 +0200 (0:00:01.632)       0:00:11.156 ****** 
+2026-10-09 08:21:37,312 p=4062549 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-10-09 08:21:37,315 p=4062549 u=administrator n=ansible INFO| TASK [Deploy guacd] *******************************************************************************************************************************************************
+2026-10-09 08:21:37,315 p=4062549 u=administrator n=ansible INFO| vendredi 09 octobre 2026  08:21:37 +0200 (0:00:00.787)       0:00:11.944 ****** 
+2026-10-09 08:21:38,909 p=4062549 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-09 08:21:38,913 p=4062549 u=administrator n=ansible INFO| TASK [Deploy guacd Service] ***********************************************************************************************************************************************
+2026-10-09 08:21:38,913 p=4062549 u=administrator n=ansible INFO| vendredi 09 octobre 2026  08:21:38 +0200 (0:00:01.597)       0:00:13.542 ****** 
+2026-10-09 08:21:40,478 p=4062549 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-09 08:21:40,481 p=4062549 u=administrator n=ansible INFO| TASK [Deploy Guacamole web] ***********************************************************************************************************************************************
+2026-10-09 08:21:40,482 p=4062549 u=administrator n=ansible INFO| vendredi 09 octobre 2026  08:21:40 +0200 (0:00:01.568)       0:00:15.110 ****** 
+2026-10-09 08:21:42,113 p=4062549 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-10-09 08:21:42,116 p=4062549 u=administrator n=ansible INFO| TASK [Deploy Guacamole web Service] ***************************************************************************************************************************************
+2026-10-09 08:21:42,117 p=4062549 u=administrator n=ansible INFO| vendredi 09 octobre 2026  08:21:42 +0200 (0:00:01.634)       0:00:16.745 ****** 
+2026-10-09 08:21:43,798 p=4062549 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-09 08:21:43,802 p=4062549 u=administrator n=ansible INFO| TASK [Deploy Guacamole Ingress] *******************************************************************************************************************************************
+2026-10-09 08:21:43,803 p=4062549 u=administrator n=ansible INFO| vendredi 09 octobre 2026  08:21:43 +0200 (0:00:01.686)       0:00:18.431 ****** 
+2026-10-09 08:21:45,399 p=4062549 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-09 08:21:45,402 p=4062549 u=administrator n=ansible INFO| TASK [Wait for Guacamole web to be ready] *********************************************************************************************************************************
+2026-10-09 08:21:45,402 p=4062549 u=administrator n=ansible INFO| vendredi 09 octobre 2026  08:21:45 +0200 (0:00:01.599)       0:00:20.031 ****** 
+2026-10-09 08:22:12,608 p=4062549 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-10-09 08:22:12,613 p=4062549 u=administrator n=ansible INFO| TASK [Show deployment status] *********************************************************************************************************************************************
+2026-10-09 08:22:12,613 p=4062549 u=administrator n=ansible INFO| vendredi 09 octobre 2026  08:22:12 +0200 (0:00:27.211)       0:00:47.242 ****** 
+2026-10-09 08:22:13,825 p=4062549 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-10-09 08:22:13,830 p=4062549 u=administrator n=ansible INFO| TASK [Display status] *****************************************************************************************************************************************************
+2026-10-09 08:22:13,830 p=4062549 u=administrator n=ansible INFO| vendredi 09 octobre 2026  08:22:13 +0200 (0:00:01.217)       0:00:48.459 ****** 
+2026-10-09 08:22:13,880 p=4062549 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg:
+  - === Pods ===
+  - NAME                            READY   STATUS        RESTARTS   AGE   IP            NODE         NOMINATED NODE   READINESS GATES
+  - guacamole-postgresql-0          2/2     Running       0          11m   10.42.0.230   k3s-node-1   <none>           <none>
+  - guacamole-web-599d66cf5-2z5wv   1/1     Running       0          32s   10.42.0.232   k3s-node-1   <none>           <none>
+  - guacamole-web-d8f67cc75-s7459   0/1     Terminating   0          11m   <none>        k3s-node-1   <none>           <none>
+  - guacd-58f8cfc5f7-d54tf          1/1     Running       0          11h   10.42.0.225   k3s-node-1   <none>           <none>
+  - ''
+  - === Services ===
+  - NAME                    TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)             AGE
+  - guacamole-postgresql    ClusterIP   10.43.80.202    <none>        5432/TCP,9187/TCP   11h
+  - guacamole-web           ClusterIP   10.43.82.20     <none>        80/TCP              11h
+  - guacamole-web-metrics   ClusterIP   10.43.244.132   <none>        8080/TCP            11h
+  - guacd                   ClusterIP   10.43.31.134    <none>        4822/TCP            11h
+  - ''
+  - === Ingress ===
+  - NAME                CLASS     HOSTS                    ADDRESS        PORTS     AGE
+  - guacamole-ingress   traefik   guacamole.app.xixtu.eu   192.168.0.20   80, 443   11h
+2026-10-09 08:22:13,885 p=4062549 u=administrator n=ansible INFO| TASK [Display access info] ************************************************************************************************************************************************
+2026-10-09 08:22:13,885 p=4062549 u=administrator n=ansible INFO| vendredi 09 octobre 2026  08:22:13 +0200 (0:00:00.054)       0:00:48.514 ****** 
+2026-10-09 08:22:13,930 p=4062549 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg:
+  - ============================================
+  - Apache Guacamole deploye avec succes !
+  - ============================================
+  - 'URL : https://guacamole.app.xixtu.eu/guacamole/'
+  - 'Auth : Active Directory (corp.lcl)'
+  - ''
+  - 'Connexions pre-configurees :'
+  - '  - dc1 (RDP)        : 192.168.0.100'
+  - '  - k3s-node-1 (SSH) : 192.168.0.11'
+  - ''
+  - 'Groupes AD requis :'
+  - '  - GRP_Guac_Admins -> admin Guacamole'
+  - '  - GRP_Guac_DC1    -> acces dc1'
+  - '  - GRP_Guac_K3S1   -> acces k3s-node-1'
+  - ''
+  - 'Grafana : dashboard ''Apache Guacamole - Bastion'''
+  - ============================================
+2026-10-09 08:22:13,932 p=4062549 u=administrator n=ansible INFO| PLAY RECAP ****************************************************************************************************************************************************************
+2026-10-09 08:22:13,933 p=4062549 u=administrator n=ansible INFO| k3s-node-1                 : ok=16   changed=5    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+2026-10-09 08:22:13,933 p=4062549 u=administrator n=ansible INFO| PLAYBOOK RECAP ************************************************************************************************************************************************************
+2026-10-09 08:22:13,933 p=4062549 u=administrator n=ansible INFO| Playbook run took 0 days, 0 hours, 0 minutes, 48 seconds
+
+2026-10-09 08:22:13,933 p=4062549 u=administrator n=ansible INFO| TASKS RECAP ***************************************************************************************************************************************************************
+2026-10-09 08:22:13,934 p=4062549 u=administrator n=ansible INFO| vendredi 09 octobre 2026  08:22:13 +0200 (0:00:00.048)       0:00:48.562 ****** 
+2026-10-09 08:22:13,934 p=4062549 u=administrator n=ansible INFO| =============================================================================== 
+2026-10-09 08:22:13,934 p=4062549 u=administrator n=ansible INFO| Wait for Guacamole web to be ready -------------------------------------------------------------------------------------------------------------------------------- 27.21s
+2026-10-09 08:22:13,934 p=4062549 u=administrator n=ansible INFO| Create guacamole namespace ----------------------------------------------------------------------------------------------------------------------------------------- 3.20s
+2026-10-09 08:22:13,934 p=4062549 u=administrator n=ansible INFO| Deploy Guacamole web Service --------------------------------------------------------------------------------------------------------------------------------------- 1.69s
+2026-10-09 08:22:13,935 p=4062549 u=administrator n=ansible INFO| Apply secrets ------------------------------------------------------------------------------------------------------------------------------------------------------ 1.64s
+2026-10-09 08:22:13,935 p=4062549 u=administrator n=ansible INFO| Deploy Guacamole web ----------------------------------------------------------------------------------------------------------------------------------------------- 1.63s
+2026-10-09 08:22:13,935 p=4062549 u=administrator n=ansible INFO| Deploy PostgreSQL Service ------------------------------------------------------------------------------------------------------------------------------------------ 1.63s
+2026-10-09 08:22:13,935 p=4062549 u=administrator n=ansible INFO| Deploy PostgreSQL StatefulSet -------------------------------------------------------------------------------------------------------------------------------------- 1.62s
+2026-10-09 08:22:13,935 p=4062549 u=administrator n=ansible INFO| Deploy Guacamole Ingress ------------------------------------------------------------------------------------------------------------------------------------------- 1.60s
+2026-10-09 08:22:13,935 p=4062549 u=administrator n=ansible INFO| Deploy guacd ------------------------------------------------------------------------------------------------------------------------------------------------------- 1.60s
+2026-10-09 08:22:13,935 p=4062549 u=administrator n=ansible INFO| Apply Guacamole config --------------------------------------------------------------------------------------------------------------------------------------------- 1.58s
+2026-10-09 08:22:13,936 p=4062549 u=administrator n=ansible INFO| Deploy guacd Service ----------------------------------------------------------------------------------------------------------------------------------------------- 1.57s
+2026-10-09 08:22:13,936 p=4062549 u=administrator n=ansible INFO| Create initdb ConfigMap from SQL seed ------------------------------------------------------------------------------------------------------------------------------ 1.45s
+2026-10-09 08:22:13,936 p=4062549 u=administrator n=ansible INFO| Show deployment status --------------------------------------------------------------------------------------------------------------------------------------------- 1.22s
+2026-10-09 08:22:13,936 p=4062549 u=administrator n=ansible INFO| Wait for PostgreSQL to be ready ------------------------------------------------------------------------------------------------------------------------------------ 0.79s
+2026-10-09 08:22:13,936 p=4062549 u=administrator n=ansible INFO| Display status ----------------------------------------------------------------------------------------------------------------------------------------------------- 0.05s
+2026-10-09 08:22:13,937 p=4062549 u=administrator n=ansible INFO| Display access info ------------------------------------------------------------------------------------------------------------------------------------------------ 0.05s
+2026-10-09 08:25:37,012 p=4072777 u=administrator n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+
+2026-10-09 08:25:37,013 p=4072777 u=administrator n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be removed from collection 'community.general' version 12.0.0.
+
+2026-10-09 08:25:37,067 p=4072777 u=administrator n=ansible INFO| PLAY [Deploy Apache Guacamole] ********************************************************************************************************************************************
+2026-10-09 08:25:37,086 p=4072777 u=administrator n=ansible INFO| TASK [Create guacamole namespace] *****************************************************************************************************************************************
+2026-10-09 08:25:37,087 p=4072777 u=administrator n=ansible INFO| vendredi 09 octobre 2026  08:25:37 +0200 (0:00:00.028)       0:00:00.028 ****** 
+2026-10-09 08:25:40,197 p=4072777 u=administrator n=ansible WARNING| [WARNING]: Collection cloud.common does not support Ansible version 2.19.0
+
+2026-10-09 08:25:40,197 p=4072777 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-09 08:25:40,201 p=4072777 u=administrator n=ansible INFO| TASK [Apply secrets] ******************************************************************************************************************************************************
+2026-10-09 08:25:40,201 p=4072777 u=administrator n=ansible INFO| vendredi 09 octobre 2026  08:25:40 +0200 (0:00:03.114)       0:00:03.142 ****** 
+2026-10-09 08:25:41,831 p=4072777 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-09 08:25:41,837 p=4072777 u=administrator n=ansible INFO| TASK [Apply Guacamole config] *********************************************************************************************************************************************
+2026-10-09 08:25:41,837 p=4072777 u=administrator n=ansible INFO| vendredi 09 octobre 2026  08:25:41 +0200 (0:00:01.635)       0:00:04.778 ****** 
+2026-10-09 08:25:43,618 p=4072777 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-10-09 08:25:43,623 p=4072777 u=administrator n=ansible INFO| TASK [Create initdb ConfigMap from SQL seed] ******************************************************************************************************************************
+2026-10-09 08:25:43,623 p=4072777 u=administrator n=ansible INFO| vendredi 09 octobre 2026  08:25:43 +0200 (0:00:01.786)       0:00:06.564 ****** 
+2026-10-09 08:25:45,040 p=4072777 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-10-09 08:25:45,043 p=4072777 u=administrator n=ansible INFO| TASK [Deploy PostgreSQL StatefulSet] **************************************************************************************************************************************
+2026-10-09 08:25:45,044 p=4072777 u=administrator n=ansible INFO| vendredi 09 octobre 2026  08:25:45 +0200 (0:00:01.420)       0:00:07.985 ****** 
+2026-10-09 08:25:46,657 p=4072777 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-09 08:25:46,661 p=4072777 u=administrator n=ansible INFO| TASK [Deploy PostgreSQL Service] ******************************************************************************************************************************************
+2026-10-09 08:25:46,661 p=4072777 u=administrator n=ansible INFO| vendredi 09 octobre 2026  08:25:46 +0200 (0:00:01.617)       0:00:09.603 ****** 
+2026-10-09 08:25:48,278 p=4072777 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-09 08:25:48,281 p=4072777 u=administrator n=ansible INFO| TASK [Wait for PostgreSQL to be ready] ************************************************************************************************************************************
+2026-10-09 08:25:48,282 p=4072777 u=administrator n=ansible INFO| vendredi 09 octobre 2026  08:25:48 +0200 (0:00:01.620)       0:00:11.223 ****** 
+2026-10-09 08:25:49,119 p=4072777 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-10-09 08:25:49,124 p=4072777 u=administrator n=ansible INFO| TASK [Deploy guacd] *******************************************************************************************************************************************************
+2026-10-09 08:25:49,124 p=4072777 u=administrator n=ansible INFO| vendredi 09 octobre 2026  08:25:49 +0200 (0:00:00.842)       0:00:12.065 ****** 
+2026-10-09 08:25:50,699 p=4072777 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-09 08:25:50,703 p=4072777 u=administrator n=ansible INFO| TASK [Deploy guacd Service] ***********************************************************************************************************************************************
+2026-10-09 08:25:50,703 p=4072777 u=administrator n=ansible INFO| vendredi 09 octobre 2026  08:25:50 +0200 (0:00:01.578)       0:00:13.644 ****** 
+2026-10-09 08:25:52,253 p=4072777 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-09 08:25:52,256 p=4072777 u=administrator n=ansible INFO| TASK [Deploy Guacamole web] ***********************************************************************************************************************************************
+2026-10-09 08:25:52,257 p=4072777 u=administrator n=ansible INFO| vendredi 09 octobre 2026  08:25:52 +0200 (0:00:01.553)       0:00:15.198 ****** 
+2026-10-09 08:25:53,843 p=4072777 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-09 08:25:53,848 p=4072777 u=administrator n=ansible INFO| TASK [Deploy Guacamole web Service] ***************************************************************************************************************************************
+2026-10-09 08:25:53,848 p=4072777 u=administrator n=ansible INFO| vendredi 09 octobre 2026  08:25:53 +0200 (0:00:01.591)       0:00:16.789 ****** 
+2026-10-09 08:25:55,415 p=4072777 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-09 08:25:55,418 p=4072777 u=administrator n=ansible INFO| TASK [Deploy Guacamole Ingress] *******************************************************************************************************************************************
+2026-10-09 08:25:55,419 p=4072777 u=administrator n=ansible INFO| vendredi 09 octobre 2026  08:25:55 +0200 (0:00:01.570)       0:00:18.360 ****** 
+2026-10-09 08:25:57,090 p=4072777 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-09 08:25:57,093 p=4072777 u=administrator n=ansible INFO| TASK [Wait for Guacamole web to be ready] *********************************************************************************************************************************
+2026-10-09 08:25:57,093 p=4072777 u=administrator n=ansible INFO| vendredi 09 octobre 2026  08:25:57 +0200 (0:00:01.674)       0:00:20.034 ****** 
+2026-10-09 08:25:57,942 p=4072777 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-10-09 08:25:57,947 p=4072777 u=administrator n=ansible INFO| TASK [Show deployment status] *********************************************************************************************************************************************
+2026-10-09 08:25:57,947 p=4072777 u=administrator n=ansible INFO| vendredi 09 octobre 2026  08:25:57 +0200 (0:00:00.854)       0:00:20.888 ****** 
+2026-10-09 08:25:59,196 p=4072777 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-10-09 08:25:59,203 p=4072777 u=administrator n=ansible INFO| TASK [Display status] *****************************************************************************************************************************************************
+2026-10-09 08:25:59,203 p=4072777 u=administrator n=ansible INFO| vendredi 09 octobre 2026  08:25:59 +0200 (0:00:01.255)       0:00:22.144 ****** 
+2026-10-09 08:25:59,251 p=4072777 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg:
+  - === Pods ===
+  - NAME                            READY   STATUS    RESTARTS   AGE     IP            NODE         NOMINATED NODE   READINESS GATES
+  - guacamole-postgresql-0          2/2     Running   0          15m     10.42.0.230   k3s-node-1   <none>           <none>
+  - guacamole-web-599d66cf5-2z5wv   1/1     Running   0          4m17s   10.42.0.232   k3s-node-1   <none>           <none>
+  - guacd-58f8cfc5f7-d54tf          1/1     Running   0          11h     10.42.0.225   k3s-node-1   <none>           <none>
+  - ''
+  - === Services ===
+  - NAME                    TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)             AGE
+  - guacamole-postgresql    ClusterIP   10.43.80.202    <none>        5432/TCP,9187/TCP   11h
+  - guacamole-web           ClusterIP   10.43.82.20     <none>        80/TCP              11h
+  - guacamole-web-metrics   ClusterIP   10.43.244.132   <none>        8080/TCP            11h
+  - guacd                   ClusterIP   10.43.31.134    <none>        4822/TCP            11h
+  - ''
+  - === Ingress ===
+  - NAME                CLASS     HOSTS                    ADDRESS        PORTS     AGE
+  - guacamole-ingress   traefik   guacamole.app.xixtu.eu   192.168.0.20   80, 443   11h
+2026-10-09 08:25:59,255 p=4072777 u=administrator n=ansible INFO| TASK [Display access info] ************************************************************************************************************************************************
+2026-10-09 08:25:59,255 p=4072777 u=administrator n=ansible INFO| vendredi 09 octobre 2026  08:25:59 +0200 (0:00:00.052)       0:00:22.197 ****** 
+2026-10-09 08:25:59,298 p=4072777 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg:
+  - ============================================
+  - Apache Guacamole deploye avec succes !
+  - ============================================
+  - 'URL : https://guacamole.app.xixtu.eu/guacamole/'
+  - 'Auth : Active Directory (corp.lcl)'
+  - ''
+  - 'Connexions pre-configurees :'
+  - '  - dc1 (RDP)        : 192.168.0.100'
+  - '  - k3s-node-1 (SSH) : 192.168.0.11'
+  - ''
+  - 'Groupes AD requis :'
+  - '  - GRP_Guac_Admins -> admin Guacamole'
+  - '  - GRP_Guac_DC1    -> acces dc1'
+  - '  - GRP_Guac_K3S1   -> acces k3s-node-1'
+  - ''
+  - 'Grafana : dashboard ''Apache Guacamole - Bastion'''
+  - ============================================
+2026-10-09 08:25:59,300 p=4072777 u=administrator n=ansible INFO| PLAY RECAP ****************************************************************************************************************************************************************
+2026-10-09 08:25:59,301 p=4072777 u=administrator n=ansible INFO| k3s-node-1                 : ok=16   changed=5    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+2026-10-09 08:25:59,301 p=4072777 u=administrator n=ansible INFO| PLAYBOOK RECAP ************************************************************************************************************************************************************
+2026-10-09 08:25:59,301 p=4072777 u=administrator n=ansible INFO| Playbook run took 0 days, 0 hours, 0 minutes, 22 seconds
+
+2026-10-09 08:25:59,301 p=4072777 u=administrator n=ansible INFO| TASKS RECAP ***************************************************************************************************************************************************************
+2026-10-09 08:25:59,302 p=4072777 u=administrator n=ansible INFO| vendredi 09 octobre 2026  08:25:59 +0200 (0:00:00.046)       0:00:22.243 ****** 
+2026-10-09 08:25:59,302 p=4072777 u=administrator n=ansible INFO| =============================================================================== 
+2026-10-09 08:25:59,302 p=4072777 u=administrator n=ansible INFO| Create guacamole namespace ----------------------------------------------------------------------------------------------------------------------------------------- 3.11s
+2026-10-09 08:25:59,302 p=4072777 u=administrator n=ansible INFO| Apply Guacamole config --------------------------------------------------------------------------------------------------------------------------------------------- 1.79s
+2026-10-09 08:25:59,303 p=4072777 u=administrator n=ansible INFO| Deploy Guacamole Ingress ------------------------------------------------------------------------------------------------------------------------------------------- 1.67s
+2026-10-09 08:25:59,303 p=4072777 u=administrator n=ansible INFO| Apply secrets ------------------------------------------------------------------------------------------------------------------------------------------------------ 1.64s
+2026-10-09 08:25:59,303 p=4072777 u=administrator n=ansible INFO| Deploy PostgreSQL Service ------------------------------------------------------------------------------------------------------------------------------------------ 1.62s
+2026-10-09 08:25:59,303 p=4072777 u=administrator n=ansible INFO| Deploy PostgreSQL StatefulSet -------------------------------------------------------------------------------------------------------------------------------------- 1.62s
+2026-10-09 08:25:59,303 p=4072777 u=administrator n=ansible INFO| Deploy Guacamole web ----------------------------------------------------------------------------------------------------------------------------------------------- 1.59s
+2026-10-09 08:25:59,303 p=4072777 u=administrator n=ansible INFO| Deploy guacd ------------------------------------------------------------------------------------------------------------------------------------------------------- 1.58s
+2026-10-09 08:25:59,304 p=4072777 u=administrator n=ansible INFO| Deploy Guacamole web Service --------------------------------------------------------------------------------------------------------------------------------------- 1.57s
+2026-10-09 08:25:59,304 p=4072777 u=administrator n=ansible INFO| Deploy guacd Service ----------------------------------------------------------------------------------------------------------------------------------------------- 1.55s
+2026-10-09 08:25:59,304 p=4072777 u=administrator n=ansible INFO| Create initdb ConfigMap from SQL seed ------------------------------------------------------------------------------------------------------------------------------ 1.42s
+2026-10-09 08:25:59,304 p=4072777 u=administrator n=ansible INFO| Show deployment status --------------------------------------------------------------------------------------------------------------------------------------------- 1.26s
+2026-10-09 08:25:59,304 p=4072777 u=administrator n=ansible INFO| Wait for Guacamole web to be ready --------------------------------------------------------------------------------------------------------------------------------- 0.85s
+2026-10-09 08:25:59,304 p=4072777 u=administrator n=ansible INFO| Wait for PostgreSQL to be ready ------------------------------------------------------------------------------------------------------------------------------------ 0.84s
+2026-10-09 08:25:59,305 p=4072777 u=administrator n=ansible INFO| Display status ----------------------------------------------------------------------------------------------------------------------------------------------------- 0.05s
+2026-10-09 08:25:59,305 p=4072777 u=administrator n=ansible INFO| Display access info ------------------------------------------------------------------------------------------------------------------------------------------------ 0.05s
+2026-10-09 20:56:54,387 p=1386862 u=administrator n=ansible ERROR| [ERROR]: User interrupted execution
+
+2026-10-09 21:03:30,045 p=1404741 u=administrator n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+
+2026-10-09 21:03:30,046 p=1404741 u=administrator n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be removed from collection 'community.general' version 12.0.0.
+
+2026-10-09 21:03:30,100 p=1404741 u=administrator n=ansible INFO| PLAY [Deploy Apache Guacamole] *************************************************
+2026-10-09 21:03:30,118 p=1404741 u=administrator n=ansible INFO| TASK [Create guacamole namespace] **********************************************
+2026-10-09 21:03:30,119 p=1404741 u=administrator n=ansible INFO| vendredi 09 octobre 2026  21:03:30 +0200 (0:00:00.026)       0:00:00.026 ****** 
+2026-10-09 21:03:30,297 p=1404741 u=administrator n=ansible ERROR| [ERROR]: Task failed: Failed to connect to the host via ssh: administrator@192.168.0.11: Permission denied (publickey,password).
+Origin: /home/administrator/git/k3s-kubevirt/playbooks/guacamole.yml:36:7
+
+34     # Namespace
+35     # ==========================================================
+36     - name: Create guacamole namespace
+         ^ column 7
+
+
+2026-10-09 21:03:30,298 p=1404741 u=administrator n=ansible INFO| fatal: [k3s-node-1]: UNREACHABLE! => changed=false 
+  msg: 'Task failed: Failed to connect to the host via ssh: administrator@192.168.0.11: Permission denied (publickey,password).'
+  unreachable: true
+2026-10-09 21:03:30,300 p=1404741 u=administrator n=ansible INFO| PLAY RECAP *********************************************************************
+2026-10-09 21:03:30,300 p=1404741 u=administrator n=ansible INFO| k3s-node-1                 : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0   
+2026-10-09 21:03:30,301 p=1404741 u=administrator n=ansible INFO| PLAYBOOK RECAP *****************************************************************
+2026-10-09 21:03:30,301 p=1404741 u=administrator n=ansible INFO| Playbook run took 0 days, 0 hours, 0 minutes, 0 seconds
+
+2026-10-09 21:03:30,301 p=1404741 u=administrator n=ansible INFO| TASKS RECAP ********************************************************************
+2026-10-09 21:03:30,302 p=1404741 u=administrator n=ansible INFO| vendredi 09 octobre 2026  21:03:30 +0200 (0:00:00.182)       0:00:00.209 ****** 
+2026-10-09 21:03:30,302 p=1404741 u=administrator n=ansible INFO| =============================================================================== 
+2026-10-09 21:03:30,302 p=1404741 u=administrator n=ansible INFO| Create guacamole namespace ---------------------------------------------- 0.18s
+2026-10-09 21:08:07,491 p=1414927 u=administrator n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+
+2026-10-09 21:08:07,492 p=1414927 u=administrator n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be removed from collection 'community.general' version 12.0.0.
+
+2026-10-09 21:08:07,547 p=1414927 u=administrator n=ansible INFO| PLAY [Deploy Apache Guacamole] *************************************************
+2026-10-09 21:08:07,569 p=1414927 u=administrator n=ansible INFO| TASK [Create guacamole namespace] **********************************************
+2026-10-09 21:08:07,569 p=1414927 u=administrator n=ansible INFO| vendredi 09 octobre 2026  21:08:07 +0200 (0:00:00.029)       0:00:00.029 ****** 
+2026-10-09 21:08:07,731 p=1414927 u=administrator n=ansible ERROR| [ERROR]: Task failed: Failed to connect to the host via ssh: administrator@192.168.0.11: Permission denied (publickey,password).
+Origin: /home/administrator/git/k3s-kubevirt/playbooks/guacamole.yml:36:7
+
+34     # Namespace
+35     # ==========================================================
+36     - name: Create guacamole namespace
+         ^ column 7
+
+
+2026-10-09 21:08:07,732 p=1414927 u=administrator n=ansible INFO| fatal: [k3s-node-1]: UNREACHABLE! => changed=false 
+  msg: 'Task failed: Failed to connect to the host via ssh: administrator@192.168.0.11: Permission denied (publickey,password).'
+  unreachable: true
+2026-10-09 21:08:07,733 p=1414927 u=administrator n=ansible INFO| PLAY RECAP *********************************************************************
+2026-10-09 21:08:07,733 p=1414927 u=administrator n=ansible INFO| k3s-node-1                 : ok=0    changed=0    unreachable=1    failed=0    skipped=0    rescued=0    ignored=0   
+2026-10-09 21:08:07,733 p=1414927 u=administrator n=ansible INFO| PLAYBOOK RECAP *****************************************************************
+2026-10-09 21:08:07,733 p=1414927 u=administrator n=ansible INFO| Playbook run took 0 days, 0 hours, 0 minutes, 0 seconds
+
+2026-10-09 21:08:07,734 p=1414927 u=administrator n=ansible INFO| TASKS RECAP ********************************************************************
+2026-10-09 21:08:07,734 p=1414927 u=administrator n=ansible INFO| vendredi 09 octobre 2026  21:08:07 +0200 (0:00:00.164)       0:00:00.194 ****** 
+2026-10-09 21:08:07,734 p=1414927 u=administrator n=ansible INFO| =============================================================================== 
+2026-10-09 21:08:07,734 p=1414927 u=administrator n=ansible INFO| Create guacamole namespace ---------------------------------------------- 0.17s
