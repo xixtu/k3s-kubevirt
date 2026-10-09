@@ -23,6 +23,8 @@ spec:
         app.kubernetes.io/part-of: guacamole
         app.kubernetes.io/component: proxy
     spec:
+      securityContext:
+        fsGroup: 1000
       containers:
         - name: guacd
           image: guacamole/guacd:1.6.0
