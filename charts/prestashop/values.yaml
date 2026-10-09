@@ -66,26 +66,23 @@ resources:
       cpu: "500m"
       memory: "1Gi"
 
-# --- HPA ---
-hpa:
-  minReplicas: 1
-  maxReplicas: 3
-  cpuUtilization: 70
-  memoryUtilization: 80
-
-# --- Probes (délais longs : installation DB au 1er boot) ---
+# --- Probes ---
+# startupProbe : laisse jusqu'à 30 min (120 x 15 s) à l'installation automatique
+# du premier démarrage. Liveness et readiness ne démarrent qu'ensuite.
 probes:
   prestashop:
+    startup:
+      periodSeconds: 15
+      timeoutSeconds: 10
+      failureThreshold: 120
     liveness:
-      initialDelaySeconds: 600
       periodSeconds: 30
       timeoutSeconds: 10
       failureThreshold: 6
     readiness:
-      initialDelaySeconds: 120
       periodSeconds: 15
       timeoutSeconds: 10
-      failureThreshold: 10
+      failureThreshold: 6
   mariadb:
     liveness:
       initialDelaySeconds: 60

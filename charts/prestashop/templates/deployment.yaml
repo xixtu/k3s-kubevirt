@@ -21,32 +21,26 @@ spec:
         {{- include "prestashop.selectorLabels" . | nindent 8 }}
     spec:
       initContainers:
-        # 1. Supprime les locks stales dans le PVC avant démarrage
-        - name: cleanup-lock
+        # 1. Si PrestaShop n'est pas installé, le volume ne contient que les restes
+        #    d'une installation interrompue (verrou périmé, dossiers renommés,
+        #    fichiers partiels) : l'image sort alors en exit 42. On repart d'un
+        #    volume vide, l'image recopie ses fichiers et relance l'installation.
+        #    Si PrestaShop est installé, on ne touche à rien.
+        - name: reset-if-not-installed
           image: "{{ .Values.image.alpine.repository }}:{{ .Values.image.alpine.tag }}"
           imagePullPolicy: {{ .Values.image.alpine.pullPolicy }}
           command:
             - sh
             - -c
             - |
-              echo "=== cleanup-lock : état de /var/www/html ==="
-              ls -la /var/www/html/ 2>/dev/null || echo "(vide)"
-              echo "=== Nettoyage des locks ==="
-              find /var/www/html -maxdepth 4 \
-                \( -name "*lock*" -o -name ".*lock*" \) \
-                -type f -delete 2>/dev/null || true
-              rm -f /var/www/html/.setup_lock \
-                    /var/www/html/.ps_lock \
-                    /var/www/html/ps-install.lock \
-                    /var/www/html/install/install.lock 2>/dev/null || true
-              # Supprimer inconditionnellement le dossier install renommé.
-              # docker_run.sh fait "mv install install-barista" au premier boot.
-              # Si install-barista existe déjà (run précédent incomplet),
-              # mv échoue avec "Directory not empty" → exit 1.
-              # Safe : si PS est déjà installé, docker_run.sh ne fait pas ce mv.
-              echo "=== Suppression inconditionnelle de {{ .Values.prestashop.folderInstall }} ==="
-              rm -rf /var/www/html/{{ .Values.prestashop.folderInstall }} 2>/dev/null || true
-              echo "=== Nettoyage terminé ==="
+              if [ -f /var/www/html/config/settings.inc.php ] || \
+                 [ -f /var/www/html/app/config/parameters.php ]; then
+                echo "PrestaShop déjà installé : volume conservé."
+              else
+                echo "PrestaShop non installé : remise à zéro du volume."
+                find /var/www/html -mindepth 1 -maxdepth 1 ! -name lost+found \
+                  -exec rm -rf {} +
+              fi
           volumeMounts:
             - name: prestashop-data
               mountPath: /var/www/html
@@ -75,60 +69,6 @@ spec:
         - name: prestashop
           image: "{{ .Values.image.prestashop.repository }}:{{ .Values.image.prestashop.tag }}"
           imagePullPolicy: {{ .Values.image.prestashop.pullPolicy }}
-          # Wrapper pour absorber le exit 42 (signal de redémarrage interne
-          # du script /tmp/docker_run.sh de l'image officielle PrestaShop).
-          # Sans wrapper, Kubernetes traite exit 42 comme un crash →
-          # CrashLoopBackOff avec backoff exponentiel qui bloque l'install.
-          command:
-            - /bin/bash
-            - -c
-            - |
-              echo "[wrapper] === Diagnostic démarrage ==="
-              grep -n "lock\|LOCK\|Another setup\|running\|SETUP" /tmp/docker_run.sh 2>/dev/null | head -30 || true
-              ls -la /var/www/html/ 2>/dev/null | head -20 || echo "(vide)"
-              echo "[wrapper] ==========================================="
-              while true; do
-                find /var/www/html -maxdepth 4 \( -name "*lock*" -o -name ".*lock*" \) \
-                  -type f -delete 2>/dev/null || true
-                find /tmp -maxdepth 2 \( -name "*lock*" -o -name ".*lock*" \) \
-                  -type f -delete 2>/dev/null || true
-                # Supprimer les dossiers renommés seulement si PS n'est pas encore installé.
-                # docker_run.sh fait mv install→install-barista et mv admin→admin-barista.
-                # Ces mv échouent si les dossiers existent déjà (run incomplet).
-                # La condition est identique au if de docker_run.sh ligne 25 :
-                #   pas de config/settings.inc.php ET pas de app/config/parameters.php
-                # → si PS est installé, on ne touche pas admin-barista (panel admin intact).
-                if [ ! -f /var/www/html/config/settings.inc.php ] && \
-                   [ ! -f /var/www/html/app/config/parameters.php ]; then
-                  rm -rf /var/www/html/{{ .Values.prestashop.folderInstall }} \
-                          /var/www/html/{{ .Values.prestashop.folderAdmin }} 2>/dev/null || true
-                fi
-                # Override mysqladmin pour rendre "CREATE DATABASE" idempotent.
-                # docker_run.sh appelle "mysqladmin ... create $DB_NAME" qui
-                # échoue si la DB existe déjà (exit 1 → crash wrapper).
-                # La fonction bash intercepte le sous-commande "create" et le
-                # remplace par "CREATE DATABASE IF NOT EXISTS" sans modifier
-                # le fichier docker_run.sh (évite les erreurs de syntaxe sed).
-                mysqladmin() {
-                  if printf '%s\n' "$@" | grep -qw 'create'; then
-                    mysql -h "${DB_SERVER}" -u "${DB_USER:-root}" -p"${DB_PASSWD}" \
-                      --port="${DB_PORT:-3306}" \
-                      -e "CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`;" 2>/dev/null
-                  else
-                    command mysqladmin "$@"
-                  fi
-                }
-                export -f mysqladmin
-                bash /tmp/docker_run.sh
-                ec=$?
-                if [ "$ec" -eq 42 ]; then
-                  echo "[wrapper] Exit 42 détecté - relance dans 5s..."
-                  sleep 5
-                else
-                  echo "[wrapper] Exit $ec - arrêt du wrapper."
-                  exit $ec
-                fi
-              done
           ports:
             - name: http
               containerPort: 80
@@ -152,8 +92,10 @@ spec:
             # --- Installation automatique ---
             - name: PS_INSTALL_AUTO
               value: "1"
+            # La base est déjà créée par MariaDB (MYSQL_DATABASE) avec les droits
+            # de l'utilisateur applicatif, qui ne peut pas faire CREATE DATABASE.
             - name: PS_INSTALL_DB
-              value: "1"
+              value: "0"
             - name: PS_ERASE_DB
               # ⚠ NE PAS PASSER À 1 EN PRODUCTION
               value: "0"
@@ -185,11 +127,19 @@ spec:
               mountPath: /var/www/html
           resources:
             {{- toYaml .Values.resources.prestashop | nindent 12 }}
+          # L'installation (jusqu'à ~30 min au premier démarrage) a lieu avant
+          # le démarrage d'Apache : les autres sondes n'agissent qu'après.
+          startupProbe:
+            httpGet:
+              path: /
+              port: 80
+            periodSeconds: {{ .Values.probes.prestashop.startup.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.prestashop.startup.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.prestashop.startup.failureThreshold }}
           livenessProbe:
             httpGet:
               path: /
               port: 80
-            initialDelaySeconds: {{ .Values.probes.prestashop.liveness.initialDelaySeconds }}
             periodSeconds: {{ .Values.probes.prestashop.liveness.periodSeconds }}
             timeoutSeconds: {{ .Values.probes.prestashop.liveness.timeoutSeconds }}
             failureThreshold: {{ .Values.probes.prestashop.liveness.failureThreshold }}
@@ -197,7 +147,6 @@ spec:
             httpGet:
               path: /
               port: 80
-            initialDelaySeconds: {{ .Values.probes.prestashop.readiness.initialDelaySeconds }}
             periodSeconds: {{ .Values.probes.prestashop.readiness.periodSeconds }}
             timeoutSeconds: {{ .Values.probes.prestashop.readiness.timeoutSeconds }}
             failureThreshold: {{ .Values.probes.prestashop.readiness.failureThreshold }}

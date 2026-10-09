@@ -6,7 +6,7 @@
 # Tags :
 #   prestashop-install → Déployer PrestaShop + MariaDB via Helm
 #   prestashop-tls     → Forcer renouvellement certificat ECDSA P-384
-#   prestashop-verify  → Vérifier pods, PVCs, Ingress, certificat, HPA
+#   prestashop-verify  → Vérifier pods, PVCs, Ingress, certificat
 #
 # Images Docker officielles (Docker Hub - gratuites) :
 #   prestashop/prestashop:{{ prestashop_version }}
@@ -20,7 +20,6 @@
 #   PrestaShop Deployment → ClusterIP :80  → Ingress + IngressRoute
 #   Ingress standard    → HTTP-01 challenge cert-manager (port 80)
 #   IngressRoute CRD    → HTTPS websecure + security-headers middleware
-#   HPA                 → min=1 max=3 CPU=70% Memory=80%
 #
 # URL publique  : https://barista.app.xixtu.eu
 # Admin panel   : https://barista.app.xixtu.eu/admin-barista
@@ -369,14 +368,6 @@
       changed_when: false
       tags: [prestashop, prestashop-verify]
 
-    - name: Vérifier le HorizontalPodAutoscaler
-      ansible.builtin.command: k3s kubectl get hpa -n prestashop
-      environment:
-        KUBECONFIG: /etc/rancher/k3s/k3s.yaml
-      register: prestashop_hpa
-      changed_when: false
-      tags: [prestashop, prestashop-verify]
-
     - name: Vérifier la release Helm
       ansible.builtin.command: helm list -n prestashop
       environment:
@@ -416,7 +407,6 @@
           - "Storage        : longhorn-fast (répliques: 2)"
           - "Données app    : {{ prestashop_config.data_storage_size }} (/var/www/html)"
           - "Base de données: MariaDB {{ prestashop_config.db_storage_size }}"
-          - "HPA            : min=1 max=3 | CPU=70% | Memory=80%"
           - "------------------------------------------------------------"
           - "Helm releases  : {{ helm_list.stdout_lines }}"
           - "Pods    : {{ prestashop_pods.stdout_lines }}"
@@ -425,7 +415,6 @@
           - "IR HTTPS: {{ prestashop_ir.stdout_lines }}"
           - "Certs   : {{ prestashop_cert.stdout_lines }}"
           - "PVCs    : {{ prestashop_pvc.stdout_lines }}"
-          - "HPA     : {{ prestashop_hpa.stdout_lines }}"
           - "============================================================"
           - "COMMANDES UTILES :"
           - "  helm list -n prestashop"

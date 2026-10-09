@@ -27,8 +27,7 @@ metadata:
     app.kubernetes.io/component: app
 spec:
   accessModes:
-    # ReadWriteOnce (1 pod) - migrer en ReadWriteMany pour HPA multi-pod
-    # Longhorn RWX disponible depuis v1.6 (NFS gateway)
+    # ReadWriteOnce : un seul pod PrestaShop (pas de mise à l'échelle)
     - ReadWriteOnce
   storageClassName: {{ .Values.persistence.storageClass | quote }}
   resources:
