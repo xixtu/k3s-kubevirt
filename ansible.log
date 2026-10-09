@@ -2192,3 +2192,341 @@ Origin: /home/administrator/git/k3s-kubevirt/playbooks/guacamole.yml:36:7
 2026-10-09 21:08:07,734 p=1414927 u=administrator n=ansible INFO| vendredi 09 octobre 2026  21:08:07 +0200 (0:00:00.164)       0:00:00.194 ****** 
 2026-10-09 21:08:07,734 p=1414927 u=administrator n=ansible INFO| =============================================================================== 
 2026-10-09 21:08:07,734 p=1414927 u=administrator n=ansible INFO| Create guacamole namespace ---------------------------------------------- 0.17s
+2026-10-09 23:07:11,108 p=1736267 u=administrator n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+
+2026-10-09 23:07:11,108 p=1736267 u=administrator n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be removed from collection 'community.general' version 12.0.0.
+
+2026-10-09 23:07:11,215 p=1736267 u=administrator n=ansible INFO| PLAY [PrestaShop - Boutique e-commerce café capsules Barista (Helm)] **********************************************************
+2026-10-09 23:07:11,253 p=1736267 u=administrator n=ansible INFO| TASK [Vérifier que Helm est installé] *****************************************************************************************
+2026-10-09 23:07:11,254 p=1736267 u=administrator n=ansible INFO| vendredi 09 octobre 2026  23:07:11 +0200 (0:00:00.096)       0:00:00.097 ****** 
+2026-10-09 23:07:12,249 p=1736267 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-09 23:07:12,280 p=1736267 u=administrator n=ansible INFO| TASK [Afficher la version Helm] ***********************************************************************************************
+2026-10-09 23:07:12,281 p=1736267 u=administrator n=ansible INFO| vendredi 09 octobre 2026  23:07:12 +0200 (0:00:01.027)       0:00:01.124 ****** 
+2026-10-09 23:07:12,320 p=1736267 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg: 'Helm détecté : v3.20.0+gb2e4314'
+2026-10-09 23:07:12,342 p=1736267 u=administrator n=ansible INFO| TASK [Créer le namespace prestashop (si absent)] ******************************************************************************
+2026-10-09 23:07:12,342 p=1736267 u=administrator n=ansible INFO| vendredi 09 octobre 2026  23:07:12 +0200 (0:00:00.061)       0:00:01.185 ****** 
+2026-10-09 23:07:13,169 p=1736267 u=administrator n=ansible ERROR| [ERROR]: non-zero return code
+
+2026-10-09 23:07:13,170 p=1736267 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-09 23:07:13,190 p=1736267 u=administrator n=ansible INFO| TASK [Labelliser le namespace prestashop (PSA baseline - Apache www-data)] ****************************************************
+2026-10-09 23:07:13,191 p=1736267 u=administrator n=ansible INFO| vendredi 09 octobre 2026  23:07:13 +0200 (0:00:00.848)       0:00:02.034 ****** 
+2026-10-09 23:07:14,032 p=1736267 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-09 23:07:14,057 p=1736267 u=administrator n=ansible INFO| TASK [Créer le répertoire de travail pour le chart Helm] **********************************************************************
+2026-10-09 23:07:14,057 p=1736267 u=administrator n=ansible INFO| vendredi 09 octobre 2026  23:07:14 +0200 (0:00:00.866)       0:00:02.900 ****** 
+2026-10-09 23:07:15,002 p=1736267 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-10-09 23:07:15,038 p=1736267 u=administrator n=ansible INFO| TASK [Copier le chart Helm PrestaShop sur le nœud] ****************************************************************************
+2026-10-09 23:07:15,038 p=1736267 u=administrator n=ansible INFO| vendredi 09 octobre 2026  23:07:15 +0200 (0:00:00.980)       0:00:03.881 ****** 
+2026-10-09 23:07:25,719 p=1736267 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-10-09 23:07:25,756 p=1736267 u=administrator n=ansible INFO| TASK [Écrire le fichier values Helm (overrides depuis group_vars)] ************************************************************
+2026-10-09 23:07:25,756 p=1736267 u=administrator n=ansible INFO| vendredi 09 octobre 2026  23:07:25 +0200 (0:00:10.717)       0:00:14.599 ****** 
+2026-10-09 23:07:26,917 p=1736267 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-10-09 23:07:26,950 p=1736267 u=administrator n=ansible INFO| TASK [Helm | upgrade --install prestashop] ************************************************************************************
+2026-10-09 23:07:26,951 p=1736267 u=administrator n=ansible INFO| vendredi 09 octobre 2026  23:07:26 +0200 (0:00:01.194)       0:00:15.794 ****** 
+2026-10-09 23:07:29,474 p=1736267 u=administrator n=ansible INFO| changed: [k3s-node-1]
+2026-10-09 23:07:29,504 p=1736267 u=administrator n=ansible INFO| TASK [Helm | résultat] ********************************************************************************************************
+2026-10-09 23:07:29,504 p=1736267 u=administrator n=ansible INFO| vendredi 09 octobre 2026  23:07:29 +0200 (0:00:02.553)       0:00:18.347 ****** 
+2026-10-09 23:07:29,542 p=1736267 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg:
+  - Release "prestashop" has been upgraded. Happy Helming!
+  - 'NAME: prestashop'
+  - 'LAST DEPLOYED: Fri Oct  9 23:07:27 2026'
+  - 'NAMESPACE: prestashop'
+  - 'STATUS: deployed'
+  - 'REVISION: 2'
+  - 'TEST SUITE: None'
+2026-10-09 23:07:29,703 p=1736267 u=administrator n=ansible INFO| TASK [Diag K8s | pods -n prestashop] ******************************************************************************************
+2026-10-09 23:07:29,704 p=1736267 u=administrator n=ansible INFO| vendredi 09 octobre 2026  23:07:29 +0200 (0:00:00.199)       0:00:18.547 ****** 
+2026-10-09 23:07:30,508 p=1736267 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-09 23:07:30,544 p=1736267 u=administrator n=ansible INFO| TASK [Diag K8s | afficher pods] ***********************************************************************************************
+2026-10-09 23:07:30,545 p=1736267 u=administrator n=ansible INFO| vendredi 09 octobre 2026  23:07:30 +0200 (0:00:00.840)       0:00:19.387 ****** 
+2026-10-09 23:07:30,615 p=1736267 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg:
+  - NAME                                  READY   STATUS        RESTARTS   AGE   IP           NODE         NOMINATED NODE   READINESS GATES
+  - prestashop-f89c969ff-sh68h            1/1     Terminating   0          14d   10.42.0.71   k3s-node-1   <none>           <none>
+  - prestashop-mariadb-699579445f-nz69x   1/1     Running       0          14d   10.42.0.69   k3s-node-1   <none>           <none>
+2026-10-09 23:07:30,635 p=1736267 u=administrator n=ansible INFO| TASK [Diag K8s | events (triés par date)] *************************************************************************************
+2026-10-09 23:07:30,636 p=1736267 u=administrator n=ansible INFO| vendredi 09 octobre 2026  23:07:30 +0200 (0:00:00.091)       0:00:19.479 ****** 
+2026-10-09 23:07:31,459 p=1736267 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-09 23:07:31,485 p=1736267 u=administrator n=ansible INFO| TASK [Diag K8s | afficher events] *********************************************************************************************
+2026-10-09 23:07:31,485 p=1736267 u=administrator n=ansible INFO| vendredi 09 octobre 2026  23:07:31 +0200 (0:00:00.849)       0:00:20.328 ****** 
+2026-10-09 23:07:31,555 p=1736267 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg:
+  - LAST SEEN   TYPE      REASON              OBJECT                            MESSAGE
+  - '6m27s       Warning   ProbeWarning        pod/prestashop-f89c969ff-sh68h    Liveness probe warning: Probe terminated redirects, Response body:'
+  - '96s         Warning   ProbeWarning        pod/prestashop-f89c969ff-sh68h    Readiness probe warning: Probe terminated redirects, Response body:'
+  - '2s          Normal    SuccessfulDelete    replicaset/prestashop-f89c969ff   Deleted pod: prestashop-f89c969ff-sh68h'
+  - 2s          Normal    ScalingReplicaSet   deployment/prestashop             Scaled down replica set prestashop-f89c969ff to 0 from 1
+2026-10-09 23:07:31,577 p=1736267 u=administrator n=ansible INFO| TASK [Diag K8s | logs PrestaShop (50 dernières lignes)] ***********************************************************************
+2026-10-09 23:07:31,578 p=1736267 u=administrator n=ansible INFO| vendredi 09 octobre 2026  23:07:31 +0200 (0:00:00.092)       0:00:20.421 ****** 
+2026-10-09 23:07:32,501 p=1736267 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-09 23:07:32,523 p=1736267 u=administrator n=ansible INFO| TASK [Diag K8s | afficher logs PrestaShop] ************************************************************************************
+2026-10-09 23:07:32,523 p=1736267 u=administrator n=ansible INFO| vendredi 09 octobre 2026  23:07:32 +0200 (0:00:00.945)       0:00:21.366 ****** 
+2026-10-09 23:07:32,595 p=1736267 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg:
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] === cleanup-lock : état de /var/www/html ==='
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] total 348'
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] drwxr-xr-x   28 xfs      xfs           4096 Sep 25 19:06 .'
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] drwxr-xr-x    3 root     root          4096 Sep 25 19:06 ..'
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] -rw-r--r--    1 xfs      xfs           3281 Mar 17  2026 .htaccess'
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] -rw-r--r--    1 xfs      xfs           1621 Feb  3  2026 .php-cs-fixer.dist.php'
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] -rw-r--r--    1 xfs      xfs           5054 Feb  3  2026 INSTALL.txt'
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] -rw-r--r--    1 xfs      xfs         183862 Feb  3  2026 LICENSES'
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] -rw-r--r--    1 xfs      xfs            863 Feb  3  2026 Makefile'
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] drwxr-xr-x    8 xfs      xfs           4096 Feb  3  2026 admin-barista'
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] drwxr-xr-x    5 xfs      xfs           4096 Feb  3  2026 app'
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] -rw-r--r--    1 xfs      xfs           1305 Feb  3  2026 autoload.php'
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] drwxr-xr-x    2 xfs      xfs           4096 Feb  3  2026 bin'
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] drwxr-xr-x    8 xfs      xfs           4096 Feb  3  2026 cache'
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] drwxr-xr-x   25 xfs      xfs           4096 Feb  3  2026 classes'
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] drwxr-xr-x    5 xfs      xfs           4096 Mar 17  2026 config'
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] drwxr-xr-x    4 xfs      xfs           4096 Feb  3  2026 controllers'
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] drwxr-xr-x    4 xfs      xfs           4096 Feb  3  2026 docs'
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] drwxr-xr-x    2 xfs      xfs           4096 Feb  3  2026 download'
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] -rw-r--r--    1 xfs      xfs           2506 Feb  3  2026 error500.html'
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] drwxr-xr-x   22 xfs      xfs           4096 Feb  3  2026 img'
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] -rw-r--r--    1 xfs      xfs           1169 Feb  3  2026 index.php'
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] -rw-r--r--    1 xfs      xfs           1256 Feb  3  2026 init.php'
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] drwxr-xr-x    7 xfs      xfs           4096 Feb  3  2026 js'
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] drwxr-xr-x    3 xfs      xfs           4096 Feb  3  2026 localization'
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] drwx------    2 root     root         16384 Mar 17  2026 lost+found'
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] drwxr-xr-x    5 xfs      xfs           4096 Mar 17  2026 mails'
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] drwxr-xr-x   71 xfs      xfs           4096 Mar 17  2026 modules'
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] drwxr-xr-x    2 xfs      xfs           4096 Feb  3  2026 override'
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] drwxr-xr-x    2 xfs      xfs           4096 Feb  3  2026 pdf'
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] -rw-r--r--    1 xfs      xfs           2895 Feb  3  2026 phpstan.neon.dist'
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] -rw-r--r--    1 xfs      xfs           2778 Mar 17  2026 robots.txt'
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] drwxr-xr-x    5 xfs      xfs           4096 Feb  3  2026 src'
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] drwxr-xr-x    3 xfs      xfs           4096 Feb  3  2026 templates'
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] drwxr-xr-x    4 xfs      xfs           4096 Aug 26 19:27 themes'
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] drwxr-xr-x    3 xfs      xfs           4096 Feb  3  2026 tools'
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] drwxr-xr-x    6 xfs      xfs           4096 Mar 17  2026 translations'
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] drwxr-xr-x    2 xfs      xfs           4096 Feb  3  2026 upload'
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] drwxr-xr-x    6 xfs      xfs           4096 Mar 17  2026 var'
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] drwxr-xr-x   56 xfs      xfs           4096 Feb  3  2026 vendor'
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] drwxr-xr-x    2 xfs      xfs           4096 Feb  3  2026 webservice'
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] === Nettoyage des locks ==='
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] === Suppression inconditionnelle de install-barista ==='
+  - '[pod/prestashop-f89c969ff-sh68h/cleanup-lock] === Nettoyage terminé ==='
+  - '[pod/prestashop-f89c969ff-sh68h/wait-for-mariadb] Attente MariaDB (connexion MySQL réelle)...'
+  - '[pod/prestashop-f89c969ff-sh68h/wait-for-mariadb] MariaDB pas encore prête, nouvelle tentative dans 3s...'
+  - '[pod/prestashop-f89c969ff-sh68h/wait-for-mariadb] MariaDB pas encore prête, nouvelle tentative dans 3s...'
+  - '[pod/prestashop-f89c969ff-sh68h/wait-for-mariadb] MariaDB pas encore prête, nouvelle tentative dans 3s...'
+  - '[pod/prestashop-f89c969ff-sh68h/wait-for-mariadb] MariaDB pas encore prête, nouvelle tentative dans 3s...'
+  - '[pod/prestashop-f89c969ff-sh68h/wait-for-mariadb] MariaDB pas encore prête, nouvelle tentative dans 3s...'
+  - '[pod/prestashop-f89c969ff-sh68h/wait-for-mariadb] MariaDB pas encore prête, nouvelle tentative dans 3s...'
+  - '[pod/prestashop-f89c969ff-sh68h/wait-for-mariadb] MariaDB pas encore prête, nouvelle tentative dans 3s...'
+  - '[pod/prestashop-f89c969ff-sh68h/wait-for-mariadb] MariaDB pas encore prête, nouvelle tentative dans 3s...'
+  - '[pod/prestashop-f89c969ff-sh68h/wait-for-mariadb] MariaDB pas encore prête, nouvelle tentative dans 3s...'
+  - '[pod/prestashop-f89c969ff-sh68h/wait-for-mariadb] MariaDB pas encore prête, nouvelle tentative dans 3s...'
+  - '[pod/prestashop-f89c969ff-sh68h/wait-for-mariadb] MariaDB pas encore prête, nouvelle tentative dans 3s...'
+  - '[pod/prestashop-f89c969ff-sh68h/wait-for-mariadb] MariaDB pas encore prête, nouvelle tentative dans 3s...'
+  - '[pod/prestashop-f89c969ff-sh68h/wait-for-mariadb] MariaDB pas encore prête, nouvelle tentative dans 3s...'
+  - '[pod/prestashop-f89c969ff-sh68h/wait-for-mariadb] mysqld is alive'
+  - '[pod/prestashop-f89c969ff-sh68h/wait-for-mariadb] MariaDB prête - connexion MySQL OK.'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:20:59:10 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:20:59:25 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:20:59:34 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:20:59:40 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:20:59:55 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:00:04 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:00:10 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:00:25 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:00:34 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:00:40 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:00:55 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:01:04 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:01:10 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:01:25 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:01:34 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:01:40 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:01:55 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:02:04 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:02:10 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:02:25 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:02:34 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:02:40 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:02:55 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:03:04 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:03:10 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:03:25 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:03:34 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:03:40 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:03:55 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:04:04 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:04:10 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:04:25 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:04:34 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:04:40 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:04:55 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:05:04 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:05:10 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:05:25 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:05:34 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:05:40 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:05:55 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:06:04 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:06:10 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:06:25 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:06:34 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:06:40 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:06:55 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:07:04 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:07:10 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+  - '[pod/prestashop-f89c969ff-sh68h/prestashop] 10.42.0.1 - - [09/Oct/2026:21:07:25 +0000] "GET / HTTP/1.1" 302 210 "-" "kube-probe/1.30"'
+2026-10-09 23:07:32,616 p=1736267 u=administrator n=ansible INFO| TASK [Diag K8s | logs MariaDB (30 dernières lignes)] **************************************************************************
+2026-10-09 23:07:32,616 p=1736267 u=administrator n=ansible INFO| vendredi 09 octobre 2026  23:07:32 +0200 (0:00:00.092)       0:00:21.459 ****** 
+2026-10-09 23:07:33,465 p=1736267 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-09 23:07:33,493 p=1736267 u=administrator n=ansible INFO| TASK [Diag K8s | afficher logs MariaDB] ***************************************************************************************
+2026-10-09 23:07:33,494 p=1736267 u=administrator n=ansible INFO| vendredi 09 octobre 2026  23:07:33 +0200 (0:00:00.877)       0:00:22.337 ****** 
+2026-10-09 23:07:33,562 p=1736267 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg:
+  - '[pod/prestashop-mariadb-699579445f-nz69x/mariadb] 2026-09-25 19:06:16+00:00 [Note] [Entrypoint]: Entrypoint script for MariaDB Server 1:10.11.19+maria~ubu2204 started.'
+  - '[pod/prestashop-mariadb-699579445f-nz69x/mariadb] 2026-09-25 19:06:17+00:00 [Warn] [Entrypoint]: /sys/fs/cgroup///memory.pressure not writable, functionality unavailable to MariaDB'
+  - '[pod/prestashop-mariadb-699579445f-nz69x/mariadb] 2026-09-25 19:06:17+00:00 [Note] [Entrypoint]: Switching to dedicated user ''mysql'''
+  - '[pod/prestashop-mariadb-699579445f-nz69x/mariadb] 2026-09-25 19:06:17+00:00 [Note] [Entrypoint]: Entrypoint script for MariaDB Server 1:10.11.19+maria~ubu2204 started.'
+  - '[pod/prestashop-mariadb-699579445f-nz69x/mariadb] 2026-09-25 19:06:17+00:00 [Note] [Entrypoint]: MariaDB upgrade not required'
+  - '[pod/prestashop-mariadb-699579445f-nz69x/mariadb] 2026-09-25 19:06:18 0 [Note] Starting MariaDB 10.11.19-MariaDB-ubu2204 source revision 93e051860a9c7e87ee8cee6ed38b640d491f7170 server_uid WX8GG4ky0K5/8saR4Yi+coKuQGk= as process 1'
+  - '[pod/prestashop-mariadb-699579445f-nz69x/mariadb] 2026-09-25 19:06:18 0 [Note] InnoDB: Compressed tables use zlib 1.2.11'
+  - '[pod/prestashop-mariadb-699579445f-nz69x/mariadb] 2026-09-25 19:06:18 0 [Note] InnoDB: Number of transaction pools: 1'
+  - '[pod/prestashop-mariadb-699579445f-nz69x/mariadb] 2026-09-25 19:06:18 0 [Note] InnoDB: Using crc32 + pclmulqdq instructions'
+  - '[pod/prestashop-mariadb-699579445f-nz69x/mariadb] 2026-09-25 19:06:18 0 [Note] InnoDB: Using io_uring'
+  - '[pod/prestashop-mariadb-699579445f-nz69x/mariadb] 2026-09-25 19:06:18 0 [Note] InnoDB: innodb_buffer_pool_size_max=8388608m, innodb_buffer_pool_size=128m'
+  - '[pod/prestashop-mariadb-699579445f-nz69x/mariadb] 2026-09-25 19:06:18 0 [Note] InnoDB: Completed initialization of buffer pool'
+  - '[pod/prestashop-mariadb-699579445f-nz69x/mariadb] 2026-09-25 19:06:18 0 [Note] InnoDB: File system buffers for log disabled (block size=512 bytes)'
+  - '[pod/prestashop-mariadb-699579445f-nz69x/mariadb] 2026-09-25 19:06:18 0 [Note] InnoDB: End of log at LSN=6737284'
+  - '[pod/prestashop-mariadb-699579445f-nz69x/mariadb] 2026-09-25 19:06:18 0 [Note] InnoDB: 128 rollback segments are active.'
+  - '[pod/prestashop-mariadb-699579445f-nz69x/mariadb] 2026-09-25 19:06:18 0 [Note] InnoDB: Setting file ''./ibtmp1'' size to 12.000MiB. Physically writing the file full; Please wait ...'
+  - '[pod/prestashop-mariadb-699579445f-nz69x/mariadb] 2026-09-25 19:06:18 0 [Note] InnoDB: File ''./ibtmp1'' size is now 12.000MiB.'
+  - '[pod/prestashop-mariadb-699579445f-nz69x/mariadb] 2026-09-25 19:06:18 0 [Note] InnoDB: log sequence number 6737284; transaction id 10994'
+  - '[pod/prestashop-mariadb-699579445f-nz69x/mariadb] 2026-09-25 19:06:18 0 [Note] InnoDB: Loading buffer pool(s) from /var/lib/mysql/ib_buffer_pool'
+  - '[pod/prestashop-mariadb-699579445f-nz69x/mariadb] 2026-09-25 19:06:18 0 [Note] Plugin ''FEEDBACK'' is disabled.'
+  - '[pod/prestashop-mariadb-699579445f-nz69x/mariadb] 2026-09-25 19:06:18 0 [Warning] You need to use --log-bin to make --expire-logs-days or --binlog-expire-logs-seconds work.'
+  - '[pod/prestashop-mariadb-699579445f-nz69x/mariadb] 2026-09-25 19:06:18 0 [Note] Server socket created on IP: ''0.0.0.0'', port: ''3306''.'
+  - '[pod/prestashop-mariadb-699579445f-nz69x/mariadb] 2026-09-25 19:06:18 0 [Note] Server socket created on IP: ''::'', port: ''3306''.'
+  - '[pod/prestashop-mariadb-699579445f-nz69x/mariadb] 2026-09-25 19:06:18 0 [Note] mariadbd: ready for connections.'
+  - '[pod/prestashop-mariadb-699579445f-nz69x/mariadb] Version: ''10.11.19-MariaDB-ubu2204''  socket: ''/run/mysqld/mysqld.sock''  port: 3306  mariadb.org binary distribution'
+  - '[pod/prestashop-mariadb-699579445f-nz69x/mariadb] 2026-09-25 19:06:19 0 [Note] InnoDB: Buffer pool(s) load completed at 260925 19:06:19'
+  - '[pod/prestashop-mariadb-699579445f-nz69x/mariadb] 2026-09-25 20:04:44 786 [Warning] Access denied for user ''root''@''localhost'' (using password: NO)'
+  - '[pod/prestashop-mariadb-699579445f-nz69x/mariadb] 2026-09-25 20:12:46 906 [ERROR] Invalid (old?) table or database name ''lost+found'''
+2026-10-09 23:07:33,595 p=1736267 u=administrator n=ansible INFO| TASK [Supprimer le chart et les values temporaires] ***************************************************************************
+2026-10-09 23:07:33,596 p=1736267 u=administrator n=ansible INFO| vendredi 09 octobre 2026  23:07:33 +0200 (0:00:00.101)       0:00:22.439 ****** 
+2026-10-09 23:07:34,219 p=1736267 u=administrator n=ansible INFO| changed: [k3s-node-1] => (item=/tmp/helm-prestashop)
+2026-10-09 23:07:34,794 p=1736267 u=administrator n=ansible INFO| changed: [k3s-node-1] => (item=/tmp/helm-prestashop-values.yaml)
+2026-10-09 23:07:34,836 p=1736267 u=administrator n=ansible INFO| TASK [Vérifier le type de clé du certificat actuel] ***************************************************************************
+2026-10-09 23:07:34,837 p=1736267 u=administrator n=ansible INFO| vendredi 09 octobre 2026  23:07:34 +0200 (0:00:01.240)       0:00:23.679 ****** 
+2026-10-09 23:07:35,668 p=1736267 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-09 23:07:35,688 p=1736267 u=administrator n=ansible INFO| TASK [Supprimer l'ancien certificat RSA pour forcer le renouvellement ECDSA] **************************************************
+2026-10-09 23:07:35,689 p=1736267 u=administrator n=ansible INFO| vendredi 09 octobre 2026  23:07:35 +0200 (0:00:00.852)       0:00:24.532 ****** 
+2026-10-09 23:07:35,731 p=1736267 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-10-09 23:07:35,752 p=1736267 u=administrator n=ansible INFO| TASK [Supprimer l'ancien secret TLS RSA] **************************************************************************************
+2026-10-09 23:07:35,752 p=1736267 u=administrator n=ansible INFO| vendredi 09 octobre 2026  23:07:35 +0200 (0:00:00.063)       0:00:24.595 ****** 
+2026-10-09 23:07:35,794 p=1736267 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-10-09 23:07:35,822 p=1736267 u=administrator n=ansible INFO| TASK [Attendre que MariaDB soit Ready] ****************************************************************************************
+2026-10-09 23:07:35,822 p=1736267 u=administrator n=ansible INFO| vendredi 09 octobre 2026  23:07:35 +0200 (0:00:00.070)       0:00:24.665 ****** 
+2026-10-09 23:07:36,732 p=1736267 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-09 23:07:36,763 p=1736267 u=administrator n=ansible INFO| TASK [Attendre que PrestaShop soit Ready (installation DB au 1er boot = ~15min)] **********************************************
+2026-10-09 23:07:36,763 p=1736267 u=administrator n=ansible INFO| vendredi 09 octobre 2026  23:07:36 +0200 (0:00:00.940)       0:00:25.606 ****** 
+2026-10-09 23:07:37,670 p=1736267 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-09 23:07:37,704 p=1736267 u=administrator n=ansible INFO| TASK [Avertissement si PrestaShop pas encore Ready] ***************************************************************************
+2026-10-09 23:07:37,705 p=1736267 u=administrator n=ansible INFO| vendredi 09 octobre 2026  23:07:37 +0200 (0:00:00.941)       0:00:26.548 ****** 
+2026-10-09 23:07:37,744 p=1736267 u=administrator n=ansible INFO| skipping: [k3s-node-1]
+2026-10-09 23:07:37,765 p=1736267 u=administrator n=ansible INFO| TASK [Vérifier les pods PrestaShop] *******************************************************************************************
+2026-10-09 23:07:37,765 p=1736267 u=administrator n=ansible INFO| vendredi 09 octobre 2026  23:07:37 +0200 (0:00:00.060)       0:00:26.608 ****** 
+2026-10-09 23:07:38,575 p=1736267 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-09 23:07:38,603 p=1736267 u=administrator n=ansible INFO| TASK [Vérifier les services PrestaShop] ***************************************************************************************
+2026-10-09 23:07:38,603 p=1736267 u=administrator n=ansible INFO| vendredi 09 octobre 2026  23:07:38 +0200 (0:00:00.837)       0:00:27.446 ****** 
+2026-10-09 23:07:39,409 p=1736267 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-09 23:07:39,445 p=1736267 u=administrator n=ansible INFO| TASK [Vérifier l'Ingress PrestaShop] ******************************************************************************************
+2026-10-09 23:07:39,446 p=1736267 u=administrator n=ansible INFO| vendredi 09 octobre 2026  23:07:39 +0200 (0:00:00.842)       0:00:28.289 ****** 
+2026-10-09 23:07:40,230 p=1736267 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-09 23:07:40,251 p=1736267 u=administrator n=ansible INFO| TASK [Vérifier l'IngressRoute HTTPS] ******************************************************************************************
+2026-10-09 23:07:40,252 p=1736267 u=administrator n=ansible INFO| vendredi 09 octobre 2026  23:07:40 +0200 (0:00:00.805)       0:00:29.095 ****** 
+2026-10-09 23:07:41,049 p=1736267 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-09 23:07:41,084 p=1736267 u=administrator n=ansible INFO| TASK [Vérifier le certificat TLS] *********************************************************************************************
+2026-10-09 23:07:41,085 p=1736267 u=administrator n=ansible INFO| vendredi 09 octobre 2026  23:07:41 +0200 (0:00:00.833)       0:00:29.928 ****** 
+2026-10-09 23:07:41,902 p=1736267 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-09 23:07:41,928 p=1736267 u=administrator n=ansible INFO| TASK [Vérifier les PersistentVolumeClaims] ************************************************************************************
+2026-10-09 23:07:41,928 p=1736267 u=administrator n=ansible INFO| vendredi 09 octobre 2026  23:07:41 +0200 (0:00:00.843)       0:00:30.771 ****** 
+2026-10-09 23:07:42,757 p=1736267 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-09 23:07:42,788 p=1736267 u=administrator n=ansible INFO| TASK [Vérifier la release Helm] ***********************************************************************************************
+2026-10-09 23:07:42,789 p=1736267 u=administrator n=ansible INFO| vendredi 09 octobre 2026  23:07:42 +0200 (0:00:00.860)       0:00:31.632 ****** 
+2026-10-09 23:07:43,511 p=1736267 u=administrator n=ansible INFO| ok: [k3s-node-1]
+2026-10-09 23:07:43,533 p=1736267 u=administrator n=ansible INFO| TASK [Résumé PrestaShop] ******************************************************************************************************
+2026-10-09 23:07:43,533 p=1736267 u=administrator n=ansible INFO| vendredi 09 octobre 2026  23:07:43 +0200 (0:00:00.744)       0:00:32.376 ****** 
+2026-10-09 23:07:43,596 p=1736267 u=administrator n=ansible INFO| ok: [k3s-node-1] => 
+  msg:
+  - ============================================================
+  - '  PrestaShop 8 - Boutique Barista'
+  - '  Déploiement Helm réussi ✓'
+  - ============================================================
+  - 'URL boutique  : https://barista.app.xixtu.eu'
+  - 'Admin panel   : https://barista.app.xixtu.eu/admin-barista'
+  - 'Admin user    : admin@xixtu.eu'
+  - 'Langue        : Français (fr) | Pays : France'
+  - '------------------------------------------------------------'
+  - 'Images Docker  : prestashop/prestashop:8'
+  - '               : mariadb:10.11'
+  - '               : alpine:3.19 (init cleanup-lock)'
+  - 'Helm release   : prestashop (namespace prestashop)'
+  - 'Chart          : charts/prestashop v1.0.0'
+  - '------------------------------------------------------------'
+  - 'Ingress        : traefik (web → redirect HTTPS, websecure TLS)'
+  - 'TLS            : cert-manager / letsencrypt-production'
+  - 'Certificat     : ECDSA P-384 (rotation automatique)'
+  - 'Headers        : security-headers (HSTS 2 ans, X-Frame, XSS)'
+  - 'PSA namespace  : baseline (Apache www-data)'
+  - '------------------------------------------------------------'
+  - 'Storage        : longhorn-fast (répliques: 2)'
+  - 'Données app    : 20Gi (/var/www/html)'
+  - 'Base de données: MariaDB 10Gi'
+  - '------------------------------------------------------------'
+  - 'Helm releases  : [''NAME      \tNAMESPACE \tREVISION\tUPDATED                                 \tSTATUS  \tCHART           \tAPP VERSION'', ''prestashop\tprestashop\t2       \t2026-10-09 23:07:27.627105244 +0200 CEST\tdeployed\tprestashop-1.0.0\t8          '']'
+  - 'Pods    : [''NAME                                  READY   STATUS        RESTARTS   AGE   IP           NODE         NOMINATED NODE   READINESS GATES'', ''prestashop-f89c969ff-sh68h            1/1     Terminating   0          14d   10.42.0.71   k3s-node-1   <none>           <none>'', ''prestashop-mariadb-699579445f-nz69x   1/1     Running       0          14d   10.42.0.69   k3s-node-1   <none>           <none>'']'
+  - 'Services: [''NAME                 TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE'', ''prestashop           ClusterIP   10.43.253.179   <none>        80/TCP     206d'', ''prestashop-mariadb   ClusterIP   10.43.173.76    <none>        3306/TCP   206d'']'
+  - 'Ingress : [''NAME         CLASS     HOSTS                  ADDRESS        PORTS     AGE'', ''prestashop   traefik   barista.app.xixtu.eu   192.168.0.20   80, 443   206d'']'
+  - 'IR HTTPS: []'
+  - 'Certs   : [''NAME             READY   SECRET           AGE'', ''prestashop-tls   True    prestashop-tls   206d'']'
+  - 'PVCs    : [''NAME                  STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS    VOLUMEATTRIBUTESCLASS   AGE'', ''prestashop-data-pvc   Bound    pvc-989ffc50-2b99-4d58-b40d-1b5a345fd6e7   20Gi       RWO            longhorn-fast   <unset>                 206d'', ''prestashop-db-pvc     Bound    pvc-6ee668a0-d2e6-4ac4-baa6-69f4f6765ac5   10Gi       RWO            longhorn-fast   <unset>                 206d'']'
+  - ============================================================
+  - 'COMMANDES UTILES :'
+  - '  helm list -n prestashop'
+  - '  helm history prestashop -n prestashop'
+  - '  helm rollback prestashop -n prestashop'
+  - '  kubectl logs -n prestashop -l app.kubernetes.io/component=app -f'
+  - '  kubectl logs -n prestashop -l app.kubernetes.io/component=mariadb -f'
+  - ============================================================
+  - 'MODULES PAIEMENT À INSTALLER (Marketplace PrestaShop) :'
+  - '  ✓ Virement bancaire   → natif'
+  - '  ✓ Chèque              → natif (ps_checkpayment)'
+  - '  ✓ Cash à la livraison → natif (ps_cashondelivery)'
+  - '  ★ Wero / Stripe       → modules Marketplace'
+  - ============================================================
+2026-10-09 23:07:43,598 p=1736267 u=administrator n=ansible INFO| PLAY RECAP ********************************************************************************************************************
+2026-10-09 23:07:43,599 p=1736267 u=administrator n=ansible INFO| k3s-node-1                 : ok=29   changed=5    unreachable=0    failed=0    skipped=3    rescued=0    ignored=0   
+2026-10-09 23:07:43,599 p=1736267 u=administrator n=ansible INFO| PLAYBOOK RECAP ****************************************************************************************************************
+2026-10-09 23:07:43,599 p=1736267 u=administrator n=ansible INFO| Playbook run took 0 days, 0 hours, 0 minutes, 32 seconds
+
+2026-10-09 23:07:43,599 p=1736267 u=administrator n=ansible INFO| TASKS RECAP *******************************************************************************************************************
+2026-10-09 23:07:43,600 p=1736267 u=administrator n=ansible INFO| vendredi 09 octobre 2026  23:07:43 +0200 (0:00:00.066)       0:00:32.443 ****** 
+2026-10-09 23:07:43,600 p=1736267 u=administrator n=ansible INFO| =============================================================================== 
+2026-10-09 23:07:43,600 p=1736267 u=administrator n=ansible INFO| Copier le chart Helm PrestaShop sur le nœud --------------------------------------------------------------------------- 10.72s
+2026-10-09 23:07:43,601 p=1736267 u=administrator n=ansible INFO| Helm | upgrade --install prestashop ------------------------------------------------------------------------------------ 2.55s
+2026-10-09 23:07:43,601 p=1736267 u=administrator n=ansible INFO| Supprimer le chart et les values temporaires --------------------------------------------------------------------------- 1.24s
+2026-10-09 23:07:43,601 p=1736267 u=administrator n=ansible INFO| Écrire le fichier values Helm (overrides depuis group_vars) ------------------------------------------------------------ 1.19s
+2026-10-09 23:07:43,601 p=1736267 u=administrator n=ansible INFO| Vérifier que Helm est installé ----------------------------------------------------------------------------------------- 1.03s
+2026-10-09 23:07:43,601 p=1736267 u=administrator n=ansible INFO| Créer le répertoire de travail pour le chart Helm ---------------------------------------------------------------------- 0.98s
+2026-10-09 23:07:43,601 p=1736267 u=administrator n=ansible INFO| Diag K8s | logs PrestaShop (50 dernières lignes) ----------------------------------------------------------------------- 0.95s
+2026-10-09 23:07:43,602 p=1736267 u=administrator n=ansible INFO| Attendre que PrestaShop soit Ready (installation DB au 1er boot = ~15min) ---------------------------------------------- 0.94s
+2026-10-09 23:07:43,602 p=1736267 u=administrator n=ansible INFO| Attendre que MariaDB soit Ready ---------------------------------------------------------------------------------------- 0.94s
+2026-10-09 23:07:43,602 p=1736267 u=administrator n=ansible INFO| Diag K8s | logs MariaDB (30 dernières lignes) -------------------------------------------------------------------------- 0.88s
+2026-10-09 23:07:43,602 p=1736267 u=administrator n=ansible INFO| Labelliser le namespace prestashop (PSA baseline - Apache www-data) ---------------------------------------------------- 0.87s
+2026-10-09 23:07:43,602 p=1736267 u=administrator n=ansible INFO| Vérifier les PersistentVolumeClaims ------------------------------------------------------------------------------------ 0.86s
+2026-10-09 23:07:43,603 p=1736267 u=administrator n=ansible INFO| Vérifier le type de clé du certificat actuel --------------------------------------------------------------------------- 0.85s
+2026-10-09 23:07:43,603 p=1736267 u=administrator n=ansible INFO| Diag K8s | events (triés par date) ------------------------------------------------------------------------------------- 0.85s
+2026-10-09 23:07:43,603 p=1736267 u=administrator n=ansible INFO| Créer le namespace prestashop (si absent) ------------------------------------------------------------------------------ 0.85s
+2026-10-09 23:07:43,603 p=1736267 u=administrator n=ansible INFO| Vérifier le certificat TLS --------------------------------------------------------------------------------------------- 0.84s
+2026-10-09 23:07:43,603 p=1736267 u=administrator n=ansible INFO| Vérifier les services PrestaShop --------------------------------------------------------------------------------------- 0.84s
+2026-10-09 23:07:43,604 p=1736267 u=administrator n=ansible INFO| Diag K8s | pods -n prestashop ------------------------------------------------------------------------------------------ 0.84s
+2026-10-09 23:07:43,604 p=1736267 u=administrator n=ansible INFO| Vérifier les pods PrestaShop ------------------------------------------------------------------------------------------- 0.84s
+2026-10-09 23:07:43,604 p=1736267 u=administrator n=ansible INFO| Vérifier l'IngressRoute HTTPS ------------------------------------------------------------------------------------------ 0.83s
