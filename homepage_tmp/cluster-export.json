@@ -1,0 +1,1317 @@
+{
+  "ingresses": {
+    "apiVersion": "v1",
+    "items": [
+        {
+            "apiVersion": "networking.k8s.io/v1",
+            "kind": "Ingress",
+            "metadata": {
+                "annotations": {
+                    "cert-manager.io/cluster-issuer": "letsencrypt-production",
+                    "cert-manager.io/private-key-algorithm": "ECDSA",
+                    "cert-manager.io/private-key-rotation-policy": "Always",
+                    "cert-manager.io/private-key-size": "384",
+                    "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"networking.k8s.io/v1\",\"kind\":\"Ingress\",\"metadata\":{\"annotations\":{\"cert-manager.io/cluster-issuer\":\"letsencrypt-production\",\"cert-manager.io/private-key-algorithm\":\"ECDSA\",\"cert-manager.io/private-key-rotation-policy\":\"Always\",\"cert-manager.io/private-key-size\":\"384\",\"traefik.ingress.kubernetes.io/router.entrypoints\":\"web\",\"traefik.ingress.kubernetes.io/router.middlewares\":\"traefik-redirect-to-https@kubernetescrd\"},\"name\":\"adguardhome-ingress\",\"namespace\":\"adguardhome\"},\"spec\":{\"ingressClassName\":\"traefik\",\"rules\":[{\"host\":\"adguardhome.app.xixtu.eu\",\"http\":{\"paths\":[{\"backend\":{\"service\":{\"name\":\"adguard-web\",\"port\":{\"number\":80}}},\"path\":\"/\",\"pathType\":\"Prefix\"}]}}],\"tls\":[{\"hosts\":[\"adguardhome.app.xixtu.eu\"],\"secretName\":\"adguardhome-tls\"}]}}\n",
+                    "traefik.ingress.kubernetes.io/router.entrypoints": "web",
+                    "traefik.ingress.kubernetes.io/router.middlewares": "traefik-redirect-to-https@kubernetescrd"
+                },
+                "creationTimestamp": "2026-03-01T18:48:43Z",
+                "generation": 1,
+                "name": "adguardhome-ingress",
+                "namespace": "adguardhome",
+                "resourceVersion": "3418380",
+                "uid": "5bea588b-ada5-42c5-bb3c-c65fd15a2785"
+            },
+            "spec": {
+                "ingressClassName": "traefik",
+                "rules": [
+                    {
+                        "host": "adguardhome.app.xixtu.eu",
+                        "http": {
+                            "paths": [
+                                {
+                                    "backend": {
+                                        "service": {
+                                            "name": "adguard-web",
+                                            "port": {
+                                                "number": 80
+                                            }
+                                        }
+                                    },
+                                    "path": "/",
+                                    "pathType": "Prefix"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "tls": [
+                    {
+                        "hosts": [
+                            "adguardhome.app.xixtu.eu"
+                        ],
+                        "secretName": "adguardhome-tls"
+                    }
+                ]
+            },
+            "status": {
+                "loadBalancer": {
+                    "ingress": [
+                        {
+                            "ip": "192.168.0.20"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "apiVersion": "networking.k8s.io/v1",
+            "kind": "Ingress",
+            "metadata": {
+                "annotations": {
+                    "cert-manager.io/cluster-issuer": "letsencrypt-production",
+                    "cert-manager.io/private-key-algorithm": "ECDSA",
+                    "cert-manager.io/private-key-rotation-policy": "Always",
+                    "cert-manager.io/private-key-size": "384",
+                    "traefik.ingress.kubernetes.io/router.entrypoints": "websecure",
+                    "traefik.ingress.kubernetes.io/router.middlewares": "guacamole-guacamole-addprefix@kubernetescrd",
+                    "traefik.ingress.kubernetes.io/router.tls": "true"
+                },
+                "creationTimestamp": "2026-10-09T19:27:47Z",
+                "generation": 1,
+                "labels": {
+                    "app.kubernetes.io/name": "guacamole-web",
+                    "app.kubernetes.io/part-of": "guacamole"
+                },
+                "name": "guacamole-ingress",
+                "namespace": "guacamole",
+                "resourceVersion": "52555702",
+                "uid": "f8369eb3-6672-420c-b83d-61f3a6d09d5d"
+            },
+            "spec": {
+                "ingressClassName": "traefik",
+                "rules": [
+                    {
+                        "host": "guacamole.app.xixtu.eu",
+                        "http": {
+                            "paths": [
+                                {
+                                    "backend": {
+                                        "service": {
+                                            "name": "guacamole-web",
+                                            "port": {
+                                                "name": "http"
+                                            }
+                                        }
+                                    },
+                                    "path": "/",
+                                    "pathType": "Prefix"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "tls": [
+                    {
+                        "hosts": [
+                            "guacamole.app.xixtu.eu"
+                        ],
+                        "secretName": "guacamole-tls"
+                    }
+                ]
+            },
+            "status": {
+                "loadBalancer": {
+                    "ingress": [
+                        {
+                            "ip": "192.168.0.20"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "apiVersion": "networking.k8s.io/v1",
+            "kind": "Ingress",
+            "metadata": {
+                "annotations": {
+                    "cert-manager.io/cluster-issuer": "letsencrypt-production",
+                    "cert-manager.io/private-key-algorithm": "ECDSA",
+                    "cert-manager.io/private-key-rotation-policy": "Always",
+                    "cert-manager.io/private-key-size": "384",
+                    "meta.helm.sh/release-name": "headlamp",
+                    "meta.helm.sh/release-namespace": "headlamp",
+                    "traefik.ingress.kubernetes.io/router.entrypoints": "web",
+                    "traefik.ingress.kubernetes.io/router.middlewares": "traefik-redirect-to-https@kubernetescrd"
+                },
+                "creationTimestamp": "2026-02-19T20:19:18Z",
+                "generation": 3,
+                "labels": {
+                    "app.kubernetes.io/instance": "headlamp",
+                    "app.kubernetes.io/managed-by": "Helm",
+                    "app.kubernetes.io/name": "headlamp",
+                    "app.kubernetes.io/version": "0.40.0",
+                    "helm.sh/chart": "headlamp-0.40.0"
+                },
+                "name": "headlamp",
+                "namespace": "headlamp",
+                "resourceVersion": "3001764",
+                "uid": "bd3860dd-cb9d-4693-8a37-34da2893ad3f"
+            },
+            "spec": {
+                "ingressClassName": "traefik",
+                "rules": [
+                    {
+                        "host": "headlamp.app.xixtu.eu",
+                        "http": {
+                            "paths": [
+                                {
+                                    "backend": {
+                                        "service": {
+                                            "name": "headlamp",
+                                            "port": {
+                                                "number": 4466
+                                            }
+                                        }
+                                    },
+                                    "path": "/",
+                                    "pathType": "Prefix"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "tls": [
+                    {
+                        "hosts": [
+                            "headlamp.app.xixtu.eu"
+                        ],
+                        "secretName": "headlamp-tls"
+                    }
+                ]
+            },
+            "status": {
+                "loadBalancer": {
+                    "ingress": [
+                        {
+                            "ip": "192.168.0.20"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "apiVersion": "networking.k8s.io/v1",
+            "kind": "Ingress",
+            "metadata": {
+                "annotations": {
+                    "cert-manager.io/cluster-issuer": "letsencrypt-production",
+                    "cert-manager.io/private-key-algorithm": "ECDSA",
+                    "cert-manager.io/private-key-rotation-policy": "Always",
+                    "cert-manager.io/private-key-size": "384",
+                    "traefik.ingress.kubernetes.io/router.entrypoints": "web,websecure",
+                    "traefik.ingress.kubernetes.io/router.middlewares": "homepage-traefik-redirect-to-https@kubernetescrd"
+                },
+                "creationTimestamp": "2026-10-10T17:54:20Z",
+                "generation": 1,
+                "name": "homepage-ingress",
+                "namespace": "homepage",
+                "resourceVersion": "52864480",
+                "uid": "c53a44b1-abee-4d4b-ba38-84d35ef96b08"
+            },
+            "spec": {
+                "ingressClassName": "traefik",
+                "rules": [
+                    {
+                        "host": "homepage.app.xixtu.eu",
+                        "http": {
+                            "paths": [
+                                {
+                                    "backend": {
+                                        "service": {
+                                            "name": "homepage-service",
+                                            "port": {
+                                                "number": 80
+                                            }
+                                        }
+                                    },
+                                    "path": "/",
+                                    "pathType": "Prefix"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "tls": [
+                    {
+                        "hosts": [
+                            "homepage.app.xixtu.eu"
+                        ],
+                        "secretName": "homepage-tls"
+                    }
+                ]
+            },
+            "status": {
+                "loadBalancer": {
+                    "ingress": [
+                        {
+                            "ip": "192.168.0.20"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "apiVersion": "networking.k8s.io/v1",
+            "kind": "Ingress",
+            "metadata": {
+                "annotations": {
+                    "cert-manager.io/cluster-issuer": "letsencrypt-production",
+                    "cert-manager.io/private-key-algorithm": "ECDSA",
+                    "cert-manager.io/private-key-rotation-policy": "Always",
+                    "cert-manager.io/private-key-size": "384",
+                    "kubernetes.io/ingress.class": "traefik",
+                    "traefik.ingress.kubernetes.io/router.entrypoints": "web",
+                    "traefik.ingress.kubernetes.io/router.middlewares": "traefik-redirect-to-https@kubernetescrd"
+                },
+                "creationTimestamp": "2026-02-19T21:22:53Z",
+                "generation": 4,
+                "name": "kwaba-redirect-ingress",
+                "namespace": "kwaba-kinesiologie-redirect",
+                "resourceVersion": "3002024",
+                "uid": "b873bac5-fc5a-4030-a730-c9bbf833a6a8"
+            },
+            "spec": {
+                "ingressClassName": "traefik",
+                "rules": [
+                    {
+                        "host": "kwaba-kinesiologie.xixtu.eu",
+                        "http": {
+                            "paths": [
+                                {
+                                    "backend": {
+                                        "service": {
+                                            "name": "kwaba-redirect-service",
+                                            "port": {
+                                                "number": 80
+                                            }
+                                        }
+                                    },
+                                    "path": "/",
+                                    "pathType": "Prefix"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "tls": [
+                    {
+                        "hosts": [
+                            "kwaba-kinesiologie.xixtu.eu"
+                        ],
+                        "secretName": "kwaba-redirect-tls"
+                    }
+                ]
+            },
+            "status": {
+                "loadBalancer": {
+                    "ingress": [
+                        {
+                            "ip": "192.168.0.20"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "apiVersion": "networking.k8s.io/v1",
+            "kind": "Ingress",
+            "metadata": {
+                "annotations": {
+                    "cert-manager.io/cluster-issuer": "letsencrypt-production",
+                    "cert-manager.io/private-key-algorithm": "ECDSA",
+                    "cert-manager.io/private-key-rotation-policy": "Always",
+                    "cert-manager.io/private-key-size": "384",
+                    "traefik.ingress.kubernetes.io/router.entrypoints": "web",
+                    "traefik.ingress.kubernetes.io/router.middlewares": "traefik-redirect-to-https@kubernetescrd"
+                },
+                "creationTimestamp": "2026-02-26T12:28:42Z",
+                "generation": 1,
+                "name": "longhorn-ingress-tls",
+                "namespace": "longhorn-system",
+                "resourceVersion": "2857864",
+                "uid": "8929fdf6-a70b-4047-9c75-038f3a53fd49"
+            },
+            "spec": {
+                "ingressClassName": "traefik",
+                "rules": [
+                    {
+                        "host": "longhorn.app.xixtu.eu",
+                        "http": {
+                            "paths": [
+                                {
+                                    "backend": {
+                                        "service": {
+                                            "name": "longhorn-frontend",
+                                            "port": {
+                                                "number": 80
+                                            }
+                                        }
+                                    },
+                                    "path": "/",
+                                    "pathType": "Prefix"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "tls": [
+                    {
+                        "hosts": [
+                            "longhorn.app.xixtu.eu"
+                        ],
+                        "secretName": "longhorn-tls"
+                    }
+                ]
+            },
+            "status": {
+                "loadBalancer": {
+                    "ingress": [
+                        {
+                            "ip": "192.168.0.20"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "apiVersion": "networking.k8s.io/v1",
+            "kind": "Ingress",
+            "metadata": {
+                "annotations": {
+                    "cert-manager.io/cluster-issuer": "letsencrypt-production",
+                    "cert-manager.io/private-key-algorithm": "ECDSA",
+                    "cert-manager.io/private-key-rotation-policy": "Always",
+                    "cert-manager.io/private-key-size": "384",
+                    "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"networking.k8s.io/v1\",\"kind\":\"Ingress\",\"metadata\":{\"annotations\":{\"cert-manager.io/cluster-issuer\":\"letsencrypt-production\",\"cert-manager.io/private-key-algorithm\":\"ECDSA\",\"cert-manager.io/private-key-rotation-policy\":\"Always\",\"cert-manager.io/private-key-size\":\"384\",\"traefik.ingress.kubernetes.io/router.entrypoints\":\"web\",\"traefik.ingress.kubernetes.io/router.middlewares\":\"traefik-redirect-to-https@kubernetescrd\"},\"name\":\"alertmanager-ingress-tls\",\"namespace\":\"monitoring\"},\"spec\":{\"ingressClassName\":\"traefik\",\"rules\":[{\"host\":\"alertmanager.app.xixtu.eu\",\"http\":{\"paths\":[{\"backend\":{\"service\":{\"name\":\"kube-prometheus-stack-alertmanager\",\"port\":{\"number\":9093}}},\"path\":\"/\",\"pathType\":\"Prefix\"}]}}],\"tls\":[{\"hosts\":[\"alertmanager.app.xixtu.eu\"],\"secretName\":\"alertmanager-tls\"}]}}\n",
+                    "traefik.ingress.kubernetes.io/router.entrypoints": "web",
+                    "traefik.ingress.kubernetes.io/router.middlewares": "traefik-redirect-to-https@kubernetescrd"
+                },
+                "creationTimestamp": "2026-02-26T18:05:46Z",
+                "generation": 1,
+                "name": "alertmanager-ingress-tls",
+                "namespace": "monitoring",
+                "resourceVersion": "3835360",
+                "uid": "41178cd1-6ffb-42b5-a5e3-061c66f99fb2"
+            },
+            "spec": {
+                "ingressClassName": "traefik",
+                "rules": [
+                    {
+                        "host": "alertmanager.app.xixtu.eu",
+                        "http": {
+                            "paths": [
+                                {
+                                    "backend": {
+                                        "service": {
+                                            "name": "kube-prometheus-stack-alertmanager",
+                                            "port": {
+                                                "number": 9093
+                                            }
+                                        }
+                                    },
+                                    "path": "/",
+                                    "pathType": "Prefix"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "tls": [
+                    {
+                        "hosts": [
+                            "alertmanager.app.xixtu.eu"
+                        ],
+                        "secretName": "alertmanager-tls"
+                    }
+                ]
+            },
+            "status": {
+                "loadBalancer": {
+                    "ingress": [
+                        {
+                            "ip": "192.168.0.20"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "apiVersion": "networking.k8s.io/v1",
+            "kind": "Ingress",
+            "metadata": {
+                "annotations": {
+                    "cert-manager.io/cluster-issuer": "letsencrypt-production",
+                    "cert-manager.io/private-key-algorithm": "ECDSA",
+                    "cert-manager.io/private-key-rotation-policy": "Always",
+                    "cert-manager.io/private-key-size": "384",
+                    "meta.helm.sh/release-name": "collectd-exporter",
+                    "meta.helm.sh/release-namespace": "monitoring",
+                    "traefik.ingress.kubernetes.io/router.entrypoints": "web",
+                    "traefik.ingress.kubernetes.io/router.middlewares": "traefik-redirect-to-https@kubernetescrd"
+                },
+                "creationTimestamp": "2026-10-07T17:34:05Z",
+                "generation": 1,
+                "labels": {
+                    "app.kubernetes.io/instance": "collectd-exporter",
+                    "app.kubernetes.io/managed-by": "Helm",
+                    "app.kubernetes.io/name": "collectd-exporter",
+                    "helm.sh/chart": "collectd-exporter-0.1.0"
+                },
+                "name": "collectd-exporter-ingress-tls",
+                "namespace": "monitoring",
+                "resourceVersion": "51866237",
+                "uid": "461c24b6-5190-4aba-b6b6-15f5ac940afc"
+            },
+            "spec": {
+                "ingressClassName": "traefik",
+                "rules": [
+                    {
+                        "host": "collectd.app.xixtu.eu",
+                        "http": {
+                            "paths": [
+                                {
+                                    "backend": {
+                                        "service": {
+                                            "name": "collectd-exporter",
+                                            "port": {
+                                                "number": 9103
+                                            }
+                                        }
+                                    },
+                                    "path": "/",
+                                    "pathType": "Prefix"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "tls": [
+                    {
+                        "hosts": [
+                            "collectd.app.xixtu.eu"
+                        ],
+                        "secretName": "collectd-tls"
+                    }
+                ]
+            },
+            "status": {
+                "loadBalancer": {
+                    "ingress": [
+                        {
+                            "ip": "192.168.0.20"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "apiVersion": "networking.k8s.io/v1",
+            "kind": "Ingress",
+            "metadata": {
+                "annotations": {
+                    "cert-manager.io/cluster-issuer": "letsencrypt-production",
+                    "cert-manager.io/private-key-algorithm": "ECDSA",
+                    "cert-manager.io/private-key-rotation-policy": "Always",
+                    "cert-manager.io/private-key-size": "384",
+                    "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"networking.k8s.io/v1\",\"kind\":\"Ingress\",\"metadata\":{\"annotations\":{\"cert-manager.io/cluster-issuer\":\"letsencrypt-production\",\"cert-manager.io/private-key-algorithm\":\"ECDSA\",\"cert-manager.io/private-key-rotation-policy\":\"Always\",\"cert-manager.io/private-key-size\":\"384\",\"traefik.ingress.kubernetes.io/router.entrypoints\":\"web\",\"traefik.ingress.kubernetes.io/router.middlewares\":\"traefik-redirect-to-https@kubernetescrd\"},\"name\":\"grafana-ingress-tls\",\"namespace\":\"monitoring\"},\"spec\":{\"ingressClassName\":\"traefik\",\"rules\":[{\"host\":\"grafana.app.xixtu.eu\",\"http\":{\"paths\":[{\"backend\":{\"service\":{\"name\":\"kube-prometheus-stack-grafana\",\"port\":{\"number\":80}}},\"path\":\"/\",\"pathType\":\"Prefix\"}]}}],\"tls\":[{\"hosts\":[\"grafana.app.xixtu.eu\"],\"secretName\":\"grafana-tls\"}]}}\n",
+                    "traefik.ingress.kubernetes.io/router.entrypoints": "web",
+                    "traefik.ingress.kubernetes.io/router.middlewares": "traefik-redirect-to-https@kubernetescrd"
+                },
+                "creationTimestamp": "2026-02-26T18:05:37Z",
+                "generation": 1,
+                "name": "grafana-ingress-tls",
+                "namespace": "monitoring",
+                "resourceVersion": "3835235",
+                "uid": "67a86c53-0dc8-401a-bf34-67850ff66f28"
+            },
+            "spec": {
+                "ingressClassName": "traefik",
+                "rules": [
+                    {
+                        "host": "grafana.app.xixtu.eu",
+                        "http": {
+                            "paths": [
+                                {
+                                    "backend": {
+                                        "service": {
+                                            "name": "kube-prometheus-stack-grafana",
+                                            "port": {
+                                                "number": 80
+                                            }
+                                        }
+                                    },
+                                    "path": "/",
+                                    "pathType": "Prefix"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "tls": [
+                    {
+                        "hosts": [
+                            "grafana.app.xixtu.eu"
+                        ],
+                        "secretName": "grafana-tls"
+                    }
+                ]
+            },
+            "status": {
+                "loadBalancer": {
+                    "ingress": [
+                        {
+                            "ip": "192.168.0.20"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "apiVersion": "networking.k8s.io/v1",
+            "kind": "Ingress",
+            "metadata": {
+                "annotations": {
+                    "cert-manager.io/cluster-issuer": "letsencrypt-production",
+                    "cert-manager.io/private-key-algorithm": "ECDSA",
+                    "cert-manager.io/private-key-rotation-policy": "Always",
+                    "cert-manager.io/private-key-size": "384",
+                    "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"networking.k8s.io/v1\",\"kind\":\"Ingress\",\"metadata\":{\"annotations\":{\"cert-manager.io/cluster-issuer\":\"letsencrypt-production\",\"cert-manager.io/private-key-algorithm\":\"ECDSA\",\"cert-manager.io/private-key-rotation-policy\":\"Always\",\"cert-manager.io/private-key-size\":\"384\",\"traefik.ingress.kubernetes.io/router.entrypoints\":\"web\",\"traefik.ingress.kubernetes.io/router.middlewares\":\"traefik-redirect-to-https@kubernetescrd\"},\"name\":\"prometheus-ingress-tls\",\"namespace\":\"monitoring\"},\"spec\":{\"ingressClassName\":\"traefik\",\"rules\":[{\"host\":\"prometheus.app.xixtu.eu\",\"http\":{\"paths\":[{\"backend\":{\"service\":{\"name\":\"kube-prometheus-stack-prometheus\",\"port\":{\"number\":9090}}},\"path\":\"/\",\"pathType\":\"Prefix\"}]}}],\"tls\":[{\"hosts\":[\"prometheus.app.xixtu.eu\"],\"secretName\":\"prometheus-tls\"}]}}\n",
+                    "traefik.ingress.kubernetes.io/router.entrypoints": "web",
+                    "traefik.ingress.kubernetes.io/router.middlewares": "traefik-redirect-to-https@kubernetescrd"
+                },
+                "creationTimestamp": "2026-02-26T18:05:41Z",
+                "generation": 1,
+                "name": "prometheus-ingress-tls",
+                "namespace": "monitoring",
+                "resourceVersion": "3835293",
+                "uid": "e57848d4-e43d-4c95-9473-681247650f34"
+            },
+            "spec": {
+                "ingressClassName": "traefik",
+                "rules": [
+                    {
+                        "host": "prometheus.app.xixtu.eu",
+                        "http": {
+                            "paths": [
+                                {
+                                    "backend": {
+                                        "service": {
+                                            "name": "kube-prometheus-stack-prometheus",
+                                            "port": {
+                                                "number": 9090
+                                            }
+                                        }
+                                    },
+                                    "path": "/",
+                                    "pathType": "Prefix"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "tls": [
+                    {
+                        "hosts": [
+                            "prometheus.app.xixtu.eu"
+                        ],
+                        "secretName": "prometheus-tls"
+                    }
+                ]
+            },
+            "status": {
+                "loadBalancer": {
+                    "ingress": [
+                        {
+                            "ip": "192.168.0.20"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "apiVersion": "networking.k8s.io/v1",
+            "kind": "Ingress",
+            "metadata": {
+                "annotations": {
+                    "cert-manager.io/cluster-issuer": "letsencrypt-production",
+                    "cert-manager.io/private-key-algorithm": "ECDSA",
+                    "cert-manager.io/private-key-rotation-policy": "Always",
+                    "cert-manager.io/private-key-size": "384",
+                    "meta.helm.sh/release-name": "pushgateway",
+                    "meta.helm.sh/release-namespace": "monitoring",
+                    "traefik.ingress.kubernetes.io/router.entrypoints": "web",
+                    "traefik.ingress.kubernetes.io/router.middlewares": "traefik-redirect-to-https@kubernetescrd"
+                },
+                "creationTimestamp": "2026-10-06T20:52:28Z",
+                "generation": 1,
+                "labels": {
+                    "app.kubernetes.io/managed-by": "Helm"
+                },
+                "name": "pushgateway-ingress-tls",
+                "namespace": "monitoring",
+                "resourceVersion": "51579479",
+                "uid": "cf7b90cf-53ed-414b-ab71-836e6bc71790"
+            },
+            "spec": {
+                "ingressClassName": "traefik",
+                "rules": [
+                    {
+                        "host": "pushgateway.app.xixtu.eu",
+                        "http": {
+                            "paths": [
+                                {
+                                    "backend": {
+                                        "service": {
+                                            "name": "pushgateway",
+                                            "port": {
+                                                "number": 9091
+                                            }
+                                        }
+                                    },
+                                    "path": "/",
+                                    "pathType": "Prefix"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "tls": [
+                    {
+                        "hosts": [
+                            "pushgateway.app.xixtu.eu"
+                        ],
+                        "secretName": "pushgateway-tls"
+                    }
+                ]
+            },
+            "status": {
+                "loadBalancer": {
+                    "ingress": [
+                        {
+                            "ip": "192.168.0.20"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "apiVersion": "networking.k8s.io/v1",
+            "kind": "Ingress",
+            "metadata": {
+                "annotations": {
+                    "cert-manager.io/cluster-issuer": "letsencrypt-production",
+                    "cert-manager.io/private-key-algorithm": "ECDSA",
+                    "cert-manager.io/private-key-size": "256",
+                    "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"networking.k8s.io/v1\",\"kind\":\"Ingress\",\"metadata\":{\"annotations\":{\"cert-manager.io/cluster-issuer\":\"letsencrypt-production\",\"cert-manager.io/private-key-algorithm\":\"ECDSA\",\"cert-manager.io/private-key-size\":\"256\",\"traefik.ingress.kubernetes.io/router.entrypoints\":\"web\",\"traefik.ingress.kubernetes.io/router.middlewares\":\"traefik-redirect-to-https@kubernetescrd\"},\"name\":\"jdownloader-ingress\",\"namespace\":\"nas\"},\"spec\":{\"ingressClassName\":\"traefik\",\"rules\":[{\"host\":\"jdownloader.app.xixtu.eu\",\"http\":{\"paths\":[{\"backend\":{\"service\":{\"name\":\"jdownloader-service\",\"port\":{\"number\":5800}}},\"path\":\"/\",\"pathType\":\"Prefix\"}]}}],\"tls\":[{\"hosts\":[\"jdownloader.app.xixtu.eu\"],\"secretName\":\"jdownloader-tls\"}]}}\n",
+                    "traefik.ingress.kubernetes.io/router.entrypoints": "web",
+                    "traefik.ingress.kubernetes.io/router.middlewares": "traefik-redirect-to-https@kubernetescrd"
+                },
+                "creationTimestamp": "2026-03-06T21:18:32Z",
+                "generation": 1,
+                "name": "jdownloader-ingress",
+                "namespace": "nas",
+                "resourceVersion": "5372878",
+                "uid": "1f4d40ef-803f-4877-b4fa-c4610873bb67"
+            },
+            "spec": {
+                "ingressClassName": "traefik",
+                "rules": [
+                    {
+                        "host": "jdownloader.app.xixtu.eu",
+                        "http": {
+                            "paths": [
+                                {
+                                    "backend": {
+                                        "service": {
+                                            "name": "jdownloader-service",
+                                            "port": {
+                                                "number": 5800
+                                            }
+                                        }
+                                    },
+                                    "path": "/",
+                                    "pathType": "Prefix"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "tls": [
+                    {
+                        "hosts": [
+                            "jdownloader.app.xixtu.eu"
+                        ],
+                        "secretName": "jdownloader-tls"
+                    }
+                ]
+            },
+            "status": {
+                "loadBalancer": {
+                    "ingress": [
+                        {
+                            "ip": "192.168.0.20"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "apiVersion": "networking.k8s.io/v1",
+            "kind": "Ingress",
+            "metadata": {
+                "annotations": {
+                    "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"networking.k8s.io/v1\",\"kind\":\"Ingress\",\"metadata\":{\"annotations\":{\"traefik.ingress.kubernetes.io/router.entrypoints\":\"websecure\",\"traefik.ingress.kubernetes.io/router.tls\":\"true\"},\"name\":\"plex-ingress\",\"namespace\":\"nas\"},\"spec\":{\"ingressClassName\":\"traefik\",\"rules\":[{\"host\":\"plex.app.xixtu.eu\",\"http\":{\"paths\":[{\"backend\":{\"service\":{\"name\":\"plex-service\",\"port\":{\"number\":32400}}},\"path\":\"/\",\"pathType\":\"Prefix\"}]}}],\"tls\":[{\"hosts\":[\"plex.app.xixtu.eu\"],\"secretName\":\"plex-tls\"}]}}\n",
+                    "traefik.ingress.kubernetes.io/router.entrypoints": "websecure",
+                    "traefik.ingress.kubernetes.io/router.tls": "true"
+                },
+                "creationTimestamp": "2026-02-27T13:14:45Z",
+                "generation": 1,
+                "name": "plex-ingress",
+                "namespace": "nas",
+                "resourceVersion": "48433497",
+                "uid": "402a439c-55f9-4d03-b06d-e2180efb73e3"
+            },
+            "spec": {
+                "ingressClassName": "traefik",
+                "rules": [
+                    {
+                        "host": "plex.app.xixtu.eu",
+                        "http": {
+                            "paths": [
+                                {
+                                    "backend": {
+                                        "service": {
+                                            "name": "plex-service",
+                                            "port": {
+                                                "number": 32400
+                                            }
+                                        }
+                                    },
+                                    "path": "/",
+                                    "pathType": "Prefix"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "tls": [
+                    {
+                        "hosts": [
+                            "plex.app.xixtu.eu"
+                        ],
+                        "secretName": "plex-tls"
+                    }
+                ]
+            },
+            "status": {
+                "loadBalancer": {
+                    "ingress": [
+                        {
+                            "ip": "192.168.0.20"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "apiVersion": "networking.k8s.io/v1",
+            "kind": "Ingress",
+            "metadata": {
+                "annotations": {
+                    "cert-manager.io/cluster-issuer": "letsencrypt-production",
+                    "cert-manager.io/private-key-algorithm": "ECDSA",
+                    "cert-manager.io/private-key-rotation-policy": "Always",
+                    "cert-manager.io/private-key-size": "384",
+                    "meta.helm.sh/release-name": "sftpgo",
+                    "meta.helm.sh/release-namespace": "nas",
+                    "traefik.ingress.kubernetes.io/router.entrypoints": "web",
+                    "traefik.ingress.kubernetes.io/router.middlewares": "traefik-redirect-to-https@kubernetescrd"
+                },
+                "creationTimestamp": "2026-10-08T17:27:57Z",
+                "generation": 1,
+                "labels": {
+                    "app.kubernetes.io/instance": "sftpgo",
+                    "app.kubernetes.io/managed-by": "Helm",
+                    "app.kubernetes.io/name": "sftpgo",
+                    "helm.sh/chart": "sftpgo-0.1.0"
+                },
+                "name": "sftpgo-ingress-tls",
+                "namespace": "nas",
+                "resourceVersion": "52194595",
+                "uid": "921327fc-5d79-4ef0-991c-4da147394acd"
+            },
+            "spec": {
+                "ingressClassName": "traefik",
+                "rules": [
+                    {
+                        "host": "sftp.app.xixtu.eu",
+                        "http": {
+                            "paths": [
+                                {
+                                    "backend": {
+                                        "service": {
+                                            "name": "sftpgo-webdav",
+                                            "port": {
+                                                "number": 8090
+                                            }
+                                        }
+                                    },
+                                    "path": "/dav",
+                                    "pathType": "Prefix"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "tls": [
+                    {
+                        "hosts": [
+                            "sftp.app.xixtu.eu"
+                        ],
+                        "secretName": "sftp-tls"
+                    }
+                ]
+            },
+            "status": {
+                "loadBalancer": {
+                    "ingress": [
+                        {
+                            "ip": "192.168.0.20"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "apiVersion": "networking.k8s.io/v1",
+            "kind": "Ingress",
+            "metadata": {
+                "annotations": {
+                    "cert-manager.io/cluster-issuer": "letsencrypt-production",
+                    "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"networking.k8s.io/v1\",\"kind\":\"Ingress\",\"metadata\":{\"annotations\":{\"cert-manager.io/cluster-issuer\":\"letsencrypt-production\"},\"labels\":{\"app.kubernetes.io/part-of\":\"openwisp\"},\"name\":\"openwisp\",\"namespace\":\"openwisp\"},\"spec\":{\"ingressClassName\":\"traefik\",\"rules\":[{\"host\":\"openwisp.app.xixtu.eu\",\"http\":{\"paths\":[{\"backend\":{\"service\":{\"name\":\"nginx\",\"port\":{\"number\":80}}},\"path\":\"/\",\"pathType\":\"Prefix\"}]}},{\"host\":\"openwisp-api.app.xixtu.eu\",\"http\":{\"paths\":[{\"backend\":{\"service\":{\"name\":\"nginx\",\"port\":{\"number\":80}}},\"path\":\"/\",\"pathType\":\"Prefix\"}]}}],\"tls\":[{\"hosts\":[\"openwisp.app.xixtu.eu\",\"openwisp-api.app.xixtu.eu\"],\"secretName\":\"openwisp-tls\"}]}}\n"
+                },
+                "creationTimestamp": "2026-10-03T17:18:35Z",
+                "generation": 1,
+                "labels": {
+                    "app.kubernetes.io/part-of": "openwisp"
+                },
+                "name": "openwisp",
+                "namespace": "openwisp",
+                "resourceVersion": "50528223",
+                "uid": "58e23290-a5e6-4c27-81f0-14ced436ec25"
+            },
+            "spec": {
+                "ingressClassName": "traefik",
+                "rules": [
+                    {
+                        "host": "openwisp.app.xixtu.eu",
+                        "http": {
+                            "paths": [
+                                {
+                                    "backend": {
+                                        "service": {
+                                            "name": "nginx",
+                                            "port": {
+                                                "number": 80
+                                            }
+                                        }
+                                    },
+                                    "path": "/",
+                                    "pathType": "Prefix"
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "host": "openwisp-api.app.xixtu.eu",
+                        "http": {
+                            "paths": [
+                                {
+                                    "backend": {
+                                        "service": {
+                                            "name": "nginx",
+                                            "port": {
+                                                "number": 80
+                                            }
+                                        }
+                                    },
+                                    "path": "/",
+                                    "pathType": "Prefix"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "tls": [
+                    {
+                        "hosts": [
+                            "openwisp.app.xixtu.eu",
+                            "openwisp-api.app.xixtu.eu"
+                        ],
+                        "secretName": "openwisp-tls"
+                    }
+                ]
+            },
+            "status": {
+                "loadBalancer": {
+                    "ingress": [
+                        {
+                            "ip": "192.168.0.20"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "apiVersion": "networking.k8s.io/v1",
+            "kind": "Ingress",
+            "metadata": {
+                "annotations": {
+                    "cert-manager.io/cluster-issuer": "letsencrypt-production",
+                    "cert-manager.io/private-key-algorithm": "ECDSA",
+                    "cert-manager.io/private-key-rotation-policy": "Always",
+                    "cert-manager.io/private-key-size": "384",
+                    "meta.helm.sh/release-name": "prestashop",
+                    "meta.helm.sh/release-namespace": "prestashop",
+                    "traefik.ingress.kubernetes.io/router.entrypoints": "web",
+                    "traefik.ingress.kubernetes.io/router.middlewares": "traefik-redirect-to-https@kubernetescrd"
+                },
+                "creationTimestamp": "2026-03-17T19:29:21Z",
+                "generation": 1,
+                "labels": {
+                    "app.kubernetes.io/instance": "prestashop",
+                    "app.kubernetes.io/managed-by": "Helm",
+                    "app.kubernetes.io/name": "prestashop",
+                    "app.kubernetes.io/version": "8",
+                    "helm.sh/chart": "prestashop-1.0.0"
+                },
+                "name": "prestashop",
+                "namespace": "prestashop",
+                "resourceVersion": "9576766",
+                "uid": "2cbe68a5-44b4-4564-8444-46150c0b64f1"
+            },
+            "spec": {
+                "ingressClassName": "traefik",
+                "rules": [
+                    {
+                        "host": "barista.app.xixtu.eu",
+                        "http": {
+                            "paths": [
+                                {
+                                    "backend": {
+                                        "service": {
+                                            "name": "prestashop",
+                                            "port": {
+                                                "number": 80
+                                            }
+                                        }
+                                    },
+                                    "path": "/",
+                                    "pathType": "Prefix"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "tls": [
+                    {
+                        "hosts": [
+                            "barista.app.xixtu.eu"
+                        ],
+                        "secretName": "prestashop-tls"
+                    }
+                ]
+            },
+            "status": {
+                "loadBalancer": {
+                    "ingress": [
+                        {
+                            "ip": "192.168.0.20"
+                        }
+                    ]
+                }
+            }
+        }
+    ],
+    "kind": "List",
+    "metadata": {
+        "resourceVersion": ""
+    }
+},
+  "issuers": {
+    "apiVersion": "v1",
+    "items": [],
+    "kind": "List",
+    "metadata": {
+        "resourceVersion": ""
+    }
+},
+  "clusterissuers": {
+    "apiVersion": "v1",
+    "items": [
+        {
+            "apiVersion": "cert-manager.io/v1",
+            "kind": "ClusterIssuer",
+            "metadata": {
+                "creationTimestamp": "2026-02-19T21:47:38Z",
+                "generation": 1,
+                "name": "letsencrypt-production",
+                "resourceVersion": "40642230",
+                "uid": "bbbb3477-70bc-4616-be47-0ef92f030de2"
+            },
+            "spec": {
+                "acme": {
+                    "email": "admin@xixtu.eu",
+                    "privateKeySecretRef": {
+                        "name": "letsencrypt-production-key"
+                    },
+                    "server": "https://acme-v02.api.letsencrypt.org/directory",
+                    "solvers": [
+                        {
+                            "http01": {
+                                "ingress": {
+                                    "ingressClassName": "traefik"
+                                }
+                            }
+                        }
+                    ]
+                }
+            },
+            "status": {
+                "acme": {
+                    "lastPrivateKeyHash": "/VARxatJBQVlnF2bF31vHrdPpSbEqvXUwCz4pf4xoIk=",
+                    "lastRegisteredEmail": "admin@xixtu.eu"
+                },
+                "conditions": [
+                    {
+                        "lastTransitionTime": "2026-09-12T19:15:40Z",
+                        "message": "The ACME account was registered with the ACME server",
+                        "observedGeneration": 1,
+                        "reason": "ACMEAccountRegistered",
+                        "status": "True",
+                        "type": "Ready"
+                    }
+                ]
+            }
+        },
+        {
+            "apiVersion": "cert-manager.io/v1",
+            "kind": "ClusterIssuer",
+            "metadata": {
+                "creationTimestamp": "2026-02-19T21:47:36Z",
+                "generation": 1,
+                "name": "letsencrypt-staging",
+                "resourceVersion": "40642195",
+                "uid": "397a717a-bee0-4cb6-ab5c-e28986ea1b16"
+            },
+            "spec": {
+                "acme": {
+                    "email": "admin@xixtu.eu",
+                    "privateKeySecretRef": {
+                        "name": "letsencrypt-staging-key"
+                    },
+                    "server": "https://acme-staging-v02.api.letsencrypt.org/directory",
+                    "solvers": [
+                        {
+                            "http01": {
+                                "ingress": {
+                                    "ingressClassName": "traefik"
+                                }
+                            }
+                        }
+                    ]
+                }
+            },
+            "status": {
+                "acme": {
+                    "lastPrivateKeyHash": "UUeuajKKwNqHjk1caV2k6HdvGl40oStLINdy+x4f9Mw=",
+                    "lastRegisteredEmail": "admin@xixtu.eu"
+                },
+                "conditions": [
+                    {
+                        "lastTransitionTime": "2026-09-12T19:15:38Z",
+                        "message": "The ACME account was registered with the ACME server",
+                        "observedGeneration": 1,
+                        "reason": "ACMEAccountRegistered",
+                        "status": "True",
+                        "type": "Ready"
+                    }
+                ]
+            }
+        }
+    ],
+    "kind": "List",
+    "metadata": {
+        "resourceVersion": ""
+    }
+},
+  "storageclasses": {
+    "apiVersion": "v1",
+    "items": [
+        {
+            "apiVersion": "storage.k8s.io/v1",
+            "kind": "StorageClass",
+            "metadata": {
+                "annotations": {
+                    "defaultVolumeType": "local",
+                    "objectset.rio.cattle.io/applied": "H4sIAAAAAAAA/4yRz47UMAyHXwX53JYpnamqSBxg0V4QEhJoObuJOzVN4ypxi0areXeUMqDhwJ9j8ov9xZ+fARd+ophYAhhIKhHPVE1dqlhebjUUMHFwYODTj+jBY0pQwEyKDhXBPAOGIIrKElI+Ohpw9fokfp3p82UhMODFoocCpP9KVhNpFVkqi6qeMokz4i+5fAsUy/M2gYGpSXfJVhcv3nNwr984J+GfLQLOv/5T3sb9r6K0oM2V09pTmS5JaYbipzCbrVQ5ioGUdnmcypuJco/BgMaV4FqAx5787upP3BHTCAbqrhmak21Pw9Db5tAe20MzHJuhPnUH19m2w1cOe3fMTX+bbEEd8+USZeO8XIpgIGKwI8UMuHtWQMwD8PxRPNsLGHhHnjRr2fYdvuXgOJw/iMuAL8j6KPGRY9IHCWmdKcL1ewAAAP//KQ1Ko0kCAAA",
+                    "objectset.rio.cattle.io/id": "",
+                    "objectset.rio.cattle.io/owner-gvk": "k3s.cattle.io/v1, Kind=Addon",
+                    "objectset.rio.cattle.io/owner-name": "local-storage",
+                    "objectset.rio.cattle.io/owner-namespace": "kube-system",
+                    "storageclass.kubernetes.io/is-default-class": "true"
+                },
+                "creationTimestamp": "2026-02-19T18:30:46Z",
+                "labels": {
+                    "objectset.rio.cattle.io/hash": "183f35c65ffbc3064603f43f1580d8c68a2dabd4"
+                },
+                "name": "local-path",
+                "resourceVersion": "2264908",
+                "uid": "04684340-ca75-4054-9159-338f67c2e330"
+            },
+            "provisioner": "rancher.io/local-path",
+            "reclaimPolicy": "Delete",
+            "volumeBindingMode": "WaitForFirstConsumer"
+        },
+        {
+            "allowVolumeExpansion": true,
+            "apiVersion": "storage.k8s.io/v1",
+            "kind": "StorageClass",
+            "metadata": {
+                "annotations": {
+                    "longhorn.io/last-applied-configmap": "kind: StorageClass\napiVersion: storage.k8s.io/v1\nmetadata:\n  name: longhorn\n  annotations:\n    storageclass.kubernetes.io/is-default-class: \"false\"\nprovisioner: driver.longhorn.io\nallowVolumeExpansion: true\nreclaimPolicy: \"Delete\"\nvolumeBindingMode: Immediate\nparameters:\n  numberOfReplicas: \"2\"\n  staleReplicaTimeout: \"30\"\n  fromBackup: \"\"\n  fsType: \"ext4\"\n  dataLocality: \"best-effort\"\n  unmapMarkSnapChainRemoved: \"ignored\"\n  disableRevisionCounter: \"true\"\n  dataEngine: \"v1\"\n  backupTargetName: \"default\"\n",
+                    "storageclass.kubernetes.io/is-default-class": "false"
+                },
+                "creationTimestamp": "2026-02-26T18:59:18Z",
+                "name": "longhorn",
+                "resourceVersion": "2204881",
+                "uid": "8d5a2b58-8375-4420-a2e0-1d577e63efd6"
+            },
+            "parameters": {
+                "backupTargetName": "default",
+                "dataEngine": "v1",
+                "dataLocality": "best-effort",
+                "disableRevisionCounter": "true",
+                "fromBackup": "",
+                "fsType": "ext4",
+                "numberOfReplicas": "2",
+                "staleReplicaTimeout": "30",
+                "unmapMarkSnapChainRemoved": "ignored"
+            },
+            "provisioner": "driver.longhorn.io",
+            "reclaimPolicy": "Delete",
+            "volumeBindingMode": "Immediate"
+        },
+        {
+            "allowVolumeExpansion": true,
+            "apiVersion": "storage.k8s.io/v1",
+            "kind": "StorageClass",
+            "metadata": {
+                "annotations": {
+                    "kubectl.kubernetes.io/last-applied-configuration": "{\"allowVolumeExpansion\":true,\"apiVersion\":\"storage.k8s.io/v1\",\"kind\":\"StorageClass\",\"metadata\":{\"annotations\":{\"storageclass.kubernetes.io/is-default-class\":\"true\"},\"creationTimestamp\":\"2026-09-25T18:57:33Z\",\"name\":\"longhorn-fast\",\"resourceVersion\":\"47888367\",\"uid\":\"c9c9f06e-6b73-42ea-a2a1-91e7793fb17a\"},\"parameters\":{\"dataLocality\":\"best-effort\",\"diskSelector\":\"fast\",\"fromBackup\":\"\",\"fsType\":\"ext4\",\"numberOfReplicas\":\"1\",\"staleReplicaTimeout\":\"2880\"},\"provisioner\":\"driver.longhorn.io\",\"reclaimPolicy\":\"Delete\",\"volumeBindingMode\":\"Immediate\"}\n",
+                    "storageclass.kubernetes.io/is-default-class": "true"
+                },
+                "creationTimestamp": "2026-09-25T19:01:13Z",
+                "name": "longhorn-fast",
+                "resourceVersion": "47889620",
+                "uid": "f5e646e3-b293-4339-abb9-a0f930787973"
+            },
+            "parameters": {
+                "dataLocality": "best-effort",
+                "diskSelector": "fast",
+                "fromBackup": "",
+                "fsType": "ext4",
+                "numberOfReplicas": "1",
+                "staleReplicaTimeout": "2880"
+            },
+            "provisioner": "driver.longhorn.io",
+            "reclaimPolicy": "Delete",
+            "volumeBindingMode": "Immediate"
+        },
+        {
+            "allowVolumeExpansion": true,
+            "apiVersion": "storage.k8s.io/v1",
+            "kind": "StorageClass",
+            "metadata": {
+                "annotations": {
+                    "kubectl.kubernetes.io/last-applied-configuration": "{\"allowVolumeExpansion\":true,\"apiVersion\":\"storage.k8s.io/v1\",\"kind\":\"StorageClass\",\"metadata\":{\"annotations\":{\"storageclass.kubernetes.io/is-default-class\":\"false\"},\"name\":\"longhorn-slow\"},\"parameters\":{\"dataLocality\":\"best-effort\",\"diskSelector\":\"slow\",\"fromBackup\":\"\",\"fsType\":\"ext4\",\"numberOfReplicas\":\"2\",\"staleReplicaTimeout\":\"2880\"},\"provisioner\":\"driver.longhorn.io\",\"reclaimPolicy\":\"Delete\",\"volumeBindingMode\":\"Immediate\"}\n",
+                    "storageclass.kubernetes.io/is-default-class": "false"
+                },
+                "creationTimestamp": "2026-02-26T09:41:08Z",
+                "name": "longhorn-slow",
+                "resourceVersion": "2046304",
+                "uid": "e4215209-ba2b-4c2b-9df4-7dc54e6ff3d7"
+            },
+            "parameters": {
+                "dataLocality": "best-effort",
+                "diskSelector": "slow",
+                "fromBackup": "",
+                "fsType": "ext4",
+                "numberOfReplicas": "2",
+                "staleReplicaTimeout": "2880"
+            },
+            "provisioner": "driver.longhorn.io",
+            "reclaimPolicy": "Delete",
+            "volumeBindingMode": "Immediate"
+        },
+        {
+            "allowVolumeExpansion": true,
+            "apiVersion": "storage.k8s.io/v1",
+            "kind": "StorageClass",
+            "metadata": {
+                "creationTimestamp": "2026-02-26T18:56:58Z",
+                "name": "longhorn-static",
+                "resourceVersion": "2203313",
+                "uid": "7603d05d-3bad-4e81-8ddc-a07c218f46f7"
+            },
+            "parameters": {
+                "staleReplicaTimeout": "30"
+            },
+            "provisioner": "driver.longhorn.io",
+            "reclaimPolicy": "Delete",
+            "volumeBindingMode": "Immediate"
+        },
+        {
+            "allowVolumeExpansion": true,
+            "apiVersion": "storage.k8s.io/v1",
+            "kind": "StorageClass",
+            "metadata": {
+                "annotations": {
+                    "kubectl.kubernetes.io/last-applied-configuration": "{\"allowVolumeExpansion\":true,\"apiVersion\":\"storage.k8s.io/v1\",\"kind\":\"StorageClass\",\"metadata\":{\"annotations\":{\"storageclass.kubernetes.io/is-default-class\":\"false\"},\"name\":\"longhorn-ultra\"},\"parameters\":{\"dataLocality\":\"best-effort\",\"diskSelector\":\"ultra\",\"fromBackup\":\"\",\"fsType\":\"ext4\",\"numberOfReplicas\":\"2\",\"staleReplicaTimeout\":\"2880\"},\"provisioner\":\"driver.longhorn.io\",\"reclaimPolicy\":\"Delete\",\"volumeBindingMode\":\"Immediate\"}\n",
+                    "storageclass.kubernetes.io/is-default-class": "false"
+                },
+                "creationTimestamp": "2026-02-26T09:41:08Z",
+                "name": "longhorn-ultra",
+                "resourceVersion": "2046302",
+                "uid": "22eae7b0-555d-4a94-95a6-46872916f59d"
+            },
+            "parameters": {
+                "dataLocality": "best-effort",
+                "diskSelector": "ultra",
+                "fromBackup": "",
+                "fsType": "ext4",
+                "numberOfReplicas": "2",
+                "staleReplicaTimeout": "2880"
+            },
+            "provisioner": "driver.longhorn.io",
+            "reclaimPolicy": "Delete",
+            "volumeBindingMode": "Immediate"
+        }
+    ],
+    "kind": "List",
+    "metadata": {
+        "resourceVersion": ""
+    }
+}
+}

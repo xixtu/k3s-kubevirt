@@ -1,0 +1,306 @@
+---
+- name: Deploy K3s Homepage Dashboard
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    target_namespace: homepage
+    domain: homepage.app.xixtu.eu
+
+  tasks:
+    - name: Exécuter le script d'export des données du cluster
+      command: "./export-cluster-info.sh"
+      register: export_result
+      changed_when: true
+
+    - name: Charger le fichier JSON des ressources
+      slurp:
+        src: "cluster-export.json"
+      register: cluster_data_raw
+
+    - name: Parser le JSON
+      set_fact:
+        cluster_data: "{{ cluster_data_raw['content'] | b64decode | from_json }}"
+
+    - name: Créer le namespace homepage
+      kubernetes.core.k8s:
+        api_version: v1
+        kind: Namespace
+        name: "{{ target_namespace }}"
+        state: present
+
+    - name: Créer le Middleware Traefik pour la redirection HTTPS dans le namespace homepage
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: traefik.io/v1alpha1
+          kind: Middleware
+          metadata:
+            name: traefik-redirect-to-https
+            namespace: "{{ target_namespace }}"
+          spec:
+            redirectScheme:
+              scheme: https
+              permanent: true
+
+    - name: Générer le contenu HTML de la homepage (Design Fun & Cyberpunk)
+      set_fact:
+        homepage_html: |
+          <!DOCTYPE html>
+          <html lang="fr">
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Xixtu's K3s Command Center</title>
+              <style>
+                  :root {
+                      --bg-color: #090d16;
+                      --card-bg: #111827;
+                      --card-hover: #1f293d;
+                      --border-color: #1e293b;
+                      --accent: #38bdf8;
+                      --accent-glow: rgba(56, 189, 248, 0.15);
+                      --text-main: #f3f4f6;
+                      --text-muted: #9ca3af;
+                  }
+                  body {
+                      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+                      background-color: var(--bg-color);
+                      color: var(--text-main);
+                      margin: 0;
+                      padding: 50px 20px;
+                      background-image: radial-gradient(circle at 50% 0%, #1e1b4b 0%, var(--bg-color) 70%);
+                      min-height: 100vh;
+                  }
+                  .container {
+                      max-width: 1300px;
+                      margin: 0 auto;
+                  }
+                  header {
+                      text-align: center;
+                      margin-bottom: 50px;
+                  }
+                  h1 {
+                      font-size: 2.75rem;
+                      font-weight: 800;
+                      background: linear-gradient(to right, #38bdf8, #818cf8, #c084fc);
+                      -webkit-background-clip: text;
+                      -webkit-text-fill-color: transparent;
+                      margin: 0 0 10px 0;
+                      letter-spacing: -0.025em;
+                  }
+                  .subtitle {
+                      color: var(--text-muted);
+                      font-size: 1.1rem;
+                  }
+                  .grid {
+                      display: grid;
+                      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+                      gap: 24px;
+                  }
+                  .card {
+                      background-color: var(--card-bg);
+                      border: 1px solid var(--border-color);
+                      border-radius: 16px;
+                      padding: 24px;
+                      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+                      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                      position: relative;
+                      display: flex;
+                      flex-direction: column;
+                      justify-content: space-between;
+                  }
+                  .card:hover {
+                      transform: translateY(-6px);
+                      border-color: var(--accent);
+                      box-shadow: 0 20px 35px -10px var(--accent-glow);
+                      background-color: var(--card-hover);
+                  }
+                  .card-content {
+                      margin-bottom: 20px;
+                  }
+                  .card a {
+                      color: var(--text-main);
+                      text-decoration: none;
+                      font-size: 1.25rem;
+                      font-weight: 700;
+                      display: block;
+                      margin-bottom: 8px;
+                      word-break: break-all;
+                      transition: color 0.2s;
+                  }
+                  .card a:hover {
+                      color: var(--accent);
+                  }
+                  .description {
+                      color: var(--text-muted);
+                      font-size: 0.95rem;
+                      line-height: 1.5;
+                      margin: 0;
+                  }
+                  .card-footer {
+                      display: flex;
+                      gap: 8px;
+                      align-items: center;
+                      flex-wrap: wrap;
+                      border-top: 1px solid var(--border-color);
+                      padding-top: 14px;
+                      margin-top: auto;
+                  }
+                  .badge {
+                      display: inline-flex;
+                      align-items: center;
+                      padding: 4px 10px;
+                      border-radius: 6px;
+                      font-size: 0.75rem;
+                      font-weight: 600;
+                      letter-spacing: 0.025em;
+                  }
+                  .badge-ns {
+                      background-color: rgba(30, 41, 59, 0.8);
+                      color: #cbd5e1;
+                      border: 1px solid #334155;
+                  }
+                  .badge-tls {
+                      background-color: rgba(6, 95, 70, 0.4);
+                      color: #34d399;
+                      border: 1px solid rgba(52, 211, 153, 0.2);
+                  }
+              </style>
+          </head>
+          <body>
+              <div class="container">
+                  <header>
+                      <h1>⚡ Xixtu's K3s Cluster</h1>
+                      <div class="subtitle">Tableau de bord centralisé des applications déployées</div>
+                  </header>
+                  <div class="grid">
+                  {% for item in cluster_data['ingresses']['items'] %}
+                    {% if item.spec.rules is defined %}
+                      {% set ns = item.metadata.namespace %}
+                      {% set name = item.metadata.name %}
+                      {% set annotations = item.metadata.annotations | default({}) %}
+                      {% set custom_desc = annotations['homepage.description'] | default('') %}
+                      
+                      {% for rule in item.spec.rules %}
+                        {% if rule.host is defined %}
+                          <div class="card">
+                              <div class="card-content">
+                                  <a href="https://{{ rule.host }}" target="_blank">{{ rule.host }} ↗</a>
+                                  <p class="description">
+                                      {% if custom_desc != '' %}
+                                          {{ custom_desc }}
+                                      {% else %}
+                                          Application hébergée dans le namespace <strong>{{ ns }}</strong> (ressource : {{ name }}).
+                                      {% endif %}
+                                  </p>
+                              </div>
+                              <div class="card-footer">
+                                  <span class="badge badge-ns">{{ ns }}</span>
+                                  {% if item.spec.tls is defined and item.spec.tls | length > 0 %}
+                                      <span class="badge badge-tls">🔒 Secure TLS</span>
+                                  {% endif %}
+                              </div>
+                          </div>
+                        {% endif %}
+                      {% endfor %}
+                    {% endif %}
+                  {% endfor %}
+                  </div>
+              </div>
+          </body>
+          </html>
+
+    - name: Créer la ConfigMap avec la page HTML stylisée
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: homepage-html-config
+            namespace: "{{ target_namespace }}"
+          data:
+            index.html: "{{ homepage_html }}"
+
+    - name: Déployer le Deployment Nginx
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: homepage
+            namespace: "{{ target_namespace }}"
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                app: homepage
+            template:
+              metadata:
+                labels:
+                  app: homepage
+              spec:
+                containers:
+                  - name: nginx
+                    image: nginx:alpine
+                    ports:
+                      - containerPort: 80
+                    volumeMounts:
+                      - name: html-volume
+                        mountPath: /usr/share/nginx/html
+                volumes:
+                  - name: html-volume
+                    configMap:
+                      name: homepage-html-config
+
+    - name: Déployer le Service
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: homepage-service
+            namespace: "{{ target_namespace }}"
+          spec:
+            selector:
+              app: homepage
+            ports:
+              - port: 80
+                targetPort: 80
+
+    - name: Déployer l'Ingress avec Cert-Manager complet et Middleware
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: networking.k8s.io/v1
+          kind: Ingress
+          metadata:
+            name: homepage-ingress
+            namespace: "{{ target_namespace }}"
+            annotations:
+              cert-manager.io/cluster-issuer: "letsencrypt-production"
+              cert-manager.io/private-key-algorithm: "ECDSA"
+              cert-manager.io/private-key-rotation-policy: "Always"
+              cert-manager.io/private-key-size: "384"
+              traefik.ingress.kubernetes.io/router.entrypoints: "web,websecure"
+              traefik.ingress.kubernetes.io/router.middlewares: "{{ target_namespace }}-traefik-redirect-to-https@kubernetescrd"
+          spec:
+            ingressClassName: traefik
+            rules:
+              - host: "{{ domain }}"
+                http:
+                  paths:
+                    - path: "/"
+                      pathType: "Prefix"
+                      backend:
+                        service:
+                          name: homepage-service
+                          port:
+                            number: 80
+            tls:
+              - hosts:
+                  - "{{ domain }}"
+                secretName: homepage-tls

@@ -2530,3 +2530,111 @@ Origin: /home/administrator/git/k3s-kubevirt/playbooks/guacamole.yml:36:7
 2026-10-09 23:07:43,604 p=1736267 u=administrator n=ansible INFO| Diag K8s | pods -n prestashop ------------------------------------------------------------------------------------------ 0.84s
 2026-10-09 23:07:43,604 p=1736267 u=administrator n=ansible INFO| Vérifier les pods PrestaShop ------------------------------------------------------------------------------------------- 0.84s
 2026-10-09 23:07:43,604 p=1736267 u=administrator n=ansible INFO| Vérifier l'IngressRoute HTTPS ------------------------------------------------------------------------------------------ 0.83s
+2026-10-10 19:48:49,274 p=512282 u=administrator n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+
+2026-10-10 19:48:49,275 p=512282 u=administrator n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be removed from collection 'community.general' version 12.0.0.
+
+2026-10-10 19:48:49,326 p=512282 u=administrator n=ansible WARNING| [WARNING]: Found variable using reserved name 'namespace'.
+Origin: /home/administrator/git/k3s-kubevirt/deploy-homepage.yml:7:5
+
+5   gather_facts: false
+6   vars:
+7     namespace: homepage
+      ^ column 5
+
+
+2026-10-10 19:48:49,329 p=512282 u=administrator n=ansible INFO| PLAY [Deploy K3s Homepage Dashboard] *******************************************************************************************************************
+2026-10-10 19:48:49,344 p=512282 u=administrator n=ansible INFO| TASK [Charger le fichier JSON des ressources] **********************************************************************************************************
+2026-10-10 19:48:49,344 p=512282 u=administrator n=ansible INFO| samedi 10 octobre 2026  19:48:49 +0200 (0:00:00.024)       0:00:00.024 ******** 
+2026-10-10 19:48:50,179 p=512282 u=administrator n=ansible ERROR| [ERROR]: Task failed: Module failed: File not found: cluster-export.json: [Errno 2] No such file or directory: 'cluster-export.json'
+Origin: /home/administrator/git/k3s-kubevirt/deploy-homepage.yml:11:7
+
+ 9
+10   tasks:
+11     - name: Charger le fichier JSON des ressources
+         ^ column 7
+
+
+2026-10-10 19:48:50,180 p=512282 u=administrator n=ansible INFO| fatal: [localhost]: FAILED! => changed=false 
+  msg: 'File not found: cluster-export.json'
+2026-10-10 19:48:50,181 p=512282 u=administrator n=ansible INFO| PLAY RECAP *********************************************************************************************************************************************
+2026-10-10 19:48:50,181 p=512282 u=administrator n=ansible INFO| localhost                  : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0   
+2026-10-10 19:48:50,182 p=512282 u=administrator n=ansible INFO| PLAYBOOK RECAP *****************************************************************************************************************************************
+2026-10-10 19:48:50,182 p=512282 u=administrator n=ansible INFO| Playbook run took 0 days, 0 hours, 0 minutes, 0 seconds
+
+2026-10-10 19:48:50,182 p=512282 u=administrator n=ansible INFO| TASKS RECAP ********************************************************************************************************************************************
+2026-10-10 19:48:50,182 p=512282 u=administrator n=ansible INFO| samedi 10 octobre 2026  19:48:50 +0200 (0:00:00.837)       0:00:00.861 ******** 
+2026-10-10 19:48:50,182 p=512282 u=administrator n=ansible INFO| =============================================================================== 
+2026-10-10 19:48:50,182 p=512282 u=administrator n=ansible INFO| Charger le fichier JSON des ressources ---------------------------------------------------------------------------------------------------------- 0.84s
+2026-10-10 19:50:11,642 p=516141 u=administrator n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+
+2026-10-10 19:50:11,642 p=516141 u=administrator n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be removed from collection 'community.general' version 12.0.0.
+
+2026-10-10 19:50:11,696 p=516141 u=administrator n=ansible WARNING| [WARNING]: Found variable using reserved name 'namespace'.
+Origin: /home/administrator/git/k3s-kubevirt/deploy-homepage.yml:7:5
+
+5   gather_facts: false
+6   vars:
+7     namespace: homepage
+      ^ column 5
+
+
+2026-10-10 19:50:11,699 p=516141 u=administrator n=ansible INFO| PLAY [Deploy K3s Homepage Dashboard] *******************************************************************************************************************
+2026-10-10 19:50:11,715 p=516141 u=administrator n=ansible INFO| TASK [Charger le fichier JSON des ressources] **********************************************************************************************************
+2026-10-10 19:50:11,715 p=516141 u=administrator n=ansible INFO| samedi 10 octobre 2026  19:50:11 +0200 (0:00:00.025)       0:00:00.025 ******** 
+2026-10-10 19:50:12,603 p=516141 u=administrator n=ansible ERROR| [ERROR]: Task failed: Module failed: File not found: cluster-export.json: [Errno 2] No such file or directory: 'cluster-export.json'
+Origin: /home/administrator/git/k3s-kubevirt/deploy-homepage.yml:11:7
+
+ 9
+10   tasks:
+11     - name: Charger le fichier JSON des ressources
+         ^ column 7
+
+
+2026-10-10 19:50:12,603 p=516141 u=administrator n=ansible INFO| fatal: [localhost]: FAILED! => changed=false 
+  msg: 'File not found: cluster-export.json'
+2026-10-10 19:50:12,605 p=516141 u=administrator n=ansible INFO| PLAY RECAP *********************************************************************************************************************************************
+2026-10-10 19:50:12,605 p=516141 u=administrator n=ansible INFO| localhost                  : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0   
+2026-10-10 19:50:12,605 p=516141 u=administrator n=ansible INFO| PLAYBOOK RECAP *****************************************************************************************************************************************
+2026-10-10 19:50:12,606 p=516141 u=administrator n=ansible INFO| Playbook run took 0 days, 0 hours, 0 minutes, 0 seconds
+
+2026-10-10 19:50:12,606 p=516141 u=administrator n=ansible INFO| TASKS RECAP ********************************************************************************************************************************************
+2026-10-10 19:50:12,606 p=516141 u=administrator n=ansible INFO| samedi 10 octobre 2026  19:50:12 +0200 (0:00:00.890)       0:00:00.916 ******** 
+2026-10-10 19:50:12,606 p=516141 u=administrator n=ansible INFO| =============================================================================== 
+2026-10-10 19:50:12,606 p=516141 u=administrator n=ansible INFO| Charger le fichier JSON des ressources ---------------------------------------------------------------------------------------------------------- 0.89s
+2026-10-10 19:50:19,597 p=516595 u=administrator n=ansible WARNING| [WARNING]: Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg.
+
+2026-10-10 19:50:19,597 p=516595 u=administrator n=ansible INFO| [DEPRECATION WARNING]: community.general.yaml has been deprecated. The plugin has been superseded by the the option `result_format=yaml` in callback plugin ansible.builtin.default from ansible-core 2.13 onwards. This feature will be removed from collection 'community.general' version 12.0.0.
+
+2026-10-10 19:50:19,647 p=516595 u=administrator n=ansible WARNING| [WARNING]: Found variable using reserved name 'namespace'.
+Origin: /home/administrator/git/k3s-kubevirt/deploy-homepage.yml:7:5
+
+5   gather_facts: false
+6   vars:
+7     namespace: homepage
+      ^ column 5
+
+
+2026-10-10 19:50:19,651 p=516595 u=administrator n=ansible INFO| PLAY [Deploy K3s Homepage Dashboard] *******************************************************************************************************************
+2026-10-10 19:50:19,665 p=516595 u=administrator n=ansible INFO| TASK [Charger le fichier JSON des ressources] **********************************************************************************************************
+2026-10-10 19:50:19,665 p=516595 u=administrator n=ansible INFO| samedi 10 octobre 2026  19:50:19 +0200 (0:00:00.023)       0:00:00.023 ******** 
+2026-10-10 19:50:20,506 p=516595 u=administrator n=ansible ERROR| [ERROR]: Task failed: Module failed: File not found: cluster-export.json: [Errno 2] No such file or directory: 'cluster-export.json'
+Origin: /home/administrator/git/k3s-kubevirt/deploy-homepage.yml:11:7
+
+ 9
+10   tasks:
+11     - name: Charger le fichier JSON des ressources
+         ^ column 7
+
+
+2026-10-10 19:50:20,507 p=516595 u=administrator n=ansible INFO| fatal: [localhost]: FAILED! => changed=false 
+  msg: 'File not found: cluster-export.json'
+2026-10-10 19:50:20,509 p=516595 u=administrator n=ansible INFO| PLAY RECAP *********************************************************************************************************************************************
+2026-10-10 19:50:20,509 p=516595 u=administrator n=ansible INFO| localhost                  : ok=0    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0   
+2026-10-10 19:50:20,510 p=516595 u=administrator n=ansible INFO| PLAYBOOK RECAP *****************************************************************************************************************************************
+2026-10-10 19:50:20,510 p=516595 u=administrator n=ansible INFO| Playbook run took 0 days, 0 hours, 0 minutes, 0 seconds
+
+2026-10-10 19:50:20,510 p=516595 u=administrator n=ansible INFO| TASKS RECAP ********************************************************************************************************************************************
+2026-10-10 19:50:20,510 p=516595 u=administrator n=ansible INFO| samedi 10 octobre 2026  19:50:20 +0200 (0:00:00.844)       0:00:00.868 ******** 
+2026-10-10 19:50:20,511 p=516595 u=administrator n=ansible INFO| =============================================================================== 
+2026-10-10 19:50:20,511 p=516595 u=administrator n=ansible INFO| Charger le fichier JSON des ressources ---------------------------------------------------------------------------------------------------------- 0.85s
