@@ -694,6 +694,19 @@
         mode: '0644'
         content: |
           apiVersion: traefik.io/v1alpha1
+          kind: ServersTransport
+          metadata:
+            name: plex-transport
+            namespace: {{ target_namespace }}
+          spec:
+            # Connexion Traefik → Plex : pas de limite d'attente de réponse
+            # (transcodage lent au démarrage), connexion inactive tolérée 1 h
+            forwardingTimeouts:
+              dialTimeout: 30s
+              responseHeaderTimeout: 0s
+              idleConnTimeout: 3600s
+          ---
+          apiVersion: traefik.io/v1alpha1
           kind: IngressRoute
           metadata:
             name: plex-https
@@ -707,6 +720,7 @@
                 services:
                   - name: plex-service
                     port: 32400
+                    serversTransport: plex-transport
             tls:
               secretName: plex-tls
       tags: [nas, nas-install, nas-plex]

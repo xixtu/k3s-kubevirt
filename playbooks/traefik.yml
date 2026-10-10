@@ -137,6 +137,11 @@
           # Appliquer le middleware security-headers sur tout le trafic HTTPS
           additionalArguments:
             - "--entryPoints.websecure.http.middlewares=traefik-security-headers@kubernetescrd"
+            # Flux longs (Plex) : pas de limite de lecture/écriture, inactivité 1 h
+            # (défaut ~3 min : coupe un flux en pause)
+            - "--entryPoints.websecure.transport.respondingTimeouts.readTimeout=0s"
+            - "--entryPoints.websecure.transport.respondingTimeouts.writeTimeout=0s"
+            - "--entryPoints.websecure.transport.respondingTimeouts.idleTimeout=3600s"
 
           # Logs
           logs:
