@@ -555,6 +555,11 @@
                       # Config Plex (RW) - sur longhorn-fast pour performance BDD
                       - name: plex-config
                         mountPath: /config
+                      # Fichiers temporaires de transcodage : disque local du nœud
+                      # (pas de réplication Longhorn). À sélectionner dans Plex :
+                      # Paramètres → Transcodeur → « Répertoire temporaire » = /transcode
+                      - name: plex-transcode
+                        mountPath: /transcode
                       # Données NAS (READ-ONLY) - streaming direct
                       - name: nas-data
                         mountPath: /data
@@ -583,6 +588,9 @@
                   - name: plex-config
                     persistentVolumeClaim:
                       claimName: plex-config
+                  - name: plex-transcode
+                    emptyDir:
+                      sizeLimit: 20Gi
                   - name: nas-data
                     persistentVolumeClaim:
                       claimName: nas-data
